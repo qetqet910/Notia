@@ -12,9 +12,11 @@
   "dependencies": {
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/vite": "^4.0.2",
+    "@types/react-icons": "^2.2.7",
     "lucide-react": "^0.474.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-icons": "^5.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
