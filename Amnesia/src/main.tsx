@@ -13,7 +13,7 @@ declare global {
 
 const platform = import.meta.env.VITE_PLATFORM || "web"
 
-import(`./platforms/${platform}`).then((module) => {
+import(`./platforms/${platform}/index.tsx`).then((module) => {
   const initPlatform = module.default
   initPlatform()
 })
