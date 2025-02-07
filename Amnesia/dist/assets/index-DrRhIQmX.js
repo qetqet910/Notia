@@ -1,1 +1,0 @@
-import{c as o,j as e}from"./index-BT_cDZqP.js";import{A as n}from"./App-DBcDcdno.js";function a(){document.addEventListener("DOMContentLoaded",()=>{const t=document.getElementById("root");t&&o.createRoot(t).render(e.jsx(n,{}))})}export{a as default};

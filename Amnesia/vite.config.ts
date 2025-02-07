@@ -9,12 +9,19 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
+      includeAssets: [
+        "favicon.ico",
+        "icon16.png",
+        "icon48.png",
+        "icon128.png",
+        "apple-touch-icon.png",
+        "masked-icon.svg",
+      ],
       manifest: {
         name: "Amnesia",
-        short_name: "Nute",
+        short_name: "Note",
         description: "까먹지 않게, 하루하루 성실하게.",
-        theme_color: "#ffffff",
+        theme_color: "#333333",
         icons: [
           {
             src: "pwa-192x192.png",
@@ -30,5 +37,20 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        background: "src/background.ts", // 백그라운드 스크립트가 있는 경우
+      },
+      output: {
+        manualChunks: {
+          web: ["./src/platforms/web"],
+          webapp: ["./src/platforms/webapp"],
+          extension: ["./src/platforms/extension"],
+        },
+      },
+    },
+  },
 })
 
