@@ -4,5 +4,7 @@ export interface Note {
     content: string;
     tags: string[];
     date: string;
-    syncStatus: 'synced' | 'pending' | 'failed';
+    syncStatus: 'synced' | 'pending' | 'conflict' | 'error';
+    lastModified: number;
+    lastSynced?: number;
   }

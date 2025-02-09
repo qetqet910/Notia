@@ -1,10 +1,21 @@
+import React from 'react';
 import { Home } from './pages/Home';
-import type React from "react"
+import { MarkdownPage } from './pages/MarkdownPage/MarkdownPage';
 
 const App: React.FC = () => {
-  return <Home />
-}
+  return (
+    <div>
+      <nav className="bg-gray-800 text-white p-4">
+        <ul className="flex space-x-4">
+          <li><a href="/">홈</a></li>
+          <li><a href="/markdown">마크다운</a></li>
+        </ul>
+      </nav>
+      <MarkdownPage />
+    </div>
+  );
+};
 
-export default App
+export default App;
 
 

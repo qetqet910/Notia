@@ -1,57 +1,46 @@
-import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react"
-import { VitePWA } from "vite-plugin-pwa"
-import tailwindcss from "@tailwindcss/vite"
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
+import tailwindcss from 'tailwindcss';
 
 export default defineConfig({
-  base: "/Amnesia/", // GitHub Pages 배포 URL에 맞게 수정
   plugins: [
     react(),
-    tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: 'autoUpdate',
       includeAssets: [
-        "favicon.ico",
-        "icon16.png",
-        "icon48.png",
-        "icon128.png",
-        "icon-192.png",
-        "icon-512.png",
-        "apple-touch-icon.png",
-        "masked-icon.svg",
+        'favicon.ico',
+        'icon16.png',
+        'icon48.png',
+        'icon128.png',
+        'apple-touch-icon.png',
+        'masked-icon.svg',
       ],
       manifest: {
-        name: "Amnesia",
-        short_name: "Note",
-        description: "깨끗한 완결, 하루하루 성실하게.",
-        theme_color: "#333333",
-        background_color: "#ffffff",
-        display: "standalone",
-        start_url: "./", // 상대 경로로 변경
-        scope: "./", // 스코프 추가
+        name: 'Amnesia',
+        short_name: 'Note',
+        description: '까먹지 않게, 하루하루 성실하게.',
+        theme_color: '#333333',
         icons: [
           {
-            src: "./icon-192.png", // 상대 경로로 변경
-            sizes: "192x192",
-            type: "image/png",
-            purpose: "any maskable",
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
           },
           {
-            src: "./icon-512.png", // 상대 경로로 변경
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable",
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
           },
         ],
       },
-      devOptions: {
-        enabled: true,
-      },
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
-      },
     }),
   ],
+  css: {
+    postcss: {
+      plugins: [tailwindcss],
+    },
+  },
   build: {
     rollupOptions: {
       input: {
@@ -66,5 +55,4 @@ export default defineConfig({
       },
     },
   },
-})
-
+});

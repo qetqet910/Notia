@@ -1,50 +1,23 @@
-import type React from "react"
-import { useState } from "react"
-import { FiMenu, FiHome, FiCalendar, FiTag, FiPlus } from "react-icons/fi"
+import React from 'react';
+import { FiMenu, FiHome, FiCalendar, FiTag } from "react-icons/fi"
+import { Editor } from "../../components/features/Editor/Editor"
+import { NoteList } from "../../components/features/NoteList/NoteList"
+import { useNotes } from "../../hooks/useNotes"
+import { useTags } from "../../hooks/useTags"
 
-// 할 일 항목의 타입 정의
-interface Task {
-  id: number
-  text: string
-  completed: boolean
-}
+export const Home: React.FC = () => {
+  const { addNote } = useNotes()
+  const { allTags, selectedTag, setSelectedTag } = useTags()
 
-// 사이드바 메뉴 항목의 타입 정의
-interface MenuItem {
-  icon: React.ReactNode
-  text: string
-}
-
-export const Home = (): JSX.Element => {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, text: "Todoist 클론 만들기", completed: false },
-    { id: 2, text: "React 학습하기", completed: true },
-    { id: 3, text: "Tailwind CSS 익히기", completed: false },
-  ])
-
-  const [newTask, setNewTask] = useState<string>("")
-
-  const menuItems: MenuItem[] = [
+  const menuItems = [
     { icon: <FiHome className="mr-2" />, text: "홈" },
     { icon: <FiCalendar className="mr-2" />, text: "오늘" },
     { icon: <FiTag className="mr-2" />, text: "레이블" },
   ]
 
-  const addTask = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (newTask.trim()) {
-      setTasks([...tasks, { id: Date.now(), text: newTask, completed: false }])
-      setNewTask("")
-    }
-  }
-
-  const toggleTask = (id: number) => {
-    setTasks(tasks.map((task) => (task.id === id ? { ...task, completed: !task.completed } : task)))
-  }
-
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* 왼쪽 사이드바 */}
+      {/* 사이드바 */}
       <div className="w-64 bg-gray-800 text-white p-4">
         <div className="flex items-center mb-6">
           <FiMenu className="mr-2" />
@@ -58,32 +31,38 @@ export const Home = (): JSX.Element => {
               </li>
             ))}
           </ul>
+          {/* 태그 목록 */}
+          <div className="mt-6">
+            <h2 className="text-sm font-semibold mb-2">태그</h2>
+            <ul className="space-y-1">
+              {allTags.map(tag => (
+                <li
+                  key={tag}
+                  className={`text-sm p-1 cursor-pointer rounded ${
+                    selectedTag === tag ? 'bg-blue-500' : 'hover:bg-gray-700'
+                  }`}
+                  onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                >
+                  <FiTag className="inline mr-2" />
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          </div>
         </nav>
       </div>
 
-      {/* 메인 컨텐츠 영역 */}
-      <div className="flex-1 p-8">
-        <h2 className="text-2xl font-semibold mb-4">오늘 할 일</h2>
-        <ul className="space-y-2">
-          {tasks.map((task) => (
-            <li key={task.id} className="flex items-center bg-white p-3 rounded shadow">
-              <input type="checkbox" checked={task.completed} onChange={() => toggleTask(task.id)} className="mr-2" />
-              <span className={task.completed ? "line-through text-gray-500" : ""}>{task.text}</span>
-            </li>
-          ))}
-        </ul>
-        <form onSubmit={addTask} className="mt-4 flex">
-          <input
-            type="text"
-            value={newTask}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTask(e.target.value)}
-            placeholder="할 일 추가..."
-            className="flex-1 p-2 border rounded-l"
-          />
-          <button type="submit" className="bg-red-500 text-white p-2 rounded-r">
-            <FiPlus />
-          </button>
-        </form>
+      {/* 메인 컨텐츠 */}
+      <div className="flex-1 p-8 overflow-auto">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-semibold mb-4">새 메모</h2>
+          <Editor onSave={addNote} />
+          
+          <h2 className="text-2xl font-semibold my-4">
+            {selectedTag ? `${selectedTag} 태그의 메모` : '모든 메모'}
+          </h2>
+          <NoteList tagFilter={selectedTag} />
+        </div>
       </div>
     </div>
   )
