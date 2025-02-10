@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import tailwindcss from 'tailwindcss';
 
 export default defineConfig({
   plugins: [
@@ -36,11 +35,6 @@ export default defineConfig({
       },
     }),
   ],
-  css: {
-    postcss: {
-      plugins: [tailwindcss],
-    },
-  },
   build: {
     rollupOptions: {
       input: {
