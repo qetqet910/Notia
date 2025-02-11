@@ -13,7 +13,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onSave,
 }) => {
   const [content, setContent] = useState(initialValue);
-  const [previewMode, setPreviewMode] = useState<'edit' | 'preview' | 'split'>('split');
+  const [previewMode, setPreviewMode] = useState<'edit' | 'preview'>('edit');
 
   const handleKeyCommand = useCallback((e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey) {
@@ -57,7 +57,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div className="space-x-2">
-          {(['edit', 'preview', 'split'] as const).map(mode => (
+          {(['edit', 'preview'] as const).map(mode => (
             <button
               key={mode}
               onClick={() => setPreviewMode(mode)}
