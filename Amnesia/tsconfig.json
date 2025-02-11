@@ -5,6 +5,8 @@
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
-    "types": ["chrome", "vite/client"]
+    "types": ["chrome", "vite/client"],
+    "target": "es5",
+    "lib": ["es2019", "dom"],
   }
 }

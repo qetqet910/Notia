@@ -4,7 +4,7 @@ import type { MarkdownDocument } from '../types/markdown';
 
 export class DBService {
   private db: IDBDatabase | null = null;
-  private readonly DB_NAME = 'MemoDB';
+  private readonly DB_NAME = '[M]MemoDB';
   private readonly STORE_NAME = 'notes';
   private readonly VERSION = 1;
 

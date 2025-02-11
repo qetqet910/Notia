@@ -11,7 +11,7 @@ const App: React.FC = () => {
           <li><a href="/markdown">마크다운</a></li>
         </ul>
       </nav>
-      <MarkdownPage />
+      <Home />
     </div>
   );
 };
