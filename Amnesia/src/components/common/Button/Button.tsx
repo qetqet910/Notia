@@ -21,8 +21,8 @@ export const Button: React.FC<ButtonProps> = ({
       className={`flex items-center justify-center ${className}`}
       onClick={onClick}
     >
-      {Icon && <Icon className="w-6 h-6" />}
-      {label && <span className="text-xs mt-1">{label}</span>}
+      {Icon && <Icon className="w-4.5 h-4.5 mr-2"/>}
+      {label && <span className="text-xm mb-1">{label}</span>}
       {children}
     </button>
   );

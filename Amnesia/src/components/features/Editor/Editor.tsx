@@ -16,20 +16,9 @@ export const Editor: React.FC<EditorProps> = ({ onSave }) => {
  const { filteredTags, filterTags } = useTags();
  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
 
- // 자동 저장 적용
- useAutoSave(
-   { title, content, tags },
-   { onSave, debounceMs: 1000 }
- );
-
- useEffect(() => {
-   console.log('Current tags:', tags); // 태그 상태 변화 모니터링
- }, [tags]);
-
  const handleSubmit = (e: React.FormEvent) => {
    e.preventDefault();
    if (e.type === 'submit' || e.type === 'click') {
-     console.log('Submitting with tags:', tags);
      onSave({ title, content, tags });
      setTitle('');
      setContent('');
@@ -40,9 +29,9 @@ export const Editor: React.FC<EditorProps> = ({ onSave }) => {
  const handleTagAdd = (e: React.KeyboardEvent) => {
    if (e.key === 'Enter' && tagInput.trim()) {
      e.preventDefault();
+     
      const newTag = tagInput.trim();
      if (!tags.includes(newTag)) {
-       console.log('Adding new tag:', newTag);
        setTags(prevTags => [...prevTags, newTag]);
      }
      setTagInput('');
@@ -57,6 +46,7 @@ export const Editor: React.FC<EditorProps> = ({ onSave }) => {
  };
 
  const handleTagSelect = (tag: string) => {
+  // 자동완성
    if (!tags.includes(tag)) {
      console.log('Selecting tag:', tag);
      setTags(prevTags => [...prevTags, tag]);
@@ -66,6 +56,7 @@ export const Editor: React.FC<EditorProps> = ({ onSave }) => {
  };
 
  const handleTagRemove = (tagToRemove: string) => {
+  // 선택된 태그 삭제
    console.log('Removing tag:', tagToRemove);
    setTags(prevTags => prevTags.filter(tag => tag !== tagToRemove));
  };
@@ -132,8 +123,7 @@ export const Editor: React.FC<EditorProps> = ({ onSave }) => {
      <Button 
        icon={Save} 
        label="저장" 
-       className="bg-blue-500 text-white px-4 py-2 rounded"
-       type="submit"
+       className="bg-blue-500 text-white px-3.5 py-1.5 rounded  hover:bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 active:bg-blue-700 cursor-pointer"
      />
    </form>
  );
