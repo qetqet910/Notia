@@ -17,11 +17,14 @@
     "@uiw/react-md-editor": "^3.25.6",
     "date-fns": "^2.30.0",
     "dexie": "^4.0.11",
+    "dexie-react-hooks": "^1.1.7",
+    "framer-motion": "^12.4.3",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.12.0",
-    "react-markdown": "^8.0.7"
+    "react-markdown": "^8.0.7",
+    "shadcn-ui": "^0.9.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.5",
