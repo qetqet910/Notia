@@ -4,8 +4,6 @@
 - useAutoSave.ts에서 useAutoSave 사용, 새로고침후에 두 개씩 Todo가 생성되는 오류 발생 / useAutoSave구문 삭제
 - 메모시 리랜더링이 안 되는 문제 발생 / dexie의 useLiveQuery를 사용하여 실시간 업데이트
 
-NoteList, useSearch, useNotes 살펴보기
-
 # 메모 앱 개발 계획 (총 90시간)
 
 ## 1주차: 프로젝트 설정 및 기본 메모 기능 (15시간)
@@ -23,6 +21,9 @@ NoteList, useSearch, useNotes 살펴보기
 - Dexie 재테스트, 문법 숙지 o
 - Editor.tsx 디버깅 완료 o
 - 추가 lib 검토 O
+
+NoteList, useSearch, useNotes 살펴보기
+shadcn/ui 사용을 위한 theme.css 설정 해결하기
 
 ### 3. 실시간 자동 저장 기능 구현 (4시간)
 - 자동 저장 로직 구현
