@@ -1,30 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import type React from "react"
+import { useState } from "react"
+import { useTags } from "../../../hooks/useTags"
+import { useNotes } from "../../../hooks/useNotes"
 import { Tag, Save } from 'lucide-react';
 import { Button } from '../../common/Button/Button';
-import { useAutoSave } from '../../../hooks/useAutoSave';
-import { useTags } from '../../../hooks/useTags';
 
-interface EditorProps {
- onSave: (note: { title: string; content: string; tags: string[] }) => void;
-}
+export const Editor: React.FC = () => {
+  const [title, setTitle] = useState("")
+  const [content, setContent] = useState("")
+  const [tagInput, setTagInput] = useState("")
+  const [tags, setTags] = useState<string[]>([])
+  const { filteredTags, filterTags } = useTags()
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false)
+  const { addNote } = useNotes()
 
-export const Editor: React.FC<EditorProps> = ({ onSave }) => {
- const [title, setTitle] = useState('');
- const [content, setContent] = useState('');
- const [tagInput, setTagInput] = useState('');
- const [tags, setTags] = useState<string[]>([]);
- const { filteredTags, filterTags } = useTags();
- const [showTagSuggestions, setShowTagSuggestions] = useState(false);
-
- const handleSubmit = (e: React.FormEvent) => {
-   e.preventDefault();
-   if (e.type === 'submit' || e.type === 'click') {
-     onSave({ title, content, tags });
-     setTitle('');
-     setContent('');
-     setTags([]);
-   }
- };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (title.trim() && content.trim()) {
+      await addNote({ title, content, tags })
+      setTitle("")
+      setContent("")
+      setTags([])
+    }
+  }
 
  const handleTagAdd = (e: React.KeyboardEvent) => {
    if (e.key === 'Enter' && tagInput.trim()) {
