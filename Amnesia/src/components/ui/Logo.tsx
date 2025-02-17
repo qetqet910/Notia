@@ -10,7 +10,7 @@ export const Logo = () => {
         </div>
       </div>
       <span className="text-xl font-bold bg-gradient-to-r from-pink-500 to-violet-500 text-transparent bg-clip-text">
-        Memo
+        AMNESIA
       </span>
     </div>
   )

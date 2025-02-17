@@ -2,8 +2,9 @@ import type React from "react"
 import { useState } from "react"
 import { useTags } from "../../../hooks/useTags"
 import { useNotes } from "../../../hooks/useNotes"
-import { Tag, Save } from 'lucide-react';
+import { X, Save } from 'lucide-react';
 import { Button } from '../../common/Button/Button';
+import { Input } from "@/components/ui/input"
 
 export const Editor: React.FC = () => {
   const [title, setTitle] = useState("")
@@ -61,30 +62,23 @@ export const Editor: React.FC = () => {
 
  return (
    <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow-sm">
-     <input
-       type="text"
-       value={title}
-       onChange={(e) => setTitle(e.target.value)}
-       placeholder="제목을 입력하세요"
-       className="w-full mb-2 p-2 border rounded"
-     />
-     <textarea
-       value={content}
-       onChange={(e) => setContent(e.target.value)}
-       placeholder="내용을 입력하세요"
-       className="w-full h-32 mb-2 p-2 border rounded resize-none"
-     />
      <div className="relative">
        <div className="flex items-center gap-2 mb-2">
-         <Tag className="w-4 h-4" />
-         <input
+          <Input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="제목을 입력하세요"
+            className="flex-1 p-3 border rounded"
+          />
+         <Input
            type="text"
            value={tagInput}
            onChange={handleTagInputChange}
            onKeyDown={handleTagAdd}
            onFocus={() => setShowTagSuggestions(true)}
            placeholder="태그 입력 (Enter로 추가)"
-           className="flex-1 p-1 border rounded"
+           className="flex-1 border rounded p-3"
          />
        </div>
        {showTagSuggestions && filteredTags.length > 0 && (
@@ -101,6 +95,12 @@ export const Editor: React.FC = () => {
          </ul>
        )}
      </div>
+     <textarea
+       value={content}
+       onChange={(e) => setContent(e.target.value)}
+       placeholder="내용을 입력하세요"
+       className="w-full h-32 mb-2 p-3 text-sm text-black border rounded resize-none"
+     />
      <div className="flex flex-wrap gap-2 mb-2">
        {tags.map((tag, index) => (
          <span 
@@ -118,11 +118,18 @@ export const Editor: React.FC = () => {
          </span>
        ))}
      </div>
-     <Button 
-       icon={Save} 
-       label="저장" 
-       className="bg-blue-500 text-white px-3.5 py-1.5 rounded  hover:bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 active:bg-blue-700 cursor-pointer"
-     />
+      <div className="flex justify-end">
+        <Button 
+        icon={Save} 
+        label="저장" 
+        className="bg-blue-500 text-xm text-white px-3.5 py-1.5 rounded  hover:bg-blue-600 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-opacity-50 active:bg-blue-700 cursor-pointer mr-3"
+      />
+      <Button 
+        icon={X} 
+        label="닫기" 
+        className="bg-gray-500 text-xm text-white px-3.5 py-1.5 rounded  hover:bg-gray-600 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-600 focus:ring-opacity-50 active:bg-blue-700 cursor-pointer"
+      />
+      </div>
    </form>
  );
 };
