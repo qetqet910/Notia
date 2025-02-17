@@ -3,6 +3,7 @@
 
 - useAutoSave.ts에서 useAutoSave 사용, 새로고침후에 두 개씩 Todo가 생성되는 오류 발생 / useAutoSave구문 삭제
 - 메모시 리랜더링이 안 되는 문제 발생 / dexie의 useLiveQuery를 사용하여 실시간 업데이트
+- 메모시 태그도 리랜더링이 안 되는 문제 발생 
 
 # 메모 앱 개발 계획 (총 90시간)
 
