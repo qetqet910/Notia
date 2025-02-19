@@ -1,51 +1,56 @@
+// src/components/features/Timeline/TimelineItem.tsx
 import React from 'react';
-import { Check, Link } from 'lucide-react';
-import type { TimelineItem as TimelineItemType } from '../../../types/timeline';
+import { Card } from '../../../components/ui/card';
+import { CheckCircle, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface TimelineItemProps {
-  item: TimelineItemType;
-  onComplete: (id: number) => void;
-  onProgressUpdate: (id: number, progress: number) => void;
+  id: string;
+  title: string;
+  date: Date;
+  content?: string;
+  completed: boolean;
+  onClick: (id: string) => void;
 }
 
 export const TimelineItem: React.FC<TimelineItemProps> = ({
-  item,
-  onComplete,
-  onProgressUpdate,
+  id,
+  title,
+  date,
+  content,
+  completed,
+  onClick
 }) => {
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-medium">{item.title}</h3>
-        <div className="flex items-center gap-2">
-          {item.dependencies && item.dependencies.length > 0 && (
-            <Link className="w-4 h-4 text-gray-400" />
+    <div className="timeline-item flex gap-4 mb-6">
+      <div className="timeline-indicator flex flex-col items-center">
+        <div className={`timeline-dot rounded-full p-2 ${completed ? 'bg-green-100' : 'bg-blue-100'}`}>
+          {completed ? 
+            <CheckCircle className="h-4 w-4 text-green-500" /> : 
+            <Clock className="h-4 w-4 text-blue-500" />
+          }
+        </div>
+        <div className="timeline-line h-full w-px bg-muted" />
+      </div>
+      
+      <div className="timeline-content flex-1">
+        <div className="timeline-date text-sm text-muted-foreground mb-1">
+          {format(date, 'PPP')}
+        </div>
+        
+        <Card className="p-4" onClick={() => onClick(id)}>
+          <h3 className={`font-medium ${completed ? 'line-through text-muted-foreground' : ''}`}>
+            {title}
+          </h3>
+          
+          {content && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {content.substring(0, 120)}
+              {content.length > 120 && '...'}
+            </p>
           )}
-          <button
-            onClick={() => onComplete(item.id)}
-            className={`p-1 rounded ${
-              item.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100'
-            }`}
-          >
-            <Check className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      <p className="text-sm text-gray-600 mb-3">{item.content}</p>
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <div className="h-2 bg-gray-200 rounded-full">
-            <div
-              className="h-full bg-blue-500 rounded-full transition-all"
-              style={{ width: `${item.progress}%` }}
-            />
-          </div>
-        </div>
-        <span className="text-sm text-gray-500">{item.progress}%</span>
-      </div>
-      <div className="text-xs text-gray-500 mt-2">
-        {item.startDate} {item.endDate ? `~ ${item.endDate}` : ''}
+        </Card>
       </div>
     </div>
   );
-}; 
+};

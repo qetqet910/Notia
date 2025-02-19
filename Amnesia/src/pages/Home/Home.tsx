@@ -8,6 +8,7 @@ import { useTags } from "../../hooks/useTags"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Logo } from "@/components/ui/Logo"
+import { TimelineView } from '../../components/features/Timeline/TimelineView';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -31,6 +32,8 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  const [view, setView] = useState<'list' | 'timeline'>('list');
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 font-sans">
@@ -194,11 +197,22 @@ export const HomePage: React.FC = () => {
               </AnimatePresence>
 
               <section>
-                <NoteList 
-                  tagFilter={selectedTag} 
-                  searchQuery={searchQuery}
-                  className="space-y-4"
-                />
+                <Button
+                  variant={view === 'timeline' ? 'default' : 'outline'}
+                  onClick={() => setView('timeline')}
+                >
+                  Timeline
+                </Button>
+                {view === 'list' ? (
+                  <NoteList 
+                    tagFilter={selectedTag} 
+                    searchQuery={searchQuery}
+                    className="space-y-4"
+                  />
+                ) : (
+                  <TimelineView />
+                )}
+
               </section>
             </div>
           </div>
