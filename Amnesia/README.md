@@ -32,7 +32,7 @@ Todoist - 메인 벤치마킹
 - 메인 페이지
 요정도? 
 
-# 메모 앱 개발 계획 (총 90시간) 
+-- # 메모 앱 개발 계획 (총 90시간) -- 
 ### 디버그
 
 - useAutoSave.ts에서 useAutoSave 사용, 새로고침후에 두 개씩 Todo가 생성되는 오류 발생 / useAutoSave구문 삭제
