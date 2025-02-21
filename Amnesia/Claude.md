@@ -1,6 +1,8 @@
 # 리마인더 프로젝트 요구사항 및 설계 문서
 휴먼과 이진법의 토론 대화 요약본
 
+[연합동아리](https://claremont.tistory.com/entry/%EB%B0%B1%EC%97%94%EB%93%9C-%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%B6%94%EC%B2%9C-IT-%EC%97%B0%ED%95%A9-%EB%8F%99%EC%95%84%EB%A6%AC-%EB%A6%AC%EC%8A%A4%ED%8A%B8-9%EA%B0%80%EC%A7%80)
+
 ## 1. 프로젝트 배경 및 요구사항
 
 ### 1.1 제작 동기
