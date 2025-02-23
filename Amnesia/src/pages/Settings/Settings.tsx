@@ -83,11 +83,11 @@ export const Login: React.FC = () => {
       <div className="w-1/2  p-8 flex items-center justify-end">
         <div className="relative w-full h-full max-w-md pt-24">
           <div className="absolute top-0 left-8 scale-125">
-            <img src={logoImage} alt="" />
+            <img src={logoImage} className='w-1/2' alt="" />
           </div>
           
           <CardContent className="pt-6">
-            <h1 className="text-2xl font-bold mb-6 text-center">노트</h1>
+            <h1 className="text-2xl font-bold mb-6 text-left">노트</h1>
             <Tabs defaultValue='login' className="space-y-4">
               <TabsList className="grid grid-cols-2 gap-4">
                 <TabsTrigger value="login">로그인</TabsTrigger>
