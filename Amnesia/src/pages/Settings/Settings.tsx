@@ -8,8 +8,9 @@ import { Copy, Key, AlertCircle, Loader2, Users } from 'lucide-react';
 import { InputOTPControlled } from '../../components/common/Input/Input';
 import { useAuth } from '../../hooks/useAuth';
 import { Logo } from '../../components/ui/Logo';
+import logoImage from '../../stores/Logo.png';
 import Lottie from 'lottie-react';
-import animationData from '../../stores/login-animation.json'; 
+import animationData from '../../stores/login-animation.json';
 
 export const Login: React.FC = () => {
   const {
@@ -26,16 +27,7 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [formattedKey, setFormattedKey] = useState('');
-
-  // Lottie 애니메이션 옵션
-  const defaultOptions = {
-    loop: true,
-    autoplay: true, 
-    animationData: animationData,
-    rendererSettings: {
-      preserveAspectRatio: 'xMidYMid slice'
-    }
-  };
+  const [showKey, setShowKey] = useState(false);
 
   // 키를 포맷팅하여 표시 (XXXX-XXXX-XXXX-XXXX 형식)
   useEffect(() => {
@@ -88,14 +80,18 @@ export const Login: React.FC = () => {
   return (
     <div className="flex min-h-screen justify-center">
       {/* 왼쪽 로그인 섹션 */}
-      <div className="w-1/4 p-8 flex items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="w-1/2  p-8 flex items-center justify-end">
+        <div className="relative w-full h-full max-w-md pt-24">
+          <div className="absolute top-0 left-8 scale-125">
+            <img src={logoImage} alt="" />
+          </div>
+          
           <CardContent className="pt-6">
-            <h1 className="text-2xl font-bold mb-6 text-center"><Logo /></h1>
+            <h1 className="text-2xl font-bold mb-6 text-center">노트</h1>
             <Tabs defaultValue='login' className="space-y-4">
               <TabsList className="grid grid-cols-2 gap-4">
-                <TabsTrigger value="login">노트 로그인</TabsTrigger>
-                <TabsTrigger value="signup">노트 회원가입</TabsTrigger>
+                <TabsTrigger value="login">로그인</TabsTrigger>
+                <TabsTrigger value="signup">회원가입</TabsTrigger>
               </TabsList>
               <TabsContent value="login" className="space-y-4">
               <form className="space-y-4 mb-6" onSubmit={handleLogin}>
@@ -107,6 +103,16 @@ export const Login: React.FC = () => {
 
                     <TabsContent value="key" className="space-y-4">
                       <InputOTPControlled />
+                      <Button type="submit" className="w-full h-12" disabled={isLoading}>
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            처리 중...
+                          </>
+                        ) : (
+                          "로그인"
+                        )}
+                      </Button>
                     </TabsContent>
 
                     <TabsContent value="group" className="space-y-4">
@@ -118,23 +124,12 @@ export const Login: React.FC = () => {
                         </div>
                       )} */}
                       <InputOTPControlled />
-                      <Button variant="outline" className="w-full">
+                      <Button type="submit" className="w-full h-12" disabled={isLoading}>
                         그룹 참여하기
                       </Button>
                     </TabsContent>
                   </Tabs>
-              
-              <Button type="submit" className="w-full h-12" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    처리 중...
-                  </>
-                ) : (
-                  "로그인"
-                )}
-              </Button>
-
+            
               <div className="flex justify-end items-center text-sm">
                 <a href="#" className="text-blue-600 hover:underline">내 노트 찾기</a>
               </div>
@@ -179,12 +174,13 @@ export const Login: React.FC = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                       />
-                      <p>이메일을 입력하지 않으면 백업 키를 받을 수 없어요 !</p>
+                      <p className='text-xs text-gray-500'>이메일을 입력하지 않으면 백업 키를 받을 수 없어요 !</p>
                       
                       <Button 
                         className="w-full"
+                        onClick={() => setShowKey(true)}
                       >
-                        <Key className="h-4 w-4 mr-2" />
+                        <Key className="h-4 w-4 mr-2"/>
                         새 키 생성하기
                       </Button>
 
@@ -196,6 +192,7 @@ export const Login: React.FC = () => {
                         //   const { groupId, inviteCode } = createCollaborativeGroup();
                         //   setActiveGroup({ id: groupId, code: inviteCode });
                         // }}
+                        onClick={() => setShowKey(true)}
                         className="w-full"
                       >
                         <Users className="h-4 w-4 mr-2" />
@@ -208,7 +205,6 @@ export const Login: React.FC = () => {
                           <code className="block text-center">{activeGroup.code}</code>
                         </div>
                       )} */}
-                      <InputOTPControlled />
                       {/* <Button variant="outline" className="w-full">
                         그룹 참여하기
                       </Button> */}
@@ -226,7 +222,7 @@ export const Login: React.FC = () => {
                 )}
               </Button> */}
             {/* API 키 표시 섹션 - 인증 성공 시에만 표시 */}
-            {userKey && (
+            {userKey && showKey && (
               <div className="mt-8 pt-6 border-t">
                 <div className="flex items-center mb-3">
                   <Key size={18} className="mr-2" />
@@ -297,12 +293,12 @@ export const Login: React.FC = () => {
               </div>
             )}
           </CardContent>
-        </Card>
+        </div>
       </div>
       
       {/* 오른쪽 Lottie 애니메이션 */}
-      <div className="w-1/4 flex items-center justify-center align-center">
-        <div className="w-4/6 h-4/6">
+      <div className="w-1/2 flex items-center justify-start align-center">
+        <div className="w-3/6 h-3/6">
             <Lottie animationData={animationData} />
         </div>
       </div>

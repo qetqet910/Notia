@@ -1,7 +1,4 @@
-"use client"
-
 import * as React from "react"
-
 import {
   InputOTP,
   InputOTPGroup,
@@ -13,56 +10,52 @@ export function InputOTPControlled() {
   const [value, setValue] = React.useState("")
 
   return (
-    <div className="space-y-4 ml-4 flex flex-col justify-center align-center">
-      {/* First Row */}
-      <div>
-        <InputOTP
-          maxLength={16}
-          value={value}
-          onChange={(value) => setValue(value)}
-        >
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-center">
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-                <InputOTPSlot index={3} />
-              </InputOTPGroup>
-              <InputOTPSeparator />
-              <InputOTPGroup>
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-                <InputOTPSlot index={6} />
-                <InputOTPSlot index={7} />
-              </InputOTPGroup>
-            </div>
-
-            {/* Second Row */}
-            <div className="flex justify-center">
-              <InputOTPGroup>
-                <InputOTPSlot index={8} />
-                <InputOTPSlot index={9} />
-                <InputOTPSlot index={10} />
-                <InputOTPSlot index={11} />
-              </InputOTPGroup>
-              <InputOTPSeparator />
-              <InputOTPGroup>
-                <InputOTPSlot index={12} />
-                <InputOTPSlot index={13} />
-                <InputOTPSlot index={14} />
-                <InputOTPSlot index={15} />
-              </InputOTPGroup>
-            </div>
+    <div className="space-y-4">
+      <InputOTP
+        maxLength={16}
+        value={value}
+        onChange={(value) => setValue(value)}
+        className="gap-1" // Reduce gap between inputs
+      >
+        <div className="flex flex-col pl-3 justify-center gap-1"> {/* Reduced gap */}
+          <div className="flex justify-center gap-1"> {/* Reduced gap */}
+            <InputOTPGroup className="gap-1"> {/* Reduced gap */}
+              <InputOTPSlot index={0} className="w-10 h-10" /> {/* Smaller size */}
+              <InputOTPSlot index={1} className="w-10 h-10" />
+              <InputOTPSlot index={2} className="w-10 h-10" />
+              <InputOTPSlot index={3} className="w-10 h-10" />
+            </InputOTPGroup>
+            <InputOTPSeparator className="mt-2"/>
+            <InputOTPGroup className="gap-1">
+              <InputOTPSlot index={4} className="w-10 h-10" />
+              <InputOTPSlot index={5} className="w-10 h-10" />
+              <InputOTPSlot index={6} className="w-10 h-10" />
+              <InputOTPSlot index={7} className="w-10 h-10" />
+            </InputOTPGroup>
           </div>
-        </InputOTP>
-      </div>
+          <div className="flex justify-center gap-1">
+            <InputOTPGroup className="gap-1">
+              <InputOTPSlot index={8} className="w-10 h-10" />
+              <InputOTPSlot index={9} className="w-10 h-10" />
+              <InputOTPSlot index={10} className="w-10 h-10" />
+              <InputOTPSlot index={11} className="w-10 h-10" />
+            </InputOTPGroup>
+            <InputOTPSeparator className="mt-2"/>
+            <InputOTPGroup className="gap-1">
+              <InputOTPSlot index={12} className="w-10 h-10" />
+              <InputOTPSlot index={13} className="w-10 h-10" />
+              <InputOTPSlot index={14} className="w-10 h-10" />
+              <InputOTPSlot index={15} className="w-10 h-10" />
+            </InputOTPGroup>
+          </div>
+        </div>
+      </InputOTP>
       
       <div className="text-center text-sm">
         {value === "" ? (
-          <>팀 코드를<br></br>입력하세요.</>
+          <span>코드를 입력하세요.</span>
         ) : (
-          <>코드: {value}</>
+          <span>코드: {value}</span>
         )}
       </div>
     </div>
