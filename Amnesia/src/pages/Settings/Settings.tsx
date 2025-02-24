@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, Key, AlertCircle, Loader2, Users } from 'lucide-react';
 import { InputOTPControlled } from '../../components/common/Input/Input';
 import { useAuth } from '../../hooks/useAuth';
-import { Logo } from '../../components/ui/Logo';
 import logoImage from '../../stores/Logo.png';
 import Lottie from 'lottie-react';
 import animationData from '../../stores/login-animation.json';
@@ -83,7 +82,7 @@ export const Login: React.FC = () => {
       <div className="w-1/2  p-8 flex items-center justify-end">
         <div className="relative w-full h-full max-w-md pt-24">
           <div className="absolute top-0 left-8 scale-125">
-            <img src={logoImage} className='w-1/2' alt="" />
+            <img src={logoImage} className='w-1/3 ml-8' alt="" />
           </div>
           
           <CardContent className="pt-6">
@@ -103,7 +102,7 @@ export const Login: React.FC = () => {
 
                     <TabsContent value="key" className="space-y-4">
                       <InputOTPControlled />
-                      <Button type="submit" className="w-full h-12" disabled={isLoading}>
+                      <Button type="submit" className="w-full h-12 bg-[#61C9A8]" disabled={isLoading}>
                         {isLoading ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -124,7 +123,7 @@ export const Login: React.FC = () => {
                         </div>
                       )} */}
                       <InputOTPControlled />
-                      <Button type="submit" className="w-full h-12" disabled={isLoading}>
+                      <Button type="submit" className="w-full h-12 bg-[#61C9A8]" disabled={isLoading}>
                         그룹 참여하기
                       </Button>
                     </TabsContent>
@@ -170,7 +169,7 @@ export const Login: React.FC = () => {
                     <TabsContent value="key" className="space-y-4">
                       <Input
                         type="email"
-                        placeholder="이메일 (선택사항)"
+                        placeholder="이메일"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                       />
