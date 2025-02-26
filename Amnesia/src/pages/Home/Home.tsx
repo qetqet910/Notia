@@ -168,41 +168,11 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-12 px-6">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="font-semibold mb-4">제품</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">기능</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">통합</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">가격</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-4">리소스</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">블로그</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">가이드</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">도움말</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-4">회사</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">소개</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">채용</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">연락처</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-4">법률</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">개인정보처리방침</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">이용약관</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-primary">보안</a></li>
-            </ul>
-          </div>
+      <footer className="bg-gray-50 mt-12 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <p className="text-center text-gray-500 text-sm">
+            © {new Date().getFullYear()} HyeonMin Kim. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
