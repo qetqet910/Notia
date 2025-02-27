@@ -1,68 +1,109 @@
-import { useCallback } from "react"
-import { useLiveQuery } from "dexie-react-hooks"
-import type { Note } from "../types"
-import { db } from "../services/db"
+import { useState, useEffect } from 'react';
 
-export const useNotes = () => {
-  const notes = useLiveQuery(() => db.getAllNotes(), [])
-
-  const addNote = useCallback(async (note: Omit<Note, "id" | "date" | "syncStatus" | "lastModified">) => {
-    const newNote: Note = {
-      ...note,
-      id: Date.now(),
-      date: new Date().toISOString().split("T")[0],
-      syncStatus: "pending",
-      lastModified: Date.now(),
-    }
-
-    try {
-      await db.saveNote(newNote)
-      syncNote(newNote)
-    } catch (error) {
-      console.error("Failed to save note:", error)
-    }
-  }, [])
-
-  const updateNote = useCallback(async (id: number, updates: Partial<Note>) => {
-    const note = await db.notes.get(id)
-    if (!note) return
-
-    if (updates.lastModified && note.lastSynced && updates.lastModified < note.lastSynced) {
-      await db.saveNote({ ...note, syncStatus: "conflict" })
-      return
-    }
-
-    const updatedNote = { ...note, ...updates, syncStatus: "pending" }
-    try {
-      await db.saveNote(updatedNote)
-      await syncNote(updatedNote)
-    } catch (error) {
-      console.error("Failed to update note:", error)
-      await db.saveNote({ ...note, syncStatus: "error" })
-    }
-  }, [])
-
-  const deleteNote = useCallback(async (id: number) => {
-    try {
-      await db.deleteNote(id)
-    } catch (error) {
-      console.error("Failed to delete note:", error)
-    }
-  }, [])
-
-  const syncNote = async (note: Note) => {
-    try {
-      // 실제 서버 동기화 로직을 여기에 구현
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const syncedNote = { ...note, syncStatus: "synced", lastSynced: Date.now() }
-      await db.saveNote(syncedNote)
-    } catch (error) {
-      const errorNote = { ...note, syncStatus: "error" }
-      await db.saveNote(errorNote)
-    }
-  }
-
-  return { notes, addNote, updateNote, deleteNote }
+// Note 타입 정의
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
+export const useNotes = () => {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  // 초기 노트 데이터 로드
+  useEffect(() => {
+    const loadNotes = () => {
+      setLoading(true);
+      try {
+        // 로컬 스토리지에서 노트 데이터 가져오기
+        const savedNotes = localStorage.getItem('notes');
+        if (savedNotes) {
+          // JSON으로 저장된 날짜를 Date 객체로 변환
+          const parsedNotes = JSON.parse(savedNotes, (key, value) => {
+            if (key === 'createdAt' || key === 'updatedAt') {
+              return new Date(value);
+            }
+            return value;
+          });
+          setNotes(parsedNotes);
+        }
+      } catch (err) {
+        console.error('노트 로드 중 오류 발생:', err);
+        setError(err instanceof Error ? err : new Error('노트 로드 중 오류 발생'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadNotes();
+  }, []);
+
+  // 노트 데이터가 변경될 때마다 로컬 스토리지에 저장
+  useEffect(() => {
+    if (notes.length > 0) {
+      localStorage.setItem('notes', JSON.stringify(notes));
+    }
+  }, [notes]);
+
+  // 노트 추가
+  const addNote = (newNote: Note) => {
+    setNotes(prevNotes => [...prevNotes, newNote]);
+  };
+
+  // 노트 업데이트
+  const updateNote = (updatedNote: Note) => {
+    setNotes(prevNotes => 
+      prevNotes.map(note => 
+        note.id === updatedNote.id 
+          ? { ...updatedNote, updatedAt: new Date() }
+          : note
+      )
+    );
+  };
+
+  // 노트 삭제
+  const deleteNote = (noteId: string) => {
+    setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
+  };
+
+  // 태그로 노트 필터링
+  const getNotesByTag = (tag: string) => {
+    return notes.filter(note => note.tags.includes(tag));
+  };
+
+  // 날짜로 노트 필터링
+  const getNotesByDate = (date: Date) => {
+    return notes.filter(note => {
+      const noteDate = new Date(note.createdAt);
+      return noteDate.getFullYear() === date.getFullYear() 
+        && noteDate.getMonth() === date.getMonth() 
+        && noteDate.getDate() === date.getDate();
+    });
+  };
+
+  // 모든 태그 가져오기
+  const getAllTags = () => {
+    const tagSet = new Set<string>();
+    notes.forEach(note => {
+      note.tags.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet);
+  };
+
+  return {
+    notes,
+    loading,
+    error,
+    addNote,
+    updateNote,
+    deleteNote,
+    getNotesByTag,
+    getNotesByDate,
+    getAllTags
+  };
+};

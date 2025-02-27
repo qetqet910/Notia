@@ -1,24 +1,91 @@
 // src/pages/Home.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Star, Calendar, Bell } from 'lucide-react';
+import { CheckCircle2, Star, Calendar, Bell, KeyRound, Users, Clock, Plus, Minus } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 import logoImage from '@/stores/Logo.png';
-import PlaceHolder from '@/stores/Placeholder.png';
+import PlaceHolder from '@/stores/main.png';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
 
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.6 }
+    }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const userProfiles = [
+    {
+      icon: <Users className="w-8 h-8 text-[#61C9A8] mb-2" />,
+      title: "바쁜 직장인",
+      description: "바쁜 업무중, 빠르게 기록하세요. 기억은 대신 해드립니다."
+    },
+    {
+      icon: <Clock className="w-8 h-8 text-[#61C9A8] mb-2" />,
+      title: "군인",
+      description: "느려터진 컴퓨터에서도 빠르게 동작합니다. 더이상 스트레스 받지 마십시오."
+    },
+    {
+      icon: <Star className="w-8 h-8 text-[#61C9A8] mb-2" />,
+      title: "학생",
+      description: "연필보다 키보드가 익숙하신 여러분들을 위해 준비했습니다, 책보다 모니터를 더 많이 보잖아요~"
+    }
+  ];
+
+  const faqItems = [
+    {
+      question: "무료로 이용할 수 있나요?",
+      answer: "네. 무료로 이용 가능합니다, 유료 페이지처럼 만들어놨지만 유료 기능은 없습니다."
+    },
+    {
+      question: "모바일에서도 사용할 수 있나요?",
+      answer: "네, React-Native로 만드려다가 포기(증발)했습니다. 하지만 PWA로 모바일에서도 사용 가능합니다."
+    },
+    {
+      question: "데이터는 안전하게 보관되나요?",
+      answer: "그건 잘 모르겠습니다, 제가 다루는 개인정보가 없어서용ㅎㅎ.."
+    },
+    {
+      question: "다른 앱과 연동이 가능한가요?",
+      answer: "네니요, 잘 모르겠어요. 알고리즘 공부로 바쁘다면 유기할 것 같네용"
+    },
+    {
+      question: "무슨 목적으로 만들어진 서비스인가요?",
+      answer: "제가 쓰려고 만들었는데, 만들다보니 좀 커졌습니다. 그래서 여러분(군인)도 쓰라고 만들었습니다. 사이버지식정보방 PC는 정말 구리걸랑요."
+    }
+  ];
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-hidden">
       {/* Navigation Bar */}
-      <nav className="border-b py-4 px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fixed top-0 w-full z-50">
+      <motion.nav 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="border-b py-4 px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fixed top-0 w-full z-50"
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <h1 className="text-2xl font-bold">
-              <img src={logoImage} className='max-w-40 cursor-pointer' alt="" />
+              <img src={logoImage} className='max-w-40 cursor-pointer' alt="로고" />
             </h1>
           </div>
           <div className="flex items-center gap-4">
@@ -30,41 +97,47 @@ export const Home: React.FC = () => {
             </Button>
             <Button 
               onClick={() => navigate('/login')}
-              className="bg-[#61C9A8] hover:bg-[#61C9A8] text-white"
+              className="bg-[#61C9A8] hover:bg-[#61C9A8] text-white hover:scale-105 transition-transform"
             >
               로그인
             </Button>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="flex-1 space-y-6">
+            <motion.div 
+              initial="hidden"
+              animate="visible"
+              variants={fadeIn}
+              className="flex-1 space-y-6"
+            >
               <h1 className="text-5xl font-bold leading-tight">
-                일과 생활을 관리하세요
+                오늘을 기억하고,<br /> 내일을 만들어보세요.
               </h1>
               <p className="text-xl text-muted-foreground">
-                당신과 당신의 팀 모두의 생활을 단순화하세요. 세계 최고의 작업 관리자 및 할일 목록 앱입니다.
+                내일의 자신이 더 나은 일을 할 수 있도록 도와줍니다.
               </p>
               <div className="space-x-4">
                 <Button 
-                  className="bg-[#61C9A8] hover:bg-[#61C9A8] text-white"
+                  className="bg-[#61C9A8] hover:bg-[#61C9A8] hover:scale-105 transition-all text-white"
                   size="lg"
-                  onClick={() => navigate('/signup')}
+                  onClick={() => navigate('/login')}
                 >
-                  앱 다운로드
+                  시작하기
                 </Button>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Star className="w-4 h-4 text-yellow-400" />
-                <span>374K+ 리뷰(예정)</span>
-              </div>
-            </div>
-            <div className="flex-1">
-              <Card className="overflow-hidden">
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="flex-1"
+            >
+              <Card className="overflow-hidden shadow-lg">
                 <CardContent className="p-0">
                   <img 
                     src={PlaceHolder}
@@ -73,7 +146,7 @@ export const Home: React.FC = () => {
                   />
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -81,90 +154,167 @@ export const Home: React.FC = () => {
       {/* Features Section */}
       <section className="py-20 bg-slate-50 dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card>
-              <CardContent className="pt-6">
-                <CheckCircle2 className="w-12 h-12 text-[#61C9A8] mb-4" />
-                <h3 className="text-xl font-semibold mb-2">작업 관리</h3>
-                <p className="text-muted-foreground">
-                  할 일을 쉽게 추가하고 구성하세요. 우선순위를 지정하고 마감일을 설정하세요.
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <Calendar className="w-12 h-12 text-[#61C9A8] mb-4" />
-                <h3 className="text-xl font-semibold mb-2">일정 관리</h3>
-                <p className="text-muted-foreground">
-                  캘린더와 통합하여 모든 일정을 한눈에 확인하세요.
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <Bell className="w-12 h-12 text-[#61C9A8] mb-4" />
-                <h3 className="text-xl font-semibold mb-2">리마인더</h3>
-                <p className="text-muted-foreground">
-                  중요한 일정을 놓치지 않도록 알림을 설정하세요.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={staggerContainer}
+            className="grid md:grid-cols-3 gap-8"
+          >
+            <motion.div variants={fadeIn}>
+              <Card className="hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="pt-6">
+                  <KeyRound className="w-12 h-12 text-[#61C9A8] mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">쉬운 접근성</h3>
+                  <p className="text-muted-foreground">
+                    어디서든 접근할 수 있는 웹 앱으로 편리하게<br/><b>사용하세요.</b>
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <Card className="hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="pt-6">
+                  <Calendar className="w-12 h-12 text-[#61C9A8] mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">간편한 인증</h3>
+                  <p className="text-muted-foreground">
+                    키코드와 통합 로그인으로 쉽고 빠른 서비스를<br/>제공합니다.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <Card className="hover:shadow-lg transition-shadow duration-300">
+                <CardContent className="pt-6">
+                  <Bell className="w-12 h-12 text-[#61C9A8] mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">간결한 UX</h3>
+                  <p className="text-muted-foreground">
+                    간결한 디자인과 가벼운 성능으로 빠르고 간편하게<br/><b>기록하세요.</b>
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Perfect For Section */}
       <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card>
-              <CardContent className="pt-6">
-                <blockquote className="text-lg italic">
-                  "간단하고 직관적이며 매우 유력합니다"
-                </blockquote>
-                <div className="mt-4">
-                  <img src="/api/placeholder/100/30" alt="The Verge" className="h-8" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <blockquote className="text-lg italic">
-                  "시중 최고의 할일 목록 앱"
-                </blockquote>
-                <div className="mt-4">
-                  <img src="/api/placeholder/100/30" alt="PC Magazine" className="h-8" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <blockquote className="text-lg italic">
-                  "최고에 못 미치는 것은 없다"
-                </blockquote>
-                <div className="mt-4">
-                  <img src="/api/placeholder/100/30" alt="TechRadar" className="h-8" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold mb-4">이런 분들에게 추천합니다</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              다양한 사용자가 각자의 목적에 맞게 활용할 수 있는 유연한 서비스입니다.
+            </p>
+          </motion.div>
+          <motion.div 
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={staggerContainer}
+            className="grid md:grid-cols-3 gap-8"
+          >
+            {userProfiles.map((profile, index) => (
+              <motion.div key={index} variants={fadeIn}>
+                <Card className="text-center hover:shadow-lg transition-shadow duration-300">
+                  <CardContent className="pt-8 pb-6">
+                    <div className="flex justify-center mb-4">
+                      {profile.icon}
+                    </div>
+                    <h3 className="text-xl font-semibold mb-3">{profile.title}</h3>
+                    <p className="text-muted-foreground">
+                      {profile.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold mb-6">지금 시작하세요</h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            더 효율적인 일과 생활 관리를 위한 첫 걸음을 내딛어보세요.
-          </p>
-          <Button 
-            className="bg-[#61C9A8] hover:bg-[#61C9A8] text-white"
-            size="lg"
-            onClick={() => navigate('/signup')}
+      {/* Improved CTA Section */}
+      <section className="py-24 bg-[#61C9A8]/10">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-12 text-center max-w-4xl mx-auto relative overflow-hidden"
           >
-            무료로 시작하기
-          </Button>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+            >
+              <h2 className="text-4xl font-bold mb-6">지금 기억해야할 게 있나요?</h2>
+              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+                내일의 나를 믿지 못 하는 여러분!
+              </p>
+              <div className="space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row justify-center">
+                <Button 
+                  className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 text-white md:px-8 hover:scale-105 transition-transform"
+                  size="lg"
+                  onClick={() => navigate('/signup')}
+                >
+                  맛만 보기
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-6">
+                내일은 까먹지 않게, 다음은 혼나지 않게, 바로 시작하세요.
+              </p>
+            </motion.div>
+            {/* Decorative elements */}
+            <div className="absolute top-0 left-0 w-32 h-32 bg-[#61C9A8]/10 rounded-br-full -z-10"></div>
+            <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#61C9A8]/10 rounded-tl-full -z-10"></div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold mb-4">자주 묻는 질문</h2>
+            <p className="text-lg text-muted-foreground">
+              서비스에 대해 궁금한 점을 확인해보세요.
+            </p>
+          </motion.div>
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={staggerContainer}
+          >
+            <Accordion type="single" collapsible className="w-full">
+              {faqItems.map((item, index) => (
+                <motion.div key={index} variants={fadeIn}>
+                  <AccordionItem value={`item-${index}`}>
+                    <AccordionTrigger className="text-lg font-medium">
+                      {item.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground">
+                      {item.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                </motion.div>
+              ))}
+            </Accordion>
+          </motion.div>
         </div>
       </section>
 

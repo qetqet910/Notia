@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-// import NoteList from "@/components/features/NoteList";
-// import Editor from "@/components/features/Editor";
-// import Calendar from "@/components/features/Calendar";
-// import PlanManager from "@/components/features/PlanManager";
-// import TimelineView from "@/components/features/Timeline/TimelineView";
-// import Search from "@/components/features/Search/Search";
+
+import { NoteList } from "@/components/features/NoteList";
+import { Editor } from "@/components/features/Editor";
+import { Calendar } from "@/components/features/Calendar";
+import { PlanManager } from "@/components/features/PlanManager";
+import { TimelineView } from "@/components/features/Timeline/TimelineView";
+import { Search } from "@/components/features/Search/Search";
+
 import { useNotes } from "@/hooks/useNotes";
 import { usePlans } from "@/hooks/usePlans";
 import { useSearch } from "@/hooks/useSearch";
+
 import { PlusCircle, Calendar as CalendarIcon, Clock, List, Search as SearchIcon, Menu } from 'lucide-react';
+import logoImage from '@/stores/Logo.png';
 
 interface Note {
   id: string;
@@ -43,8 +48,8 @@ export const Dashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   const { notes, addNote, updateNote, deleteNote } = useNotes();
-//   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
-//   const { searchResults, setSearchQuery } = useSearch();
+  const { plans, addPlan, updatePlan, deletePlan } = usePlans();
+  const { searchResults, setSearchQuery } = useSearch();
 
   // Check if mobile on resize
   useEffect(() => {
@@ -85,7 +90,7 @@ export const Dashboard: React.FC = () => {
       tags: []
     };
     
-    // addPlan(newPlan);
+    addPlan(newPlan);
     setActiveTab("plans");
   };
 
@@ -94,7 +99,9 @@ export const Dashboard: React.FC = () => {
       {/* Header */}
       <header className="flex justify-between items-center px-4 py-3 border-b">
         <div className="flex items-center">
-          <h1 className="text-xl font-bold text-[#61C9A8]">리마인더</h1>
+          <h1 className="text-xl font-bold text-[#61C9A8]">
+            <img src={logoImage} className='max-w-40 cursor-pointer' alt="" />
+          </h1>
         </div>
         
         <div className="flex items-center gap-2">
@@ -237,24 +244,22 @@ export const Dashboard: React.FC = () => {
           {activeTab === "notes" && (
             <div className="flex h-full">
               <div className="w-1/3 border-r h-full">
-                {/* <NoteList 
+                <NoteList 
                   notes={notes} 
                   onSelectNote={setSelectedNote}
                   selectedNote={selectedNote}
-                /> */}
+                />
               </div>
               <div className="w-2/3 h-full">
                 {selectedNote ? (
-                //   <Editor
-                //     note={selectedNote}
-                //     onSave={updateNote}
-                //     onDelete={() => {
-                //       deleteNote(selectedNote.id);
-                //       setSelectedNote(null);
-                //     }}
-                //   />
-
-                <div>1</div>
+                  <Editor
+                    note={selectedNote}
+                    onSave={updateNote}
+                    onDelete={() => {
+                      deleteNote(selectedNote.id);
+                      setSelectedNote(null);
+                    }}
+                  />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
@@ -272,7 +277,7 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {/* {activeTab === "plans" && (
+          {activeTab === "plans" && (
             <PlanManager 
               plans={plans}
               onAddPlan={addPlan}
@@ -305,7 +310,7 @@ export const Dashboard: React.FC = () => {
                 setActiveTab("notes");
               }}
             />
-          )} */}
+          )}
         </div>
       </div>
     </div>
