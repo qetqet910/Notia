@@ -1,11 +1,12 @@
 // src/pages/Home.tsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Star, Calendar, Bell, KeyRound, Users, Clock, Plus, Minus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Star, Calendar, Bell, KeyRound, Users, Clock } from 'lucide-react';
 import { motion } from "framer-motion";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Header } from '@/components/ui/_Header';
 
 import logoImage from '@/stores/Logo.png';
 import PlaceHolder from '@/stores/main.png';
@@ -61,11 +62,11 @@ export const Home: React.FC = () => {
     },
     {
       question: "데이터는 안전하게 보관되나요?",
-      answer: "그건 잘 모르겠습니다, 제가 다루는 개인정보가 없어서용ㅎㅎ.."
+      answer: "네, 데이터는 안전하게 보관됩니다. 데이터는 암호화되어 저장되며, 외부로 유출되지 않습니다."
     },
     {
       question: "다른 앱과 연동이 가능한가요?",
-      answer: "네니요, 잘 모르겠어요. 알고리즘 공부로 바쁘다면 유기할 것 같네용"
+      answer: "아직은 불가능합니다. 하지만 추후에 가능하도록 업데이트 할 예정입니다."
     },
     {
       question: "무슨 목적으로 만들어진 서비스인가요?",
@@ -76,34 +77,7 @@ export const Home: React.FC = () => {
   return (
     <div className="min-h-screen overflow-hidden">
       {/* Navigation Bar */}
-      <motion.nav 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="border-b py-4 px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fixed top-0 w-full z-50"
-      >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <h1 className="text-2xl font-bold">
-              <img src={logoImage} className='max-w-40 cursor-pointer' alt="로고" />
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost"
-              onClick={() => navigate('/download')}
-            >
-              앱 다운로드
-            </Button>
-            <Button 
-              onClick={() => navigate('/login')}
-              className="bg-[#61C9A8] hover:bg-[#61C9A8] text-white hover:scale-105 transition-transform"
-            >
-              로그인
-            </Button>
-          </div>
-        </div>
-      </motion.nav>
+      <Header />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
@@ -178,7 +152,7 @@ export const Home: React.FC = () => {
                   <Calendar className="w-12 h-12 text-[#61C9A8] mb-4" />
                   <h3 className="text-xl font-semibold mb-2">간편한 인증</h3>
                   <p className="text-muted-foreground">
-                    키코드와 통합 로그인으로 쉽고 빠른 서비스를<br/>제공합니다.
+                    키코드와 통합 로그인으로 <b>쉽고 빠른</b> 서비스를<br/>제공합니다.
                   </p>
                 </CardContent>
               </Card>
@@ -263,13 +237,13 @@ export const Home: React.FC = () => {
                 <Button 
                   className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 text-white md:px-8 hover:scale-105 transition-transform"
                   size="lg"
-                  onClick={() => navigate('/signup')}
+                  onClick={() => navigate('/login')}
                 >
                   맛만 보기
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-6">
-                내일은 까먹지 않게, 다음은 혼나지 않게, 바로 시작하세요.
+                내일은 까먹지 않게, 다음 번엔 혼나지 않게, 바로 시작하세요.
               </p>
             </motion.div>
             {/* Decorative elements */}

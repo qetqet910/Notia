@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Header } from '@/components/ui/_Header';
+
 import logoImage from "@/stores/Logo.png";
 
 const fadeIn = {
@@ -39,20 +41,10 @@ export const DownloadPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="text-xl font-bold">
-            <img src={logoImage} className='max-w-40 cursor-pointer' alt="" />
-          </div>
-          <Button style={{ backgroundColor: '#61C9A8' }}>
-            무료로 시작하기
-          </Button>
-        </div>
-      </header>
+      <Header />
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="max-w-4xl mx-auto px-4 py-12 mt-16">
         {/* Hero Section */}
         <motion.div 
           className="text-center mb-12"
