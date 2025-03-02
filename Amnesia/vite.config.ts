@@ -4,6 +4,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from "path"
 
 export default defineConfig({
+  cacheDir: '.vite-cache',
+  server: {
+    hmr: {
+      overlay: false,
+    },
+  },
   plugins: [
     react(),
     VitePWA({
