@@ -1,10 +1,12 @@
-"use client"
-
 import * as React from "react"
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp"
 
-export function InputOTPControlled() {
+export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = React.useState("")
+
+  const formatValue = (val: string) => {
+    return val.replace(/(.{4})/g, "$1-").replace(/-$/, "");
+  };
 
   return (
     <div className="space-y-4 w-full max-w-md mx-auto">
@@ -44,7 +46,7 @@ export function InputOTPControlled() {
       </InputOTP>
 
       <div className="text-center text-sm">
-        {value === "" ? <span>코드를 입력하세요.</span> : <span>코드: {value}</span>}
+        {value === "" ? <span>코드를 입력해주세요.</span> : <span className="text-sm">{formatValue(value)}</span>}
       </div>
     </div>
   )

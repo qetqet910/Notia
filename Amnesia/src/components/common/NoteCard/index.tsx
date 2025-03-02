@@ -1,1 +1,0 @@
-export { NoteCard } from './NoteCard';

@@ -1,11 +1,11 @@
-// src/pages/Home.tsx
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Link, useNavigate } from 'react-router-dom';
-import { Star, Calendar, Bell, KeyRound, Users, Clock } from 'lucide-react';
 import { motion } from "framer-motion";
+import { Star, Calendar, Bell, KeyRound, Users, Clock } from 'lucide-react';
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Header } from '@/components/ui/_Header';
 
 import logoImage from '@/stores/Logo.png';
@@ -70,7 +70,7 @@ export const Home: React.FC = () => {
     },
     {
       question: "무슨 목적으로 만들어진 서비스인가요?",
-      answer: "제가 쓰려고 만들었는데, 만들다보니 좀 커졌습니다. 그래서 여러분(군인)도 쓰라고 만들었습니다. 사이버지식정보방 PC는 정말 구리걸랑요."
+      answer: "제가 쓰려고 만들었는데, 포폴로도 사용할 수 있으면 좋을 것 같아서 해봤습니다, 근데 요즘 시대에 이런 것도 포폴로 쳐주나요..?"
     }
   ];
 
@@ -245,10 +245,10 @@ export const Home: React.FC = () => {
               <p className="text-sm text-muted-foreground mt-6">
                 내일은 까먹지 않게, 다음 번엔 혼나지 않게, 바로 시작하세요.
               </p>
-            </motion.div>
+            </motion.div >
             {/* Decorative elements */}
-            <div className="absolute top-0 left-0 w-32 h-32 bg-[#61C9A8]/10 rounded-br-full -z-10"></div>
-            <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#61C9A8]/10 rounded-tl-full -z-10"></div>
+            <div className="absolute top-0 left-0 w-32 h-32 bg-[#61C9A8]/10 rounded-br-full"></div>
+            <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#61C9A8]/10 rounded-tl-full"></div>
           </motion.div>
         </div>
       </section>
