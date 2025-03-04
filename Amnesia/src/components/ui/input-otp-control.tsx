@@ -1,8 +1,15 @@
 import * as React from "react"
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp"
+import { useAuth } from "@/hooks/useAuth"
 
 export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = React.useState("")
+  const { loginWithKey } = useAuth()
+
+  const handleComplete = (value: string) => {
+    const cleanValue = value.replace(/-/g, "")
+    loginWithKey(cleanValue)
+  }
 
   const formatValue = (val: string) => {
     return val.replace(/(.{4})/g, "$1-").replace(/-$/, "");
@@ -10,7 +17,7 @@ export const InputOTPControlled: React.FC = () => {
 
   return (
     <div className="space-y-4 w-full max-w-md mx-auto">
-      <InputOTP maxLength={16} value={value} onChange={(value) => setValue(value)} className="gap-0.5 sm:gap-1">
+      <InputOTP maxLength={16} value={value} onChange={(value) => setValue(value)} onComplete={handleComplete} className="gap-0.5 sm:gap-1">
         <div className="flex flex-col w-full justify-center gap-1 sm:gap-2">
           <div className="flex justify-center gap-0.5 sm:gap-1">
             <InputOTPGroup className="gap-0.5 sm:gap-1">

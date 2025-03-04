@@ -23,13 +23,40 @@ export const Login: React.FC = () => {
     loginWithSocial
   } = useAuth();
 
-  const [email, setEmail] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [formattedKey, setFormattedKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
-  const [activeAuthTab, setActiveAuthTab] = useState('key');
   const [initialAnimationComplete, setInitialAnimationComplete] = useState(false);
+// 이메일 상태 추가
+  const [email, setEmail] = useState("")
+  const [activeAuthTab, setActiveAuthTab] = useState<"key" | "group">("key") // activeAuthTab 상태 추가
+
+  // 키 로그인 핸들러
+  const handleKeyLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    // InputOTPControlled 컴포넌트에서 처리됨
+  }
+
+  // 그룹 참여 핸들러
+  const handleGroupJoin = (e: React.FormEvent) => {
+    e.preventDefault()
+    // 그룹 참여 로직 구현
+    // 예: joinGroup(groupCode);
+  }
+
+  // 회원가입 핸들러
+  const handleSignup = (e: React.FormEvent) => {
+    e.preventDefault()
+    generateAndStoreKey(email)
+  }
+
+  // 그룹 생성 핸들러
+  const handleCreateGroup = (e: React.FormEvent) => {
+    e.preventDefault()
+    // 그룹 생성 로직 구현
+    // 예: createGroup(groupName);
+  }
 
   // Format key (XXXX-XXXX-XXXX-XXXX)
   useEffect(() => {
@@ -370,7 +397,10 @@ export const Login: React.FC = () => {
                                 <motion.div variants={itemVariants}>
                                   <Button 
                                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                                    onClick={() => setShowKey(true)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setShowKey(true)
+                                    }}
                                   >
                                     <Key className="h-4 w-4 mr-2"/>
                                     새 키 생성하기
@@ -381,7 +411,10 @@ export const Login: React.FC = () => {
                               <TabsContent value="group" className="space-y-4">
                                 <motion.div variants={itemVariants}>
                                   <Button 
-                                    onClick={() => setShowKey(true)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setShowKey(true)
+                                    }}
                                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
                                   >
                                     <Users className="h-4 w-4 mr-2" />

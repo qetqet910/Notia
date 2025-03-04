@@ -2,10 +2,26 @@ import React from 'react';
 import { ThemeProvider } from "next-themes"
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+import { useAuth } from "./hooks/useAuth"
+
 import { Home } from '@/pages/Home';
 import { Dashboard } from '@/pages/Dashboard/Dashboard';
-import { Login } from '@/pages/Settings/Login';
+import { Login } from '@/pages/Login/Login';
 import { DownloadPage } from '@/pages/Download';
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return <div>로딩 중...</div>
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
 
 const App: React.FC = () => {
   return (
@@ -16,7 +32,14 @@ const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/download" element={<DownloadPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ThemeProvider>
@@ -25,3 +48,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

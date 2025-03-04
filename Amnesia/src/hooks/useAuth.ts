@@ -1,139 +1,114 @@
-import { useState, useEffect, useCallback } from 'react';
-import { authService, AuthState, SocialProvider } from '../services/auth';
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { auth } from "../services/auth"
+import { useNavigate } from "react-router-dom"
 
 export function useAuth() {
-  const [authState, setAuthState] = useState<AuthState>(authService.getAuthState());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [userKey, setUserKey] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
-  // 초기 로드 시 저장된 인증 상태 확인
+  // 초기 인증 상태 확인
   useEffect(() => {
-    const storedState = authService.getAuthState();
-    setAuthState(storedState);
-  }, []);
-
-  /**
-   * 새로운 키 생성 후 저장
-   */
-  const generateAndStoreKey = useCallback(() => {
-    try {
-      const newKey = authService.generateKey();
-      authService.storeKey(newKey);
-      setAuthState(authService.getAuthState());
-      setError(null);
-      return newKey;
-    } catch (err) {
-      setError('키 생성 중 오류가 발생했습니다.');
-      return null;
+    const storedKey = auth.getCurrentKey()
+    if (storedKey) {
+      setUserKey(storedKey)
+      setIsAuthenticated(true)
     }
-  }, []);
+  }, [])
 
-  /**
-   * 소셜 로그인 처리 
-   */
-  const loginWithSocial = useCallback(async (provider: SocialProvider) => {
-    setIsLoading(true);
-    setError(null);
+  // 키 생성 및 저장 (회원가입)
+  const generateAndStoreKey = useCallback(
+    async (email?: string) => {
+      setIsLoading(true)
+      setError(null)
 
-    try {
-      let result;
-      if (provider === 'github') {
-        result = await authService.loginWithGithub();
-      } else {
-        result = await authService.loginWithGoogle();
+      try {
+        const key = await auth.generateKey(email)
+        setUserKey(key)
+        localStorage.setItem("userKey", key)
+        setIsAuthenticated(true)
+        navigate("/dashboard")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "키 생성에 실패했습니다.")
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [navigate],
+  )
+
+  // 키로 로그인
+  const loginWithKey = useCallback(
+    async (key: string) => {
+      if (!key || key.length !== 16) {
+        setError("유효하지 않은 키입니다. 16자리 키를 입력해주세요.")
+        return
       }
 
-      if (result.success) {
-        // 소셜 로그인 성공 시 키가 없으면 자동 생성
-        if (!authState.key) {
-          generateAndStoreKey();
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const isValid = await auth.validateKey(key)
+        if (isValid) {
+          setUserKey(key)
+          localStorage.setItem("userKey", key)
+          setIsAuthenticated(true)
+          navigate("/dashboard")
+        } else {
+          setError("유효하지 않은 키입니다. 다시 확인해주세요.")
         }
-        setAuthState(authService.getAuthState());
-      } else {
-        setError(`${provider} 로그인에 실패했습니다.`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "로그인에 실패했습니다.")
+      } finally {
+        setIsLoading(false)
       }
-      return result.success;
-    } catch (err) {
-      setError(`${provider} 로그인 중 오류가 발생했습니다.`);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [authState.key, generateAndStoreKey]);
+    },
+    [navigate],
+  )
 
-  /**
-   * 키와 소셜 계정 연결
-   */
-  const bindKeyWithSocial = useCallback(async (provider: SocialProvider) => {
-    if (!authState.key) {
-      setError('연결할 키가 없습니다. 먼저 키를 생성해주세요.');
-      return false;
-    }
+  // 소셜 로그인
+  const loginWithSocial = useCallback(
+    async (provider: "github" | "google") => {
+      setIsLoading(true)
+      setError(null)
 
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const success = await authService.bindKeyWithSocial(provider, authState.key);
-      if (success) {
-        setAuthState(authService.getAuthState());
-      } else {
-        setError(`키와 ${provider} 계정 연결에 실패했습니다.`);
+      try {
+        const { key } = await auth.socialLogin(provider)
+        setUserKey(key)
+        localStorage.setItem("userKey", key)
+        setIsAuthenticated(true)
+        navigate("/dashboard")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : `${provider} 로그인에 실패했습니다.`)
+      } finally {
+        setIsLoading(false)
       }
-      return success;
-    } catch (err) {
-      setError(`계정 연결 중 오류가 발생했습니다.`);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [authState.key]);
+    },
+    [navigate],
+  )
 
-  /**
-   * 이메일로 키 백업
-   */
-  const backupKeyToEmail = useCallback(async (email: string) => {
-    if (!authState.key) {
-      setError('백업할 키가 없습니다.');
-      return false;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const success = await authService.backupKeyToEmail(email);
-      if (!success) {
-        setError('키 백업에 실패했습니다.');
-      }
-      return success;
-    } catch (err) {
-      setError('키 백업 중 오류가 발생했습니다.');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [authState.key]);
-
-  /**
-   * 로그아웃
-   */
+  // 로그아웃
   const logout = useCallback(() => {
-    authService.logout();
-    setAuthState(authService.getAuthState());
-  }, []);
+    auth.logout()
+    setUserKey(null)
+    setIsAuthenticated(false)
+    navigate("/login")
+  }, [navigate])
 
   return {
-    authState,
-    isAuthenticated: authState.isAuthenticated,
-    userKey: authState.key,
-    socialConnections: authState.socialConnections,
+    userKey,
+    isAuthenticated,
     isLoading,
     error,
     generateAndStoreKey,
+    loginWithKey,
     loginWithSocial,
-    bindKeyWithSocial,
-    backupKeyToEmail,
     logout,
-  };
+  }
 }
+
