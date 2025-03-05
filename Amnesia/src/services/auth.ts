@@ -1,117 +1,230 @@
-// 인증 서비스 구현
-import { db } from "./db"
+import { supabase } from "./supabase"
+import { generateRandomKey } from "../utils/keys"
 
 type SocialProvider = "github" | "google"
-type AuthResponse = {
-  key: string
-  user?: {
-    id: string
-    email?: string
-  }
-}
 
 class AuthService {
-  // 키 생성 (회원가입)
-  async generateKey(email?: string): Promise<string> {
-    try {
-      // 16자리 랜덤 키 생성
-      const key = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join("")
+  // 현재 사용자 가져오기
+  async getCurrentUser() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    return user
+  }
 
-      // 데이터베이스에 사용자 정보 저장
-      await db.users.create({
-        key,
-        email,
-        createdAt: new Date().toISOString(),
-      })
+  // 현재 세션 가져오기
+  async getSession() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    return session
+  }
 
-      // 이메일이 제공된 경우 이메일로 키 전송 (실제 구현 필요)
-      if (email) {
-        console.log(`이메일 ${email}로 키 ${key} 전송됨`)
-        // 실제로는 이메일 전송 API 호출
-      }
+  // 이메일로 OTP 로그인
+  async loginWithOtp(email: string) {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
 
-      return key
-    } catch (error) {
-      console.error("키 생성 오류:", error)
-      throw new Error("키를 생성하는 중 오류가 발생했습니다.")
+    if (error) throw error
+    return data
+  }
+
+  // 키로 로그인
+  async loginWithKey(key: string) {
+    // 1. 키로 사용자 찾기
+    const { data: keyData, error: keyError } = await supabase
+      .from("user_keys")
+      .select("user_id, key")
+      .eq("key", key)
+      .eq("is_active", true)
+      .single()
+
+    if (keyError || !keyData) {
+      throw new Error("유효하지 않은 키입니다.")
+    }
+
+    // 2. 해당 사용자의 이메일 찾기
+    const { data: userData, error: userError } = await supabase
+      .from("user_profiles")
+      .select("id, user_id")
+      .eq("user_id", keyData.user_id)
+      .single()
+
+    if (userError) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.")
+    }
+
+    // 3. 익명 로그인 (키 기반 인증)
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: `${keyData.user_id}@amnesia.app`, // 가상 이메일
+      password: key, // 키를 비밀번호로 사용
+    })
+
+    if (authError) {
+      throw new Error("인증에 실패했습니다.")
+    }
+
+    return {
+      user: authData.user,
+      key,
     }
   }
 
-  // 키 검증 (로그인)
-  async validateKey(key: string): Promise<boolean> {
-    try {
-      // 데이터베이스에서 키 확인
-      const user = await db.users.findByKey(key)
-      return !!user // 사용자가 존재하면 true, 아니면 false
-    } catch (error) {
-      console.error("키 검증 오류:", error)
-      throw new Error("키를 검증하는 중 오류가 발생했습니다.")
+  // 키 생성 (회원가입)
+  async generateAndStoreKey(email?: string) {
+    // 1. 익명 사용자 생성 또는 이메일 사용자 생성
+    let authResponse
+
+    if (email) {
+      // 이메일이 있으면 이메일로 가입
+      authResponse = await supabase.auth.signUp({
+        email,
+        password: generateRandomKey(12), // 임의의 비밀번호 생성
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+    } else {
+      // 이메일이 없으면 익명 로그인
+      const anonymousEmail = `anon-${Date.now()}@amnesia.app`
+      const anonymousPassword = generateRandomKey(12)
+
+      authResponse = await supabase.auth.signUp({
+        email: anonymousEmail,
+        password: anonymousPassword,
+      })
     }
+
+    if (authResponse.error) {
+      throw authResponse.error
+    }
+
+    const user = authResponse.data.user
+    if (!user) throw new Error("사용자 생성에 실패했습니다.")
+
+    // 2. 사용자 키 생성
+    const key = generateRandomKey(16)
+
+    // 3. 키 저장
+    const { error: keyError } = await supabase.from("user_keys").insert({
+      user_id: user.id,
+      key,
+      created_at: new Date().toISOString(),
+      is_active: true,
+    })
+
+    if (keyError) {
+      throw keyError
+    }
+
+    // 4. 사용자 프로필 생성
+    const { error: profileError } = await supabase.from("user_profiles").insert({
+      user_id: user.id,
+      display_name: email ? email.split("@")[0] : "익명 사용자",
+      updated_at: new Date().toISOString(),
+    })
+
+    if (profileError) {
+      console.error("프로필 생성 오류:", profileError)
+    }
+
+    return key
   }
 
   // 소셜 로그인
-  async socialLogin(provider: SocialProvider): Promise<AuthResponse> {
-    try {
-      // 소셜 로그인 팝업 열기 (실제 구현 필요)
-      const result = await this.openSocialLoginPopup(provider)
+  async loginWithSocial(provider: SocialProvider) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
 
-      // 사용자 정보 저장 또는 업데이트
-      const user = await db.users.findOrCreate({
-        socialId: result.id,
-        provider,
-        email: result.email,
+    if (error) throw error
+    return data
+  }
+
+  // 그룹 생성
+  async createGroup(name: string) {
+    const user = await this.getCurrentUser()
+    if (!user) throw new Error("로그인이 필요합니다.")
+
+    const key = generateRandomKey(16)
+
+    const { data, error } = await supabase
+      .from("user_groups")
+      .insert({
+        name,
+        key,
+        owner_id: user.id,
+        created_at: new Date().toISOString(),
       })
+      .select()
+      .single()
 
-      return {
-        key: user.key,
-        user: {
-          id: user.id,
-          email: user.email,
-        },
-      }
-    } catch (error) {
-      console.error(`${provider} 로그인 오류:`, error)
-      throw new Error(`${provider}로 로그인하는 중 오류가 발생했습니다.`)
+    if (error) throw error
+
+    // 그룹 멤버로 자신 추가
+    await supabase.from("group_members").insert({
+      group_id: data.id,
+      user_id: user.id,
+      joined_at: new Date().toISOString(),
+    })
+
+    return data
+  }
+
+  // 그룹 참여
+  async joinGroup(groupKey: string) {
+    const user = await this.getCurrentUser()
+    if (!user) throw new Error("로그인이 필요합니다.")
+
+    // 그룹 찾기
+    const { data: group, error: groupError } = await supabase
+      .from("user_groups")
+      .select("id, name, owner_id")
+      .eq("key", groupKey)
+      .single()
+
+    if (groupError || !group) {
+      throw new Error("유효하지 않은 그룹 키입니다.")
+    }
+
+    // 이미 멤버인지 확인
+    const { data: existingMember } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", group.id)
+      .eq("user_id", user.id)
+      .single()
+
+    if (existingMember) {
+      return { message: "이미 그룹의 멤버입니다." }
+    }
+
+    // 그룹에 멤버 추가
+    const { error: memberError } = await supabase.from("group_members").insert({
+      group_id: group.id,
+      user_id: user.id,
+      joined_at: new Date().toISOString(),
+    })
+
+    if (memberError) throw memberError
+
+    return {
+      message: `${group.name} 그룹에 참여했습니다.`,
+      group,
     }
   }
 
-  // 소셜 로그인 팝업 (실제 구현 필요)
-  private async openSocialLoginPopup(provider: SocialProvider) {
-    // 실제 구현에서는 OAuth 프로세스 처리
-    // 예시 코드:
-    return new Promise<{ id: string; email?: string }>((resolve, reject) => {
-      // 실제 구현에서는 Firebase Auth, Auth0 등의 서비스 사용
-      if (provider === "github") {
-        // GitHub OAuth 처리
-        setTimeout(() => {
-          resolve({ id: "github-123", email: "user@example.com" })
-        }, 1000)
-      } else if (provider === "google") {
-        // Google OAuth 처리
-        setTimeout(() => {
-          resolve({ id: "google-456", email: "user@gmail.com" })
-        }, 1000)
-      } else {
-        reject(new Error("지원되지 않는 소셜 로그인 제공자입니다."))
-      }
-    })
-  }
-
   // 로그아웃
-  logout(): void {
-    // 로컬 스토리지에서 인증 정보 제거
-    localStorage.removeItem("userKey")
-    // 필요한 경우 서버에 로그아웃 요청
-  }
-
-  // 현재 인증 상태 확인
-  isAuthenticated(): boolean {
-    return !!localStorage.getItem("userKey")
-  }
-
-  // 현재 사용자 키 가져오기
-  getCurrentKey(): string | null {
-    return localStorage.getItem("userKey")
+  async logout() {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
   }
 }
 

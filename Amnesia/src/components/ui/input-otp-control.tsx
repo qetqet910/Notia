@@ -1,16 +1,16 @@
-import * as React from "react"
+import { useState } from "react"
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from "@/components/ui/input-otp"
 import { useAuth } from "@/hooks/useAuth"
+import { cleanKey } from "@/utils/keys"
 
 export const InputOTPControlled: React.FC = () => {
-  const [value, setValue] = React.useState("")
+  const [value, setValue] = useState("")
   const { loginWithKey } = useAuth()
 
   const handleComplete = (value: string) => {
-    const cleanValue = value.replace(/-/g, "")
-    loginWithKey(cleanValue)
+    const key = cleanKey(value);
+    loginWithKey(key)
   }
-
   const formatValue = (val: string) => {
     return val.replace(/(.{4})/g, "$1-").replace(/-$/, "");
   };

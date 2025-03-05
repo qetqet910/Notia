@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import type React from "react" 
+import { useState, useEffect } from 'react';
+import { Users } from "react-feather" 
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Separator } from '../../components/ui/separator';
 import { Card, CardContent } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Key, AlertCircle, Loader2, Users, Search } from 'lucide-react';
+import { Copy, Key, AlertCircle, Loader2, Search } from 'lucide-react';
 import { InputOTPControlled } from '../../components/ui/input-otp-control';
 import { useAuth } from '../../hooks/useAuth';
 import logoImage from '../../stores/Logo.png';
@@ -15,61 +17,47 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const Login: React.FC = () => {
   const {
-    userKey,
+    loginWithKey,
     isAuthenticated,
+    userKey,
+    formattedKey,
     isLoading,
     error,
     generateAndStoreKey,
-    loginWithSocial
+    loginWithSocial,
+    createGroup,
+    joinGroup
   } = useAuth();
 
+  const [email, setEmail] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
-  const [formattedKey, setFormattedKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+  const [activeAuthTab, setActiveAuthTab] = useState('key');
   const [initialAnimationComplete, setInitialAnimationComplete] = useState(false);
-// 이메일 상태 추가
-  const [email, setEmail] = useState("")
-  const [activeAuthTab, setActiveAuthTab] = useState<"key" | "group">("key") // activeAuthTab 상태 추가
 
-  // 키 로그인 핸들러
   const handleKeyLogin = (e: React.FormEvent) => {
     e.preventDefault()
     // InputOTPControlled 컴포넌트에서 처리됨
   }
-
+  
   // 그룹 참여 핸들러
   const handleGroupJoin = (e: React.FormEvent) => {
     e.preventDefault()
-    // 그룹 참여 로직 구현
-    // 예: joinGroup(groupCode);
+    joinGroup(formattedKey.replace(/-/g, ""))
   }
-
+  
   // 회원가입 핸들러
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault()
     generateAndStoreKey(email)
   }
-
+  
   // 그룹 생성 핸들러
   const handleCreateGroup = (e: React.FormEvent) => {
     e.preventDefault()
-    // 그룹 생성 로직 구현
-    // 예: createGroup(groupName);
+    createGroup("새 그룹")
   }
-
-  // Format key (XXXX-XXXX-XXXX-XXXX)
-  useEffect(() => {
-    if (userKey) {
-      const chunks = [];
-      for (let i = 0; i < userKey.length; i += 4) {
-        chunks.push(userKey.substring(i, i + 4));
-      }
-      setFormattedKey(chunks.join('-'));
-    } else {
-      setFormattedKey('');
-    }
-  }, [userKey]);
 
   // 최초 로드 시 애니메이션 완료 표시
   useEffect(() => {
@@ -88,12 +76,6 @@ export const Login: React.FC = () => {
       setCopiedKey(true);
       setTimeout(() => setCopiedKey(false), 2000);
     }
-  };
-
-  // Handle login
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    generateAndStoreKey();
   };
 
   // Social login button component
@@ -229,7 +211,7 @@ export const Login: React.FC = () => {
                         variants={tabContentVariants}
                         className="space-y-4"
                       >
-                        <form className="space-y-4 mb-6" onSubmit={handleLogin}>
+                        <form className="space-y-4 mb-6" onSubmit={activeAuthTab === "key" ? handleKeyLogin : handleGroupJoin}>
                           <Tabs 
                             defaultValue="key" 
                             className="space-y-4"
@@ -359,7 +341,7 @@ export const Login: React.FC = () => {
                         variants={tabContentVariants}
                         className="space-y-4"
                       >
-                        <form className="space-y-4 mb-6" onSubmit={handleLogin}>
+                        <form className="space-y-4 mb-6" onSubmit={handleSignup}>
                           <Tabs defaultValue="key" className="space-y-4">
                             <TabsList className="grid grid-cols-2 gap-4">
                               <TabsTrigger 
@@ -398,8 +380,9 @@ export const Login: React.FC = () => {
                                   <Button 
                                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
                                     onClick={(e) => {
-                                      e.preventDefault();
-                                      setShowKey(true)
+                                      // e.preventDefault();
+                                      // setShowKey(true)
+                                      handleSignup
                                     }}
                                   >
                                     <Key className="h-4 w-4 mr-2"/>
@@ -412,8 +395,9 @@ export const Login: React.FC = () => {
                                 <motion.div variants={itemVariants}>
                                   <Button 
                                     onClick={(e) => {
-                                      e.preventDefault();
-                                      setShowKey(true)
+                                      // e.preventDefault();
+                                      // setShowKey(true)
+                                      handleCreateGroup
                                     }}
                                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
                                   >

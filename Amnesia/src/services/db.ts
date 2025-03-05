@@ -1,5 +1,3 @@
-// 간단한 데이터베이스 서비스 (실제로는 Firebase, Supabase 등 사용)
-
 // 사용자 타입 정의
 type User = {
   id: string
