@@ -7,8 +7,8 @@ import { Separator } from '../../components/ui/separator';
 import { Card, CardContent } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, Key, AlertCircle, Loader2, Search } from 'lucide-react';
-import { InputOTPControlled } from '../../components/ui/input-otp-control';
-import { useAuth } from '../../hooks/useAuth';
+import { InputOTPControlled } from '../../components/features/InputOtpControl/input-otp-control';
+import { useAuth } from '../../context/AuthProvider';
 import logoImage from '../../stores/Logo.png';
 import Lottie from 'lottie-react';
 import animationData from '../../stores/login-animation.json';
@@ -40,6 +40,16 @@ export const Login: React.FC = () => {
     e.preventDefault()
     // InputOTPControlled 컴포넌트에서 처리됨
   }
+
+  // 소셜 로그인 핸들러
+  const handleSocialLogin = async (provider: 'github' | 'google') => {
+    try {
+      console.log(`${provider} 로그인 시도`);
+      await loginWithSocial(provider);
+    } catch (error) {
+      console.error(`${provider} 로그인 오류:`, error);
+    }
+  };
   
   // 그룹 참여 핸들러
   const handleGroupJoin = (e: React.FormEvent) => {
@@ -95,12 +105,10 @@ export const Login: React.FC = () => {
         variant="outline" 
         className="w-full flex items-center justify-center gap-2 h-11 mb-2 hover:shadow-sm"
         style={{ borderColor: color, color }}
-        onClick={() => loginWithSocial(provider)}
+        onClick={() => handleSocialLogin(provider)}
         disabled={isLoading}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
       >
-        <img src={icon} alt={provider} className="w-5 h-5" />
+        <img src={icon || "/placeholder.svg"} alt={provider} className="w-5 h-5" />
         <span>{label}</span>
       </Button>
     </motion.div>
