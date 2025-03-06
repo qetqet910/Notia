@@ -1,1 +1,1 @@
-export { default } from "./AuthCallback"
+export { AuthCallback } from "./AuthCallback"

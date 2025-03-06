@@ -137,15 +137,20 @@ class AuthService {
 
   // 소셜 로그인
   async loginWithSocial(provider: SocialProvider) {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) throw error
-    return data
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          skipBrowserRedirect: false, // 브라우저 리디렉션 사용
+        },
+      });
+      
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw err;
+    }
   }
 
   // 그룹 생성
