@@ -1,52 +1,36 @@
-import React from 'react';
-import { ThemeProvider } from "next-themes"
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-import { useAuth } from "./hooks/useAuth"
-
+import { AuthProvider } from '@/context/AuthProvider';
 import { Home } from '@/pages/Home';
-import { Dashboard } from '@/pages/Dashboard/Dashboard';
-import { Login } from '@/pages/Login/Login';
+import { Login } from '@/pages/Login';
 import { DownloadPage } from '@/pages/Download';
-import AuthCallback from "@/pages/AuthCallback"
+import { Dashboard } from '@/pages/Dashboard';
+import { AuthCallback } from '@/pages/AuthCallback';
+import { ProtectedRoute } from '@/components/features/ProtectedRoute';
+import { NotFound } from '@/pages/404'
 
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth()
-
-  if (isLoading) {
-    return <div>로딩 중...</div>
-  }
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
-  return <>{children}</>
-}
-
-const App: React.FC = () => {
+function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <Router>
+      <AuthProvider>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/download" element={<DownloadPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route
-            path="/dashboard"
+          <Route path="/download" element={<DownloadPage />} />
+          <Route 
+            path="/dashboard" 
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            }
+            } 
           />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />}/>
         </Routes>
-      </ThemeProvider>
-    </BrowserRouter>
+      </AuthProvider>
+    </Router>
   );
-};
+}
 
 export default App;
-
