@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client"
-import App from "../../App"
+import App from "@/App"
 
 // Chrome API 타입을 사용할 수 있도록 합니다.
 /// <reference types="chrome"/>
