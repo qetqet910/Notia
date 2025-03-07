@@ -228,8 +228,22 @@ class AuthService {
 
   // 로그아웃
   async logout() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    console.log("로그아웃 시작");
+    
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("로그아웃 오류:", error);
+        throw error;
+      }
+      
+      console.log("로그아웃 성공");
+      return { success: true };
+    } catch (err) {
+      console.error("로그아웃 예외:", err);
+      throw err;
+    }
   }
 }
 

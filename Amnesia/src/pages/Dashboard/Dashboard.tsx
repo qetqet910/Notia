@@ -14,11 +14,12 @@ import { PlanManager } from "@/components/features/PlanManager";
 import { TimelineView } from "@/components/features/Timeline/TimelineView";
 import { Search } from "@/components/features/Search/Search";
 
+import { useAuth } from "@/context/AuthProvider";
 import { useNotes } from "@/hooks/useNotes";
 import { usePlans } from "@/hooks/usePlans";
 import { useSearch } from "@/hooks/useSearch";
 
-import { PlusCircle, Calendar as CalendarIcon, Clock, List, Search as SearchIcon, Menu } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Clock, List, Search as SearchIcon, Menu, LogOut, User } from 'lucide-react';
 import logoImage from '@/stores/Logo.png';
 
 interface Note {
@@ -50,6 +51,7 @@ export const Dashboard: React.FC = () => {
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
+  const { logout, userProfile } = useAuth();
 
   // Check if mobile on resize
   useEffect(() => {
@@ -103,7 +105,35 @@ export const Dashboard: React.FC = () => {
             <img src={logoImage} className='max-w-40 cursor-pointer' alt="" />
           </h1>
         </div>
-        
+        {/* 유저 프로필 */}
+        <div className="flex items-center gap-4">
+          {userProfile && (
+            <div className="flex items-center gap-2">
+              {userProfile.avatar_url ? (
+                <img 
+                  src={userProfile.avatar_url || "/placeholder.svg"} 
+                  alt="프로필" 
+                  className="w-8 h-8 rounded-full"
+                />
+              ) : (
+                <User className="w-6 h-6 text-gray-500" />
+              )}
+              <span className="text-sm font-medium">
+                {userProfile.display_name || userProfile.email || '사용자'}
+              </span>
+            </div>
+          )}
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={logout}
+            className="flex items-center gap-1"
+          >
+            <LogOut className="w-4 h-4" />
+            로그아웃
+          </Button>
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

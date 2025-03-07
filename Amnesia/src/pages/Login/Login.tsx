@@ -1,19 +1,22 @@
 import type React from "react" 
 import { useState, useEffect } from 'react';
-import { Users } from "react-feather" 
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Separator } from '../../components/ui/separator';
-import { Card, CardContent } from '../../components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Key, AlertCircle, Loader2, Search } from 'lucide-react';
-import { InputOTPControlled } from '../../components/features/InputOtpControl/input-otp-control';
-import { useAuth } from '../../context/AuthProvider';
-import logoImage from '../../stores/Logo.png';
-import Lottie from 'lottie-react';
-import animationData from '../../stores/login-animation.json';
 import { Link } from 'react-router-dom';
+import { Users } from "react-feather" 
+import { Copy, Key, AlertCircle, Loader2, Search } from 'lucide-react';
+import Lottie from 'lottie-react';
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from 'framer-motion';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
+import { InputOTPControlled } from '@/components/features/InputOtpControl/input-otp-control';
+import { useAuth } from '@/context/AuthProvider';
+import logoImage from '@/stores/Logo.png';
+
+import animationData from '@/stores/login-animation.json';
 
 export const Login: React.FC = () => {
   const {
@@ -35,6 +38,13 @@ export const Login: React.FC = () => {
   const [activeTab, setActiveTab] = useState('login');
   const [activeAuthTab, setActiveAuthTab] = useState('key');
   const [initialAnimationComplete, setInitialAnimationComplete] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleKeyLogin = (e: React.FormEvent) => {
     e.preventDefault()
