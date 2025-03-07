@@ -2,7 +2,7 @@
 
 [연합동아리](https://claremont.tistory.com/entry/%EB%B0%B1%EC%97%94%EB%93%9C-%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%B6%94%EC%B2%9C-IT-%EC%97%B0%ED%95%A9-%EB%8F%99%EC%95%84%EB%A6%AC-%EB%A6%AC%EC%8A%A4%ED%8A%B8-9%EA%B0%80%EC%A7%80)
 
-회고 - 다음엔 REMIX 써보기 Tailwind 안 익숙하면 쓰지말기 ㅈㄴ불편함
+회고 - 다음엔 REMIX + pnpm 써보기 Tailwind 안 익숙하면 쓰지말기 ㅈㄴ불편
 
 # 리마인더 프로젝트 요구사항 및 설계 문서
 
