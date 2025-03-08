@@ -105,35 +105,6 @@ export const Dashboard: React.FC = () => {
             <img src={logoImage} className='max-w-40 cursor-pointer' alt="" />
           </h1>
         </div>
-        {/* 유저 프로필 */}
-        <div className="flex items-center gap-4">
-          {userProfile && (
-            <div className="flex items-center gap-2">
-              {userProfile.avatar_url ? (
-                <img 
-                  src={userProfile.avatar_url || "/placeholder.svg"} 
-                  alt="프로필" 
-                  className="w-8 h-8 rounded-full"
-                />
-              ) : (
-                <User className="w-6 h-6 text-gray-500" />
-              )}
-              <span className="text-sm font-medium">
-                {userProfile.display_name || userProfile.email || '사용자'}
-              </span>
-            </div>
-          )}
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={logout}
-            className="flex items-center gap-1"
-          >
-            <LogOut className="w-4 h-4" />
-            로그아웃
-          </Button>
-        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -222,6 +193,35 @@ export const Dashboard: React.FC = () => {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 새 일정
               </Button>
+              {/* 유저 프로필 */}
+              <div className="flex items-center gap-4">
+                {userProfile && (
+                  <div className="flex items-center gap-2">
+                    {userProfile.avatar_url ? (
+                      <img 
+                        src={userProfile.avatar_url || "/placeholder.svg"} 
+                        alt="프로필" 
+                        className="w-8 h-8 rounded-full"
+                      />
+                    ) : (
+                      <User className="w-6 h-6 text-gray-500" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {userProfile.display_name || userProfile.email || '사용자'}
+                    </span>
+                  </div>
+                )}
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={logout}
+                  className="flex items-center gap-1"
+                >
+                  <LogOut className="w-4 h-4" />
+                  로그아웃
+                </Button>
+              </div>
             </div>
           )}
         </div>
