@@ -1,0 +1,22 @@
+{
+  "name": "Amnesia",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20.10.0"
+    }
+  },
+  "forwardPorts": [5173],
+  "postCreateCommand": "code --install-extension dbaeumer.vscode-eslint --force && code --install-extension esbenp.prettier-vscode --force && code --install-extension bradlc.vscode-tailwindcss --force && code --install-extension PKief.material-icon-theme --force && code --install-extension akamud.vscode-theme-onedark --force",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "PKief.material-icon-theme",
+        "akamud.vscode-theme-onedark"
+      ]
+    }
+  }
+}
