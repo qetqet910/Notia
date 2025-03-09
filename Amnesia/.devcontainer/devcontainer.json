@@ -7,8 +7,7 @@
     }
   },
   "forwardPorts": [5173],
-  "postCreateCommand": "npm install",
-  "postStartCommand": "code --install-extension dbaeumer.vscode-eslint && code --install-extension esbenp.prettier-vscode && code --install-extension bradlc.vscode-tailwindcss",
+  "postCreateCommand": "npm install && code --install-extension dbaeumer.vscode-eslint --force && code --install-extension esbenp.prettier-vscode --force && code --install-extension bradlc.vscode-tailwindcss --force",
   "customizations": {
     "vscode": {
       "extensions": [
