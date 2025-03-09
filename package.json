@@ -45,7 +45,7 @@
     "react-lottie": "^1.2.10",
     "react-markdown": "^8.0.7",
     "react-router-dom": "^7.2.0",
-    "shadcn-ui": "^0.9.4",
+    "shadcn-ui": "^0.9.5",
     "tailwind-merge": "^3.0.1",
     "uuid": "^11.1.0"
   },
