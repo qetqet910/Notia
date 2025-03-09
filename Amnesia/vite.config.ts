@@ -48,6 +48,8 @@ export default defineConfig({
     },
   },
   build: {
+    minify: false, // 코드 압축(난독화) 비활성화 → 빌드 속도 증가
+    // 배포 과정에선 당연히 true로 바꿀 것
     rollupOptions: {
       input: {
         main: "index.html",
