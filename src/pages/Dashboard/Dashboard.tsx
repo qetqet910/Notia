@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,17 @@ import { useNotes } from "@/hooks/useNotes";
 import { usePlans } from "@/hooks/usePlans";
 import { useSearch } from "@/hooks/useSearch";
 
-import { PlusCircle, Calendar as CalendarIcon, Clock, List, Search as SearchIcon, Menu, LogOut, User } from 'lucide-react';
-import logoImage from '@/stores/Logo.png';
+import {
+  PlusCircle,
+  Calendar as CalendarIcon,
+  Clock,
+  List,
+  Search as SearchIcon,
+  Menu,
+  LogOut,
+  User,
+} from "lucide-react";
+import logoImage from "@/stores/images/Logo.png";
 
 interface Note {
   id: string;
@@ -38,7 +47,7 @@ interface Plan {
   startDate: Date;
   endDate: Date;
   completed: boolean;
-  priority: 'low' | 'medium' | 'high';
+  priority: "low" | "medium" | "high";
   tags: string[];
 }
 
@@ -47,7 +56,7 @@ export const Dashboard: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
+
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
@@ -58,9 +67,9 @@ export const Dashboard: React.FC = () => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Create a new note
@@ -71,9 +80,9 @@ export const Dashboard: React.FC = () => {
       content: "",
       tags: [],
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
-    
+
     addNote(newNote);
     setSelectedNote(newNote);
     setActiveTab("notes");
@@ -88,10 +97,10 @@ export const Dashboard: React.FC = () => {
       startDate: new Date(),
       endDate: new Date(Date.now() + 3600000), // 1 hour later
       completed: false,
-      priority: 'medium',
-      tags: []
+      priority: "medium",
+      tags: [],
     };
-    
+
     addPlan(newPlan);
     setActiveTab("plans");
   };
@@ -102,7 +111,7 @@ export const Dashboard: React.FC = () => {
       <header className="flex justify-between items-center px-4 py-3 border-b">
         <div className="flex items-center">
           <h1 className="text-xl font-bold text-[#61C9A8]">
-            <img src={logoImage} className='max-w-40 cursor-pointer' alt="" />
+            <img src={logoImage} className="max-w-40 cursor-pointer" alt="" />
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -113,7 +122,7 @@ export const Dashboard: React.FC = () => {
           >
             <SearchIcon className="h-5 w-5" />
           </Button>
-          
+
           {isMobile ? (
             <Sheet>
               <SheetTrigger asChild>
@@ -123,24 +132,22 @@ export const Dashboard: React.FC = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-64">
                 <div className="flex flex-col gap-4 py-4">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start" 
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
                     onClick={handleCreateNote}
                   >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    새 노트
+                    <PlusCircle className="mr-2 h-4 w-4" />새 노트
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start" 
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
                     onClick={handleCreatePlan}
                   >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    새 일정
+                    <PlusCircle className="mr-2 h-4 w-4" />새 일정
                   </Button>
                   <Separator />
-                  <Button 
+                  <Button
                     variant={activeTab === "notes" ? "default" : "ghost"}
                     className="w-full justify-start"
                     onClick={() => setActiveTab("notes")}
@@ -148,7 +155,7 @@ export const Dashboard: React.FC = () => {
                     <List className="mr-2 h-4 w-4" />
                     노트
                   </Button>
-                  <Button 
+                  <Button
                     variant={activeTab === "plans" ? "default" : "ghost"}
                     className="w-full justify-start"
                     onClick={() => setActiveTab("plans")}
@@ -156,7 +163,7 @@ export const Dashboard: React.FC = () => {
                     <Clock className="mr-2 h-4 w-4" />
                     일정
                   </Button>
-                  <Button 
+                  <Button
                     variant={activeTab === "calendar" ? "default" : "ghost"}
                     className="w-full justify-start"
                     onClick={() => setActiveTab("calendar")}
@@ -164,7 +171,7 @@ export const Dashboard: React.FC = () => {
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     캘린더
                   </Button>
-                  <Button 
+                  <Button
                     variant={activeTab === "timeline" ? "default" : "ghost"}
                     className="w-full justify-start"
                     onClick={() => setActiveTab("timeline")}
@@ -177,44 +184,36 @@ export const Dashboard: React.FC = () => {
             </Sheet>
           ) : (
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCreateNote}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                새 노트
+              <Button variant="outline" size="sm" onClick={handleCreateNote}>
+                <PlusCircle className="mr-2 h-4 w-4" />새 노트
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCreatePlan}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                새 일정
+              <Button variant="outline" size="sm" onClick={handleCreatePlan}>
+                <PlusCircle className="mr-2 h-4 w-4" />새 일정
               </Button>
               {/* 유저 프로필 */}
               <div className="flex items-center gap-4">
                 {userProfile && (
                   <div className="flex items-center gap-2">
                     {userProfile.avatar_url ? (
-                      <img 
-                        src={userProfile.avatar_url || "/placeholder.svg"} 
-                        alt="프로필" 
+                      <img
+                        src={userProfile.avatar_url || "/placeholder.svg"}
+                        alt="프로필"
                         className="w-8 h-8 rounded-full"
                       />
                     ) : (
                       <User className="w-6 h-6 text-gray-500" />
                     )}
                     <span className="text-sm font-medium">
-                      {userProfile.display_name || userProfile.email || '사용자'}
+                      {userProfile.display_name ||
+                        userProfile.email ||
+                        "사용자"}
                     </span>
                   </div>
                 )}
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={logout}
                   className="flex items-center gap-1"
                 >
@@ -233,7 +232,7 @@ export const Dashboard: React.FC = () => {
         {!isMobile && (
           <div className="w-56 border-r bg-muted/10 p-4 hidden md:block">
             <div className="flex flex-col gap-2">
-              <Button 
+              <Button
                 variant={activeTab === "notes" ? "default" : "ghost"}
                 className="w-full justify-start"
                 onClick={() => setActiveTab("notes")}
@@ -241,7 +240,7 @@ export const Dashboard: React.FC = () => {
                 <List className="mr-2 h-4 w-4" />
                 노트
               </Button>
-              <Button 
+              <Button
                 variant={activeTab === "plans" ? "default" : "ghost"}
                 className="w-full justify-start"
                 onClick={() => setActiveTab("plans")}
@@ -249,7 +248,7 @@ export const Dashboard: React.FC = () => {
                 <Clock className="mr-2 h-4 w-4" />
                 일정
               </Button>
-              <Button 
+              <Button
                 variant={activeTab === "calendar" ? "default" : "ghost"}
                 className="w-full justify-start"
                 onClick={() => setActiveTab("calendar")}
@@ -257,7 +256,7 @@ export const Dashboard: React.FC = () => {
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 캘린더
               </Button>
-              <Button 
+              <Button
                 variant={activeTab === "timeline" ? "default" : "ghost"}
                 className="w-full justify-start"
                 onClick={() => setActiveTab("timeline")}
@@ -274,8 +273,8 @@ export const Dashboard: React.FC = () => {
           {activeTab === "notes" && (
             <div className="flex h-full">
               <div className="w-1/3 border-r h-full">
-                <NoteList 
-                  notes={notes} 
+                <NoteList
+                  notes={notes}
                   onSelectNote={setSelectedNote}
                   selectedNote={selectedNote}
                 />
@@ -293,13 +292,12 @@ export const Dashboard: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                     <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
-                    <Button 
+                    <Button
                       variant="outline"
                       className="mt-4"
                       onClick={handleCreateNote}
                     >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      새 노트
+                      <PlusCircle className="mr-2 h-4 w-4" />새 노트
                     </Button>
                   </div>
                 )}
@@ -308,7 +306,7 @@ export const Dashboard: React.FC = () => {
           )}
 
           {activeTab === "plans" && (
-            <PlanManager 
+            <PlanManager
               plans={plans}
               onAddPlan={addPlan}
               onUpdatePlan={updatePlan}
@@ -317,25 +315,22 @@ export const Dashboard: React.FC = () => {
           )}
 
           {activeTab === "calendar" && (
-            <Calendar 
-              plans={plans} 
+            <Calendar
+              plans={plans}
               onSelectDate={setSelectedDate}
               selectedDate={selectedDate}
             />
           )}
 
           {activeTab === "timeline" && (
-            <TimelineView 
-              plans={plans} 
-              notes={notes}
-            />
+            <TimelineView plans={plans} notes={notes} />
           )}
 
           {activeTab === "search" && (
-            <Search 
+            <Search
               onSearch={setSearchQuery}
               results={searchResults}
-              onSelectNote={note => {
+              onSelectNote={(note) => {
                 setSelectedNote(note);
                 setActiveTab("notes");
               }}

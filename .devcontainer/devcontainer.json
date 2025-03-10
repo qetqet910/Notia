@@ -16,23 +16,8 @@
         "bradlc.vscode-tailwindcss",
         "PKief.material-icon-theme",
         "akamud.vscode-theme-onedark"
-      ],
-      "settings": {
-        "eslint.alwaysShowStatus": true,
-        "eslint.validate": ["javascript", "typescript", "typescriptreact"],
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": true
-        },
-        "tailwindCSS.includeLanguages": {
-          "javascript": "javascript",
-          "typescript": "typescript",
-          "typescriptreact": "typescriptreact"
-        },
-        "workbench.iconTheme": "material-icon-theme",
-        "workbench.colorTheme": "Atom One Dark"
-      }
+      ]
     }
-  }
+  },
+  "initializeCommand": "/bin/bash -c 'echo \"alias treex=\\\"tree -I \\'node_modules|dist|.git|.vscode|.devcontainer|coverage\\'\\\"\" >> ~/.bashrc'"
 }
