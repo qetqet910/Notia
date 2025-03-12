@@ -17,4 +17,3 @@ updates:
       - "qetqet910"
     assignees:
       - "qetqet910"
-    delete-branch: true # ✅ PR 병합 후 브랜치 자동 삭제!
