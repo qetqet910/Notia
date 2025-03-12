@@ -8,10 +8,9 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "resolveJsonModule": true,
+    "esModuleInterop": true
   },
-  "include": [
-    "src",
-    "src/stores/login-animation.json"
-  ]
+  "include": ["src", "src/stores/data/login-animation.json"]
 }
