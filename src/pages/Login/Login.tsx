@@ -56,6 +56,8 @@ export const Login: React.FC = () => {
   const handleSocialLogin = async (provider: "github" | "google") => {
     try {
       console.log(`${provider} 로그인 시도`);
+      // 지연시간 추가
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await loginWithSocial(provider);
     } catch (error) {
       console.error(`${provider} 로그인 오류:`, error);
@@ -228,7 +230,7 @@ export const Login: React.FC = () => {
                         : ""
                     }
                   >
-                    회원가입
+                    만들기
                   </TabsTrigger>
                 </TabsList>
 
@@ -269,7 +271,8 @@ export const Login: React.FC = () => {
                                     : ""
                                 }`}
                               >
-                                <Key className="h-4 w-4" />키
+                                <Key className="h-4 w-4" />
+                                노트
                               </TabsTrigger>
                               <TabsTrigger
                                 value="group"
@@ -401,7 +404,8 @@ export const Login: React.FC = () => {
                                 value="key"
                                 className="flex items-center justify-center gap-2"
                               >
-                                <Key className="h-4 w-4" />키
+                                <Key className="h-4 w-4" />
+                                노트
                               </TabsTrigger>
                               <TabsTrigger
                                 value="group"
@@ -440,8 +444,7 @@ export const Login: React.FC = () => {
                                       handleSignup;
                                     }}
                                   >
-                                    <Key className="h-4 w-4 mr-2" />새 키
-                                    생성하기
+                                    <Key className="h-4 w-4 mr-2" />새 키 만들기
                                   </Button>
                                 </motion.div>
                               </TabsContent>
@@ -464,7 +467,7 @@ export const Login: React.FC = () => {
                             </AnimatePresence>
                           </Tabs>
 
-                          <AnimatePresence>
+                          <AnimatePresence mode="wait">
                             {userKey && showKey && (
                               <motion.div
                                 className="mt-6 pt-4 border-t"
@@ -509,7 +512,7 @@ export const Login: React.FC = () => {
                                   </Button>
                                 </motion.div>
 
-                                <AnimatePresence>
+                                <AnimatePresence mode="wait">
                                   {copiedKey && (
                                     <motion.p
                                       className="text-xs text-green-600 mt-1 text-center"
@@ -570,7 +573,7 @@ export const Login: React.FC = () => {
                 </div>
               </Tabs>
 
-              <AnimatePresence>
+              <AnimatePresence mode="wait">
                 {error && (
                   <motion.div
                     className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded flex items-center gap-2 mt-4"
