@@ -71,9 +71,13 @@ export const Login: React.FC = () => {
   };
 
   // 회원가입 핸들러
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    generateAndStoreKey(email);
+    try {
+      await generateAndStoreKey(email);
+    } catch (err) {
+      console.error("회원가입 오류:", err);
+    }
   };
 
   // 그룹 생성 핸들러
@@ -242,7 +246,7 @@ export const Login: React.FC = () => {
                   <AnimatePresence mode="wait">
                     {activeTab === "login" && (
                       <motion.div
-                        key="login-tab"
+                        key="login-form"
                         initial="hidden"
                         animate="visible"
                         exit="exit"
@@ -387,7 +391,7 @@ export const Login: React.FC = () => {
 
                     {activeTab === "signup" && (
                       <motion.div
-                        key="signup-tab"
+                        key="signup-form"
                         initial="hidden"
                         animate="visible"
                         exit="exit"
