@@ -1,16 +1,17 @@
-import React, {
+import type React from "react";
+import {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/services/supabase";
 import { auth } from "@/services/auth";
 import { formatKey, cleanKey } from "@/utils/keys";
 
-// 사용자 타입 정의 추후 분리 예정
 type UserProfile = {
   id?: string;
   user_id?: string;
@@ -21,52 +22,58 @@ type UserProfile = {
 };
 
 type AuthContextType = {
+  userKey: string | null;
+  formattedKey: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  userKey: string | null;
-  formattedKey: string;
-  userProfile: UserProfile | null; // 사용자 프로필 추가
+  userProfile: UserProfile | null;
+  generateAndStoreKey: (email?: string) => Promise<string>;
   loginWithKey: (key: string) => Promise<void>;
   loginWithEmail: (
     email: string
   ) => Promise<{ success: boolean; message: string }>;
   loginWithSocial: (provider: "github" | "google") => Promise<void>;
-  generateAndStoreKey: (email?: string) => Promise<string>;
   createGroup: (name: string) => Promise<any>;
   joinGroup: (groupKey: string) => Promise<any>;
   logout: () => Promise<void>;
   formatKey: (key: string) => string;
   cleanKey: (formattedKey: string) => string;
+  setIsAuthenticated: (value: boolean) => void;
 };
 
 // Context 생성
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Provider 컴포넌트
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // 기존 useAuth.ts의 상태 변수들
+  // 상태 변수들
   const [userKey, setUserKey] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null); // 사용자 프로필 상태 추가
   const location = useLocation();
-  const [isMounted, setIsMounted] = useState(false);
 
+  // 마운트 상태 추적을 위한 ref
+  const isMounted = useRef(true);
+
+  // 사용자 프로필 가져오기
   const fetchUserProfile = useCallback(async (userId: string) => {
     try {
-      // 1. Supabase 사용자 정보 가져오기
+      if (!isMounted.current) return null;
+
+      // Supabase 사용자 정보 가져오기
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) return null;
 
-      // 2. 사용자 프로필 정보 가져오기
+      // 사용자 프로필 정보 가져오기
       const { data: profileData, error: profileError } = await supabase
         .from("user_profiles")
         .select("*")
@@ -77,12 +84,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error("프로필 가져오기 오류:", profileError);
       }
 
-      // 3. 기본 프로필 정보 구성
+      // 기본 프로필 정보 구성
       const profile: UserProfile = {
         user_id: user.id,
         email: user.email,
         provider: user.app_metadata?.provider,
-        // user_metadata에서 정보 추출
         display_name:
           user.user_metadata?.full_name ||
           user.user_metadata?.name ||
@@ -90,8 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         avatar_url: user.user_metadata?.avatar_url || profileData?.avatar_url,
       };
 
-      console.log("사용자 프로필 로드:", profile);
-      setUserProfile(profile);
+      if (isMounted.current) {
+        setUserProfile(profile);
+      }
 
       return profile;
     } catch (err) {
@@ -100,148 +107,203 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  // 초기 인증 상태 확인 (기존 useAuth.ts의 useEffect)
-  useEffect(() => {
-    console.log("AuthProvider 마운트");
-    setIsMounted(true);
+  // 사용자 키 가져오기
+  const fetchUserKey = useCallback(async (userId: string) => {
+    try {
+      if (!isMounted.current) return;
 
-    async function checkAuth() {
+      // 오류 처리를 위해 try-catch 사용
       try {
-        console.log("초기 인증 상태 확인 시작");
-        const session = await auth.getSession();
+        const { data: keyData, error: keyError } = await supabase
+          .from("user_keys")
+          .select("key")
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
 
-        if (session) {
-          console.log("세션 있음:", session);
-          setIsAuthenticated(true);
+        if (keyError) {
+          console.log("키 데이터 로드 오류:", keyError);
+          return;
+        }
 
-          try {
-            // 세션이 있으면 사용자 키 가져오기
-            const { data: keyData, error: keyError } = await supabase
-              .from("user_keys")
-              .select("key")
-              .eq("user_id", session.user.id)
-              .eq("is_active", true)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .single();
-
-            if (keyError) {
-              console.log("키 데이터 로드 오류:", keyError);
-            } else if (keyData) {
-              console.log("키 데이터 로드 성공:", keyData.key);
-              setUserKey(keyData.key);
-            }
-
-            // 사용자 프로필 가져오기
-            await fetchUserProfile(session.user.id);
-          } catch (err) {
-            console.error("사용자 데이터 로드 중 오류:", err);
-          }
-        } else {
-          console.log("세션 없음");
+        if (keyData && isMounted.current) {
+          console.log("사용자 키 발견:", keyData.key);
+          setUserKey(keyData.key);
         }
       } catch (err) {
-        console.error("인증 확인 오류:", err);
-      } finally {
-        if (isMounted) {
-          console.log("초기 로딩 상태 false로 설정");
-          setIsLoading(false);
-        }
+        console.error("키 가져오기 예외:", err);
       }
+    } catch (err) {
+      console.error("키 가져오기 실패:", err);
     }
+  }, []);
 
-    checkAuth();
+  // 현재 경로에 따른 리디렉션 처리
+  const handleRedirection = useCallback(
+    (isAuth: boolean) => {
+      const currentPath = location.pathname;
 
-    // Supabase 인증 상태 변경 리스너
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event, !!session);
+      // 인증된 사용자가 로그인 페이지에 접근하면 대시보드로 리디렉션
+      if (
+        isAuth &&
+        (currentPath === "/login" || currentPath === "/auth/callback")
+      ) {
+        console.log(
+          "인증된 사용자가 로그인 페이지에 접근, 대시보드로 리디렉션"
+        );
+        navigate("/dashboard");
+      }
 
-      // 즉시 인증 상태 업데이트 (비동기 작업 전)
-      setIsAuthenticated(!!session);
+      // 인증되지 않은 사용자가 보호된 경로에 접근하면 로그인 페이지로 리디렉션
+      if (!isAuth && currentPath.startsWith("/dashboard")) {
+        console.log(
+          "인증되지 않은 사용자가 보호된 경로에 접근, 로그인으로 리디렉션"
+        );
+        navigate("/login");
+      }
+    },
+    [location.pathname, navigate]
+  );
 
-      // 비동기 작업을 별도 함수로 분리
-      const updateUserData = async () => {
-        try {
-          if (!isMounted) {
-            console.log("컴포넌트가 언마운트됨, 상태 업데이트 중단");
-            return;
+  // 초기 인증 상태 확인
+  useEffect(() => {
+    console.log("AuthProvider 마운트");
+
+    // 이미 초기화되었는지 확인하는 플래그
+    let isInitialized = false;
+    isMounted.current = true;
+
+    // Supabase 세션 확인 함수
+    const checkSession = async () => {
+      // 이미 초기화되었으면 중복 실행 방지
+      if (isInitialized) return;
+      isInitialized = true;
+
+      try {
+        console.log("세션 확인 시작");
+
+        // Supabase의 내장 세션 관리 사용
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("세션 확인 오류:", error);
+          if (isMounted.current) {
+            setIsAuthenticated(false);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        if (data.session) {
+          console.log("세션 발견:", data.session.user.id);
+
+          if (isMounted.current) {
+            setIsAuthenticated(true);
           }
 
-          if (session) {
-            console.log("세션 있음, 사용자 데이터 로드 시작");
-            try {
-              // 세션이 있으면 사용자 키 가져오기
-              const { data: keyData, error: keyError } = await supabase
-                .from("user_keys")
-                .select("key")
-                .eq("user_id", session.user.id)
-                .eq("is_active", true)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
+          // 사용자 키와 프로필 가져오기
+          await fetchUserKey(data.session.user.id);
+          await fetchUserProfile(data.session.user.id);
 
-              if (keyError) {
-                console.log("키 데이터 로드 오류:", keyError);
-              } else if (keyData) {
-                console.log("키 데이터 로드 성공:", keyData.key);
-                setUserKey(keyData.key);
-              }
-
-              // 사용자 프로필 가져오기
-              await fetchUserProfile(session.user.id);
-
-              // 로그인 이벤트에만 리디렉션 적용
-              if (event === "SIGNED_IN") {
-                // 현재 경로가 로그인 또는 콜백 페이지인 경우에만 리디렉션
-                const currentPath = location.pathname;
-                if (
-                  currentPath === "/login" ||
-                  currentPath === "/auth/callback"
-                ) {
-                  console.log("로그인 후 대시보드로 리디렉션");
-                  navigate("/dashboard");
-                }
-              }
-            } catch (err) {
-              console.error("사용자 데이터 로드 중 오류:", err);
-            }
-          } else {
-            console.log("세션 없음, 사용자 데이터 초기화");
+          // 세션이 있으면 현재 경로에 따라 리디렉션 처리
+          handleRedirection(true);
+        } else {
+          console.log("세션 없음");
+          if (isMounted.current) {
+            setIsAuthenticated(false);
             setUserKey(null);
             setUserProfile(null);
           }
+
+          // 세션이 없으면 현재 경로에 따라 리디렉션 처리
+          handleRedirection(false);
+        }
+      } catch (err) {
+        console.error("세션 확인 중 예외 발생:", err);
+      } finally {
+        if (isMounted.current) {
+          console.log("로딩 상태 업데이트: false");
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // 세션 확인 실행
+    checkSession();
+
+    // 인증 상태 변경 리스너
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, !!session);
+
+      if (!isMounted.current) return;
+
+      // 이벤트 타입에 따른 디버깅 로그 추가
+      console.log(
+        `Auth event: ${event}, Session exists: ${!!session}, User ID: ${
+          session?.user?.id || "none"
+        }`
+      );
+
+      // 세션 상태에 따라 인증 상태 업데이트
+      setIsAuthenticated(!!session);
+
+      if (session) {
+        console.log("세션 있음, 사용자 데이터 로드 시작");
+
+        try {
+          await fetchUserKey(session.user.id);
+          await fetchUserProfile(session.user.id);
         } catch (err) {
-          console.error("인증 상태 처리 중 오류:", err);
-        } finally {
-          // 마운트 상태 확인 후 로딩 상태 업데이트
-          if (isMounted) {
-            console.log("로딩 상태 false로 설정");
-            setIsLoading(false);
+          console.error("사용자 데이터 로드 중 오류:", err);
+        }
+
+        // 로그인 이벤트에만 리디렉션 적용
+        if (event === "SIGNED_IN") {
+          const currentPath = location.pathname;
+          if (currentPath === "/login" || currentPath === "/auth/callback") {
+            console.log("로그인 후 대시보드로 리디렉션");
+            navigate("/dashboard");
           }
         }
-      };
+      } else {
+        console.log("세션 없음, 사용자 데이터 초기화");
+        setUserKey(null);
+        setUserProfile(null);
 
-      // 비동기 작업 실행
-      updateUserData();
+        // 로그아웃 이벤트에만 리디렉션 적용
+        if (event === "SIGNED_OUT") {
+          // 약간의 지연 후 리디렉션
+          setTimeout(() => {
+            if (isMounted.current) {
+              navigate("/login");
+            }
+          }, 100);
+        }
+      }
+
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
       console.log("AuthProvider 언마운트");
-      setIsMounted(false);
+      isMounted.current = false;
       subscription.unsubscribe();
     };
-  }, [navigate, fetchUserProfile, location]);
+  }, [
+    navigate,
+    fetchUserProfile,
+    fetchUserKey,
+    handleRedirection,
+    location.pathname,
+  ]);
 
-  useEffect(() => {
-    // 이미 인증되었고 로딩 중이 아니며, 현재 경로가 로그인 페이지인 경우에만 리디렉션
-    if (isAuthenticated && !isLoading && location.pathname === "/login") {
-      navigate("/dashboard");
-    }
-  }, [isAuthenticated, isLoading, navigate, location.pathname]);
-
-  // 기존 useAuth.ts의 함수들을 그대로 가져옵니다
+  // 키 생성 및 저장 (회원가입)
   const generateAndStoreKey = useCallback(
     async (email?: string) => {
       setIsLoading(true);
@@ -249,44 +311,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         const key = await auth.generateAndStoreKey(email);
-        setUserKey(key);
-        setIsAuthenticated(true);
+        if (isMounted.current) {
+          setUserKey(key);
+          setIsAuthenticated(true);
+        }
         navigate("/dashboard");
         return key;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "키 생성에 실패했습니다.";
-        setError(errorMessage);
+        if (isMounted.current) {
+          setError(errorMessage);
+        }
         throw err;
       } finally {
-        setIsLoading(false);
+        if (isMounted.current) {
+          setIsLoading(false);
+        }
       }
     },
     [navigate]
   );
 
-  const logout = useCallback(async () => {
-    setIsLoading(true);
-
-    try {
-      console.log("로그아웃 시도");
-      await auth.logout();
-
-      // 상태 초기화
-      setUserKey(null);
-      setUserProfile(null);
-      setIsAuthenticated(false);
-
-      console.log("로그아웃 성공, 로그인 페이지로 이동");
-      navigate("/login");
-    } catch (err) {
-      console.error("로그아웃 오류:", err);
-      setError("로그아웃 중 오류가 발생했습니다.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [navigate]);
-
+  // 키로 로그인
   const loginWithKey = useCallback(
     async (key: string) => {
       if (!key || key.length !== 16) {
@@ -299,27 +346,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         const result = await auth.loginWithKey(key);
-        setUserKey(result.key);
-        setIsAuthenticated(true);
+        if (isMounted.current) {
+          setUserKey(result.key);
+          setIsAuthenticated(true);
+        }
         navigate("/dashboard");
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "로그인에 실패했습니다.";
-        setError(errorMessage);
+        if (isMounted.current) {
+          setError(errorMessage);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted.current) {
+          setIsLoading(false);
+        }
       }
     },
     [navigate]
   );
 
+  // 이메일 OTP 로그인
   const loginWithEmail = useCallback(async (email: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
       await auth.loginWithOtp(email);
-      // 이메일 전송 성공 메시지
       return {
         success: true,
         message: "로그인 링크가 이메일로 전송되었습니다.",
@@ -327,13 +380,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "이메일 전송에 실패했습니다.";
-      setError(errorMessage);
+      if (isMounted.current) {
+        setError(errorMessage);
+      }
       return { success: false, message: errorMessage };
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
+  // 소셜 로그인
   const loginWithSocial = useCallback(async (provider: "github" | "google") => {
     setIsLoading(true);
     setError(null);
@@ -347,12 +405,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         err instanceof Error
           ? err.message
           : `${provider} 로그인에 실패했습니다.`;
-      setError(errorMessage);
+      if (isMounted.current) {
+        setError(errorMessage);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
+  // 그룹 생성
   const createGroup = useCallback(
     async (name: string) => {
       setIsLoading(true);
@@ -365,15 +428,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "그룹 생성에 실패했습니다.";
-        setError(errorMessage);
+        if (isMounted.current) {
+          setError(errorMessage);
+        }
         throw err;
       } finally {
-        setIsLoading(false);
+        if (isMounted.current) {
+          setIsLoading(false);
+        }
       }
     },
     [navigate]
   );
 
+  // 그룹 참여
   const joinGroup = useCallback(
     async (groupKey: string) => {
       setIsLoading(true);
@@ -386,26 +454,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "그룹 참여에 실패했습니다.";
-        setError(errorMessage);
+        if (isMounted.current) {
+          setError(errorMessage);
+        }
         throw err;
       } finally {
-        setIsLoading(false);
+        if (isMounted.current) {
+          setIsLoading(false);
+        }
       }
     },
     [navigate]
   );
 
+  // 로그아웃
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      console.log("로그아웃 시도");
+
+      // 상태 먼저 초기화
+      if (isMounted.current) {
+        setUserKey(null);
+        setUserProfile(null);
+        setIsAuthenticated(false);
+      }
+
+      // 로그아웃 처리
+      await auth.logout();
+
+      console.log("로그아웃 성공, 로그인 페이지로 이동");
+
+      // 로그아웃 후 약간의 지연을 두고 리디렉션
+      setTimeout(() => {
+        if (isMounted.current) {
+          navigate("/login");
+        }
+      }, 100);
+    } catch (err) {
+      console.error("로그아웃 오류:", err);
+      if (isMounted.current) {
+        setError("로그아웃 중 오류가 발생했습니다.");
+        setIsLoading(false); // 오류 시 로딩 상태 해제
+      }
+    }
+  }, [navigate]);
+
   // 포맷팅된 키 계산
-  const formattedKey = userKey ? formatKey(userKey) : "";
+  const formattedKey = userKey ? formatKey(userKey) : null;
 
   // Context 값 정의
-  const authContextValue: AuthContextType = {
+  const value = {
     userKey,
     formattedKey,
     isAuthenticated,
     isLoading,
     error,
-    userProfile, // 사용자 프로필 추가
+    userProfile,
     generateAndStoreKey,
     loginWithKey,
     loginWithEmail,
@@ -415,19 +521,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     logout,
     formatKey,
     cleanKey,
+    setIsAuthenticated,
   };
 
-  return (
-    <AuthContext.Provider value={authContextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// useAuth 훅 - 기존 useAuth.ts를 대체
+// useAuth 훅
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;

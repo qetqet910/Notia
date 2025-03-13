@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { supabase } from "@/services/supabase";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -60,17 +61,28 @@ export const Dashboard: React.FC = () => {
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
-  const { logout, userProfile } = useAuth();
+  const { logout, userProfile, isAuthenticated } = useAuth();
 
-  // Check if mobile on resize
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    // 페이지 로드 시 세션 상태 확인
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        console.log("Dashboard - Current session:", data.session ? "exists" : "none")
+  
+        // 세션이 없지만 인증 상태가 true인 경우 처리
+        if (!data.session && isAuthenticated) {
+          console.error("Dashboard - 세션 불일치: 세션은 없지만 인증 상태는 true")
+          // 여기서 추가 처리 가능 (예: 로그아웃 또는 상태 초기화)
+          logout()
+        }
+      } catch (err) {
+        console.error("Dashboard - 세션 확인 오류:", err)
+      }
+    }
+  
+    checkSession()
+  }, [isAuthenticated, logout])
 
   // Create a new note
   const handleCreateNote = () => {
