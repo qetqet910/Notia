@@ -1,30 +1,23 @@
-import { supabase } from "./supabase"
-import { generateRandomKey, formatKey } from "@/utils/keys"
-import { useAuthStore } from "@/stores/authStore"
+import { supabase } from "./supabase";
+import { generateRandomKey } from "@/utils/keys";
 
-type SocialProvider = "google" | "github"
-
-interface LoginAttempt {
-  timestamp: string
-  success: boolean
-  ip: string
-}
+type SocialProvider = "github" | "google";
 
 class AuthService {
   // 현재 사용자 가져오기
   async getCurrentUser() {
     const {
       data: { user },
-    } = await supabase.auth.getUser()
-    return user
+    } = await supabase.auth.getUser();
+    return user;
   }
 
   // 현재 세션 가져오기
   async getSession() {
     const {
       data: { session },
-    } = await supabase.auth.getSession()
-    return session
+    } = await supabase.auth.getSession();
+    return session;
   }
 
   // 이메일로 OTP 로그인
@@ -34,10 +27,10 @@ class AuthService {
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
-    })
+    });
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   }
 
   // 로그인 시도 제한 확인 (IP 기반)
@@ -97,277 +90,124 @@ class AuthService {
   }
 
   async loginWithKey(key: string) {
-    try {
-      // 키 형식 정리 (하이픈 제거)
-      const cleanKey = key.replace(/-/g, "")
+    // 1. 키로 사용자 찾기
+    const { data: keyData, error: keyError } = await supabase
+      .from("user_keys")
+      .select("user_id, key")
+      .eq("key", key)
+      .eq("is_active", true)
+      .single();
 
-      console.log("로그인 시도 키:", cleanKey)
-
-      // 로그인 시도 제한 확인 (IP 기반)
-      const isRateLimited = await this.checkLoginRateLimit()
-      if (isRateLimited) {
-        throw new Error("너무 많은 로그인 시도. 잠시 후 다시 시도해주세요.")
-      }
-
-      // 키로 사용자 찾기 - 쿼리 방식 변경
-      // 1. RPC 함수 사용 (권장)
-      try {
-        const { data, error } = await supabase.rpc("find_user_by_key", {
-          key_value: cleanKey,
-        })
-
-        if (error) throw error
-        if (!data || data.length === 0) {
-          await this.recordLoginAttempt(false)
-          throw new Error("유효하지 않은 키입니다.")
-        }
-
-        const userId = data[0].user_id
-
-        // 익명 로그인 (임시 세션 생성)
-        const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
-
-        if (authError) {
-          await this.recordLoginAttempt(false)
-          throw authError
-        }
-
-        // 사용자 메타데이터 업데이트 (실제 사용자 ID 연결)
-        await supabase.auth.updateUser({
-          data: {
-            original_user_id: userId,
-            key_login: true,
-            login_method: "key",
-          },
-        })
-
-        // 로그인 성공 기록
-        await this.recordLoginAttempt(true)
-
-        // Zustand 스토어 업데이트
-        useAuthStore.setState({
-          userKey: cleanKey,
-          formattedKey: formatKey(cleanKey),
-          isAuthenticated: true,
-        })
-
-        return {
-          success: true,
-          message: "로그인 성공",
-          key: cleanKey,
-        }
-      } catch (rpcError) {
-        console.error("RPC 호출 오류:", rpcError)
-
-        // 2. 대체 방법: 직접 SQL 쿼리 (RPC가 없는 경우)
-        try {
-          // 백틱으로 컬럼 이름 감싸기
-          const { data: keyData, error: keyError } = await supabase
-            .from("user_keys")
-            .select("user_id")
-            .filter("key", "eq", cleanKey) // filter 메소드 사용
-            .eq("is_active", true)
-            .single()
-
-          if (keyError || !keyData) {
-            // 3. 마지막 방법: 모든 키를 가져와서 JavaScript에서 필터링
-            const { data: allKeys, error: allKeysError } = await supabase
-              .from("user_keys")
-              .select("user_id, key, is_active")
-
-            if (allKeysError) {
-              await this.recordLoginAttempt(false)
-              throw new Error("키 확인 중 오류가 발생했습니다.")
-            }
-
-            const matchingKey = allKeys?.find((k) => k.key === cleanKey && k.is_active)
-            if (!matchingKey) {
-              await this.recordLoginAttempt(false)
-              throw new Error("유효하지 않은 키입니다.")
-            }
-
-            // 익명 로그인 (임시 세션 생성)
-            const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
-
-            if (authError) {
-              await this.recordLoginAttempt(false)
-              throw authError
-            }
-
-            // 사용자 메타데이터 업데이트
-            await supabase.auth.updateUser({
-              data: {
-                original_user_id: matchingKey.user_id,
-                key_login: true,
-                login_method: "key",
-              },
-            })
-
-            // 로그인 성공 기록
-            await this.recordLoginAttempt(true)
-
-            // Zustand 스토어 업데이트
-            useAuthStore.setState({
-              userKey: cleanKey,
-              formattedKey: formatKey(cleanKey),
-              isAuthenticated: true,
-            })
-
-            return {
-              success: true,
-              message: "로그인 성공",
-              key: cleanKey,
-            }
-          }
-
-          // 키를 찾은 경우 (두 번째 방법 성공)
-          // 익명 로그인 (임시 세션 생성)
-          const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
-
-          if (authError) {
-            await this.recordLoginAttempt(false)
-            throw authError
-          }
-
-          // 사용자 메타데이터 업데이트
-          await supabase.auth.updateUser({
-            data: {
-              original_user_id: keyData.user_id,
-              key_login: true,
-              login_method: "key",
-            },
-          })
-
-          // 로그인 성공 기록
-          await this.recordLoginAttempt(true)
-
-          // Zustand 스토어 업데이트
-          useAuthStore.setState({
-            userKey: cleanKey,
-            formattedKey: formatKey(cleanKey),
-            isAuthenticated: true,
-          })
-
-          return {
-            success: true,
-            message: "로그인 성공",
-            key: cleanKey,
-          }
-        } catch (directQueryError) {
-          console.error("직접 쿼리 오류:", directQueryError)
-          throw directQueryError
-        }
-      }
-    } catch (err) {
-      console.error("키 로그인 실패:", err)
-      throw err
+    if (keyError || !keyData) {
+      throw new Error("유효하지 않은 키입니다.");
     }
+
+    // 2. 해당 사용자의 이메일 찾기
+    const { data: userData, error: userError } = await supabase
+      .from("user_profiles")
+      .select("id, user_id")
+      .eq("user_id", keyData.user_id)
+      .single();
+
+    if (userError) {
+      throw new Error("사용자 정보를 찾을 수 없습니다.");
+    }
+
+    // 3. 익명 로그인 (키 기반 인증)
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email: `${keyData.user_id}@amnesia.app`, // 가상 이메일
+        password: key, // 키를 비밀번호로 사용
+      });
+
+    if (authError) {
+      throw new Error("인증에 실패했습니다.");
+    }
+
+    return {
+      user: authData.user,
+      key,
+    };
   }
 
-  // auth.ts의 generateAndStoreKey 함수 수정
+  // 키 생성 (회원가입) - 개선된 버전
   async generateAndStoreKey(email?: string) {
-    try {
-      // 이메일 유효성 검사
-      if (!email || email.trim() === "") {
-        throw new Error("이메일을 입력해주세요.")
-      }
+    // 1. 익명 사용자 생성 또는 이메일 사용자 생성
+    let authResponse;
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
-        throw new Error("유효한 이메일 주소를 입력해주세요.")
-      }
-
-      // 1. 랜덤 키 생성 (사용자에게 보여줄 원본 키)
-      const originalKey = generateRandomKey(16)
-
-      // 2. 솔트 생성
-      const salt = generateRandomKey(16)
-
-      // 3. 키 해싱
-      const hashedKey = await this.hashKeyWithSalt(originalKey, salt)
-
-      // 4. 이메일/비밀번호로 회원가입
-      const password = generateRandomKey(12)
-
-      const { data: userData, error: signUpError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
+    if (email) {
+      // 이메일이 있으면 이메일로 가입
+      authResponse = await supabase.auth.signUp({
+        email,
+        password: generateRandomKey(12), // 임의의 비밀번호 생성
         options: {
-          data: {
-            key_prefix: originalKey.substring(0, 4), // 키 접두사만 저장
-            salt: salt, // 솔트도 메타데이터에 저장
-          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-      })
+      });
+    } else {
+      // 이메일이 없으면 익명 로그인
+      const anonymousEmail = `anon-${Date.now()}@amnesia.app`;
+      const anonymousPassword = generateRandomKey(12);
 
-      if (signUpError) {
-        console.error("회원가입 오류:", signUpError)
-        throw signUpError
-      }
-
-      if (!userData.user) {
-        throw new Error("사용자 생성에 실패했습니다.")
-      }
-
-      // 5. 키 저장 (기존 스키마 사용)
-      const expiresAt = new Date()
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1)
-
-      const { error: keyError } = await supabase.from("user_keys").insert({
-        user_id: userData.user.id,
-        key: originalKey,
-        created_at: new Date().toISOString(),
-        is_active: true,
-        expires_at: expiresAt.toISOString(), // 만료 시간 설정
-      })
-
-      if (keyError) {
-        console.error("키 저장 오류:", keyError)
-        throw keyError
-      }
-
-      // 6. 사용자 프로필 생성
-      const displayName = email.split("@")[0]
-      const { error: profileError } = await supabase.from("user_profiles").insert({
-        user_id: userData.user.id,
-        display_name: displayName,
-        updated_at: new Date().toISOString(),
-      })
-
-      if (profileError) {
-        console.error("프로필 생성 오류:", profileError)
-        // 프로필 생성 실패해도 계속 진행
-      }
-
-      // 7. Zustand 스토어 업데이트
-      useAuthStore.setState({
-        userKey: originalKey,
-        formattedKey: formatKey(originalKey),
-      })
-
-      // 8. 원본 키 반환 (사용자에게 보여줄 용도)
-      return originalKey
-    } catch (err) {
-      console.error("키 생성 실패:", err)
-      throw err
+      authResponse = await supabase.auth.signUp({
+        email: anonymousEmail,
+        password: anonymousPassword,
+      });
     }
+
+    if (authResponse.error) {
+      throw authResponse.error;
+    }
+
+    const user = authResponse.data.user;
+    if (!user) throw new Error("사용자 생성에 실패했습니다.");
+
+    // 2. 사용자 키 생성
+    const key = generateRandomKey(16);
+
+    // 3. 키 저장
+    const { error: keyError } = await supabase.from("user_keys").insert({
+      user_id: user.id,
+      key,
+      created_at: new Date().toISOString(),
+      is_active: true,
+    });
+
+    if (keyError) {
+      throw keyError;
+    }
+
+    // 4. 사용자 프로필 생성
+    const { error: profileError } = await supabase
+      .from("user_profiles")
+      .insert({
+        user_id: user.id,
+        display_name: email ? email.split("@")[0] : "익명 사용자",
+        updated_at: new Date().toISOString(),
+      });
+
+    if (profileError) {
+      console.error("프로필 생성 오류:", profileError);
+    }
+
+    return key;
   }
 
   // 소셜 로그인 (개선된 버전)
   async loginWithSocial(provider: SocialProvider) {
     try {
-      console.log(`${provider} 로그인 시도`)
+      console.log(`${provider} 로그인 시도`);
 
       // 1. 이미 진행 중인 세션이 있는지 확인
-      const { data: sessionData } = await supabase.auth.getSession()
+      const { data: sessionData } = await supabase.auth.getSession();
 
       // 2. 이미 로그인된 경우 로그아웃 처리
       if (sessionData.session) {
-        console.log("기존 세션 발견, 로그아웃 처리")
-        await supabase.auth.signOut({ scope: "global" })
+        console.log("기존 세션 발견, 로그아웃 처리");
+        await supabase.auth.signOut({ scope: "global" });
 
         // 세션 정리를 위한 짧은 지연
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       // 3. 소셜 로그인 시작
@@ -377,128 +217,107 @@ class AuthService {
           redirectTo: `${window.location.origin}/auth/callback`,
           skipBrowserRedirect: false, // 브라우저 리디렉션 사용
         },
-      })
+      });
 
-      if (error) throw error
-      return data
+      if (error) throw error;
+      return data;
     } catch (err) {
-      console.error(`${provider} 로그인 예외:`, err)
-      throw err
+      console.error(`${provider} 로그인 예외:`, err);
+      throw err;
     }
   }
 
   async createGroup(name: string) {
-    try {
-      // 1. 그룹 생성
-      const { data: groupData, error: groupError } = await supabase.from("groups").insert({ name }).select().single()
+    const user = await this.getCurrentUser();
+    if (!user) throw new Error("로그인이 필요합니다.");
 
-      if (groupError) {
-        console.error("그룹 생성 오류:", groupError)
-        throw groupError
-      }
+    const key = generateRandomKey(16);
 
-      // 2. 그룹 멤버십 생성
-      const { error: membershipError } = await supabase.from("group_members").insert({
-        group_id: groupData.id,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        role: "admin",
-      })
-
-      if (membershipError) {
-        console.error("그룹 멤버십 생성 오류:", membershipError)
-        throw membershipError
-      }
-
-      // 3. 그룹 키 생성
-      const groupKey = generateRandomKey(16)
-      const { error: keyError } = await supabase.from("group_keys").insert({
-        group_id: groupData.id,
-        key: groupKey,
+    const { data, error } = await supabase
+      .from("user_groups")
+      .insert({
+        name,
+        key,
+        owner_id: user.id,
         created_at: new Date().toISOString(),
-        is_active: true,
       })
+      .select()
+      .single();
 
-      if (keyError) {
-        console.error("그룹 키 생성 오류:", keyError)
-        throw keyError
-      }
+    if (error) throw error;
 
-      return {
-        groupId: groupData.id,
-        groupKey: formatKey(groupKey),
-      }
-    } catch (err) {
-      console.error("그룹 생성 실패:", err)
-      throw err
-    }
+    // 그룹 멤버로 자신 추가
+    await supabase.from("group_members").insert({
+      group_id: data.id,
+      user_id: user.id,
+      joined_at: new Date().toISOString(),
+    });
+
+    return data;
   }
 
-  // 그룹 참여 - 수정된 버전
-  async joinGroup(key: string) {
-    try {
-      // 키 형식 정리 (하이픈 제거)
-      const cleanKey = key.replace(/-/g, "")
+  // 그룹 참여
+  async joinGroup(groupKey: string) {
+    const user = await this.getCurrentUser();
+    if (!user) throw new Error("로그인이 필요합니다.");
 
-      // 키로 그룹 찾기
-      const { data: keyData, error: keyError } = await supabase
-        .from("group_keys")
-        .select("group_id")
-        .eq("key", cleanKey)
-        .eq("is_active", true)
-        .single()
+    // 그룹 찾기
+    const { data: group, error: groupError } = await supabase
+      .from("user_groups")
+      .select("id, name, owner_id")
+      .eq("key", groupKey)
+      .single();
 
-      if (keyError || !keyData) {
-        console.error("그룹 키 조회 오류:", keyError)
-        throw new Error("유효하지 않은 그룹 키입니다.")
-      }
-
-      // 그룹 멤버십 생성
-      const { error: membershipError } = await supabase.from("group_members").insert({
-        group_id: keyData.group_id,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        role: "member",
-      })
-
-      if (membershipError) {
-        console.error("그룹 멤버십 생성 오류:", membershipError)
-        throw membershipError
-      }
-
-      return {
-        success: true,
-        groupId: keyData.group_id,
-      }
-    } catch (err) {
-      console.error("그룹 참여 실패:", err)
-      throw err
+    if (groupError || !group) {
+      throw new Error("유효하지 않은 그룹 키입니다.");
     }
+
+    // 이미 멤버인지 확인
+    const { data: existingMember } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", group.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (existingMember) {
+      return { message: "이미 그룹의 멤버입니다." };
+    }
+
+    // 그룹에 멤버 추가
+    const { error: memberError } = await supabase.from("group_members").insert({
+      group_id: group.id,
+      user_id: user.id,
+      joined_at: new Date().toISOString(),
+    });
+
+    if (memberError) throw memberError;
+
+    return {
+      message: `${group.name} 그룹에 참여했습니다.`,
+      group,
+    };
   }
 
   // 로그아웃 (개선된 버전)
   async logout() {
+    console.log("로그아웃 시작");
+
     try {
-      const { error } = await supabase.auth.signOut()
+      const { error } = await supabase.auth.signOut();
 
       if (error) {
-        console.error("로그아웃 오류:", error)
-        throw error
+        console.error("로그아웃 오류:", error);
+        throw error;
       }
 
-      // Zustand 스토어 업데이트
-      useAuthStore.setState({
-        user: null,
-        session: null,
-        isAuthenticated: false,
-        userKey: null,
-        formattedKey: null,
-      })
-
-      return { success: true }
+      console.log("로그아웃 성공");
+      return { success: true };
     } catch (err) {
-      console.error("로그아웃 실패:", err)
-      throw err
+      console.error("로그아웃 예외:", err);
+      throw err;
     }
   }
 }
 
-export const auth = new AuthService()
+export const auth = new AuthService();
