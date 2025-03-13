@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/services/supabase';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import {supabse}
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
