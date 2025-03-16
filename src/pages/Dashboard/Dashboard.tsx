@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {supabse}
+import { supabase } from "@/services/supabase";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
