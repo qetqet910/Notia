@@ -172,77 +172,55 @@ class AuthService {
     }
   }
 
-  // 그룹 생성
+  // 그룹 생성 - 수정된 버전
   async createGroup(name: string) {
     const user = await this.getCurrentUser();
     if (!user) throw new Error("로그인이 필요합니다.");
 
     const key = generateRandomKey(16);
 
-    const { data, error } = await supabase
-      .from("user_groups")
-      .insert({
-        name,
-        key,
-        owner_id: user.id,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    try {
+      // RPC 함수 호출
+      const { data, error } = await supabase.rpc("create_group_with_member", {
+        group_name: name,
+        group_key: key,
+        user_id: user.id,
+      });
 
-    if (error) throw error;
+      if (error) {
+        console.error("그룹 생성 오류:", error);
+        throw error;
+      }
 
-    // 그룹 멤버로 자신 추가
-    await supabase.from("group_members").insert({
-      group_id: data.id,
-      user_id: user.id,
-      joined_at: new Date().toISOString(),
-    });
-
-    return data;
+      return data;
+    } catch (error) {
+      console.error("그룹 생성 예외:", error);
+      throw error;
+    }
   }
 
-  // 그룹 참여
+  // 그룹 참여 - 수정된 버전
   async joinGroup(groupKey: string) {
     const user = await this.getCurrentUser();
     if (!user) throw new Error("로그인이 필요합니다.");
 
-    // 그룹 찾기
-    const { data: group, error: groupError } = await supabase
-      .from("user_groups")
-      .select("id, name, owner_id")
-      .eq("key", groupKey)
-      .single();
+    try {
+      // RPC 함수 호출
+      const { data, error } = await supabase.rpc("join_group_by_key", {
+        group_key: groupKey,
+        user_id: user.id,
+      });
 
-    if (groupError || !group) {
-      throw new Error("유효하지 않은 그룹 키입니다.");
+      if (error) {
+        console.error("그룹 참여 오류:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("그룹 참여 예외:", error);
+      throw error;
     }
-
-    // 이미 멤버인지 확인
-    const { data: existingMember } = await supabase
-      .from("group_members")
-      .select("id")
-      .eq("group_id", group.id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (existingMember) {
-      return { message: "이미 그룹의 멤버입니다." };
-    }
-
-    // 그룹에 멤버 추가
-    const { error: memberError } = await supabase.from("group_members").insert({
-      group_id: group.id,
-      user_id: user.id,
-      joined_at: new Date().toISOString(),
-    });
-
-    if (memberError) throw memberError;
-
-    return {
-      message: `${group.name} 그룹에 참여했습니다.`,
-      group,
-    };
   }
 
   // 로그아웃 (개선된 버전)
