@@ -171,18 +171,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     console.log("AuthProvider 마운트");
 
-    // 이미 초기화되었는지 확인하는 플래그
-    let isInitialized = false;
     isMounted.current = true;
 
     // Supabase 세션 확인 함수
     const checkSession = async () => {
-      // 이미 초기화되었으면 중복 실행 방지
-      if (isInitialized) return;
-      isInitialized = true;
-
       try {
         console.log("세션 확인 시작");
+
+        // 모든 상태 초기화
+        setIsLoading(true);
+        setIsAuthenticated(false);
+        setUserKey(null);
+        setUserProfile(null);
 
         // Supabase의 내장 세션 관리 사용
         const { data, error } = await supabase.auth.getSession();
@@ -206,9 +206,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           // 사용자 키와 프로필 가져오기
           await fetchUserKey(data.session.user.id);
           await fetchUserProfile(data.session.user.id);
-
-          // 세션이 있으면 현재 경로에 따라 리디렉션 처리
-          handleRedirection(true);
         } else {
           console.log("세션 없음");
           if (isMounted.current) {
@@ -216,9 +213,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             setUserKey(null);
             setUserProfile(null);
           }
-
-          // 세션이 없으면 현재 경로에 따라 리디렉션 처리
-          handleRedirection(false);
         }
       } catch (err) {
         console.error("세션 확인 중 예외 발생:", err);
@@ -241,18 +235,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (!isMounted.current) return;
 
-      // 이벤트 타입에 따른 디버깅 로그 추가
-      console.log(
-        `Auth event: ${event}, Session exists: ${!!session}, User ID: ${
-          session?.user?.id || "none"
-        }`
-      );
-
-      // 세션 상태에 따라 인증 상태 업데이트
-      setIsAuthenticated(!!session);
-
       if (session) {
         console.log("세션 있음, 사용자 데이터 로드 시작");
+
+        if (isMounted.current) {
+          setIsAuthenticated(true);
+        }
 
         try {
           await fetchUserKey(session.user.id);
@@ -260,28 +248,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         } catch (err) {
           console.error("사용자 데이터 로드 중 오류:", err);
         }
-
-        // 로그인 이벤트에만 리디렉션 적용
-        if (event === "SIGNED_IN") {
-          const currentPath = location.pathname;
-          if (currentPath === "/login" || currentPath === "/auth/callback") {
-            console.log("로그인 후 대시보드로 리디렉션");
-            navigate("/dashboard");
-          }
-        }
       } else {
         console.log("세션 없음, 사용자 데이터 초기화");
-        setUserKey(null);
-        setUserProfile(null);
 
-        // 로그아웃 이벤트에만 리디렉션 적용
-        if (event === "SIGNED_OUT") {
-          // 약간의 지연 후 리디렉션
-          setTimeout(() => {
-            if (isMounted.current) {
-              navigate("/login");
-            }
-          }, 100);
+        if (isMounted.current) {
+          setIsAuthenticated(false);
+          setUserKey(null);
+          setUserProfile(null);
         }
       }
 
@@ -295,42 +268,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       isMounted.current = false;
       subscription.unsubscribe();
     };
-  }, [
-    navigate,
-    fetchUserProfile,
-    fetchUserKey,
-    handleRedirection,
-    location.pathname,
-  ]);
+  }, []);
 
   // 키 생성 및 저장 (회원가입)
   const generateAndStoreKey = useCallback(
     async (email?: string) => {
-      setIsLoading(true);
-      setError(null);
+      // 이미 로딩 중이면 중복 호출 방지
+      if (isLoading) return null;
 
       try {
+        setIsLoading(true);
+        setError(null);
+
+        // auth.ts의 함수 호출
         const key = await auth.generateAndStoreKey(email);
+
         if (isMounted.current) {
           setUserKey(key);
-          setIsAuthenticated(true);
+          formatKey(key);
+          // 여기서는 인증 상태를 변경하지 않음 (키만 생성)
+          // setIsAuthenticated(true);
         }
-        navigate("/dashboard");
+
         return key;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "키 생성에 실패했습니다.";
+      } catch (err: any) {
+        console.error("키 생성 오류:", err);
+
+        // 사용자 친화적인 오류 메시지
+        let errorMessage = "키 생성에 실패했습니다.";
+
+        if (err.message === "Email not confirmed") {
+          errorMessage = "이메일 확인이 필요합니다. 이메일을 확인해주세요.";
+        } else if (err.message?.includes("duplicate key")) {
+          errorMessage = "이미 사용 중인 이메일입니다.";
+        }
+
         if (isMounted.current) {
           setError(errorMessage);
         }
-        throw err;
+
+        return null;
       } finally {
         if (isMounted.current) {
           setIsLoading(false);
         }
       }
     },
-    [navigate]
+    [isLoading]
   );
 
   // 키로 로그인
@@ -347,7 +331,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const result = await auth.loginWithKey(key);
         if (isMounted.current) {
-          setUserKey(result.key);
+          setUserKey(result.message);
           setIsAuthenticated(true);
         }
         navigate("/dashboard");

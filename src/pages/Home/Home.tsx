@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/_Header";
 
 import logoImage from "@/stores/images/Logo.png";
-import PlaceHolder from "@/stores/images/main.png";
+import PlaceHolder from "@/stores/images/Placeholder.png";
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
