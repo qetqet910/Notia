@@ -4,147 +4,126 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export interface Database {
   public: {
     Tables: {
       user_keys: {
         Row: {
-          id: string
-          user_id: string
-          key: string
-          created_at: string
-          is_active: boolean
-        }
+          id: string;
+          user_id: string;
+          key: string;
+          created_at: string;
+          is_active: boolean;
+        };
         Insert: {
-          id?: string
-          user_id: string
-          key: string
-          created_at?: string
-          is_active?: boolean
-        }
+          id?: string;
+          user_id: string;
+          key: string;
+          created_at?: string;
+          is_active?: boolean;
+        };
         Update: {
-          id?: string
-          user_id?: string
-          key?: string
-          created_at?: string
-          is_active?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_keys_user_id_fkey"
-            columns: ["user_id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
+          id?: string;
+          user_id?: string;
+          key?: string;
+          created_at?: string;
+          is_active?: boolean;
+        };
+      };
       user_groups: {
         Row: {
-          id: string
-          name: string
-          key: string
-          owner_id: string
-          created_at: string
-        }
+          id: string;
+          name: string;
+          key: string;
+          owner_id: string;
+          created_at: string;
+        };
         Insert: {
-          id?: string
-          name: string
-          key: string
-          owner_id: string
-          created_at?: string
-        }
+          id?: string;
+          name: string;
+          key: string;
+          owner_id: string;
+          created_at?: string;
+        };
         Update: {
-          id?: string
-          name?: string
-          key?: string
-          owner_id?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_groups_owner_id_fkey"
-            columns: ["owner_id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
+          id?: string;
+          name?: string;
+          key?: string;
+          owner_id?: string;
+          created_at?: string;
+        };
+      };
       group_members: {
         Row: {
-          id: string
-          group_id: string
-          user_id: string
-          joined_at: string
-        }
+          id: string;
+          group_id: string;
+          user_id: string;
+          joined_at: string;
+        };
         Insert: {
-          id?: string
-          group_id: string
-          user_id: string
-          joined_at?: string
-        }
+          id?: string;
+          group_id: string;
+          user_id: string;
+          joined_at?: string;
+        };
         Update: {
-          id?: string
-          group_id?: string
-          user_id?: string
-          joined_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "group_members_group_id_fkey"
-            columns: ["group_id"]
-            referencedRelation: "user_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_members_user_id_fkey"
-            columns: ["user_id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
+          id?: string;
+          group_id?: string;
+          user_id?: string;
+          joined_at?: string;
+        };
+      };
       user_profiles: {
         Row: {
-          id: string
-          user_id: string
-          display_name: string | null
-          avatar_url: string | null
-          updated_at: string
-        }
+          id: string;
+          user_id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          updated_at: string;
+        };
         Insert: {
-          id?: string
-          user_id: string
-          display_name?: string | null
-          avatar_url?: string | null
-          updated_at?: string
-        }
+          id?: string;
+          user_id: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          id?: string
-          user_id?: string
-          display_name?: string | null
-          avatar_url?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_profiles_user_id_fkey"
-            columns: ["user_id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-    }
+          id?: string;
+          user_id?: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          updated_at?: string;
+        };
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      create_group_with_member: {
+        Args: {
+          group_name: string;
+          group_key: string;
+          user_id: string;
+        };
+        Returns: Json;
+      };
+      join_group_by_key: {
+        Args: {
+          group_key: string;
+          user_id: string;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
 }
