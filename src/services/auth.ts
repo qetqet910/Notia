@@ -33,53 +33,120 @@ class AuthService {
     return data;
   }
 
-  // 키로 로그인 (개선된 버전)
+  // 로그인 시도 제한 확인 (IP 기반)
+  async checkLoginRateLimit(): Promise<boolean> {
+    // 실제 구현에서는 클라이언트 IP를 가져와야 함
+    const clientIp = "client-ip";
+
+    // 현재 시간에서 15분 전
+    const fifteenMinutesAgo = new Date();
+    fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15);
+
+    // 로그인 시도 횟수 확인 (메모리 또는 로컬 스토리지 사용)
+    // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
+    const loginAttempts = this.getLoginAttempts();
+
+    // 15분 이내의 실패한 로그인 시도 필터링
+    const recentFailedAttempts = loginAttempts.filter(
+      (attempt) =>
+        !attempt.success && new Date(attempt.timestamp) > fifteenMinutesAgo
+    );
+
+    // 5회 이상 실패 시 제한
+    return recentFailedAttempts.length >= 5;
+  }
+
+  // 로그인 시도 기록 (메모리 사용)
+  async recordLoginAttempt(success: boolean) {
+    // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
+    const loginAttempts = this.getLoginAttempts();
+
+    loginAttempts.push({
+      timestamp: new Date().toISOString(),
+      success: success,
+      ip: "client-ip", // 실제 구현에서는 클라이언트 IP 가져오기
+    });
+
+    // 최대 100개만 저장
+    if (loginAttempts.length > 100) {
+      loginAttempts.shift();
+    }
+
+    // 로컬 스토리지에 저장
+    localStorage.setItem("loginAttempts", JSON.stringify(loginAttempts));
+  }
+
+  // 로그인 시도 가져오기
+  getLoginAttempts() {
+    const storedAttempts = localStorage.getItem("loginAttempts");
+    return storedAttempts ? JSON.parse(storedAttempts) : [];
+  }
+
+  async hashKeyWithSalt(key: string, salt: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(key + salt);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // auth.ts의 loginWithKey 함수 수정
   async loginWithKey(key: string) {
+    // 키로 사용자 찾기 (만료 확인 추가)
     try {
       // 키 형식 정리 (하이픈 제거)
       const cleanKey = key.replace(/-/g, "");
 
-      // 키로 사용자 찾기
+      // 로그인 시도 제한 확인 (IP 기반)
+      const isRateLimited = await this.checkLoginRateLimit();
+      if (isRateLimited) {
+        throw new Error("너무 많은 로그인 시도. 잠시 후 다시 시도해주세요.");
+      }
+
+      // 키로 사용자 찾기 (기존 스키마 사용)
       const { data: keyData, error: keyError } = await supabase
         .from("user_keys")
-        .select("user_id")
+        .select("user_id, expires_at")
         .eq("key", cleanKey)
         .eq("is_active", true)
         .single();
 
       if (keyError || !keyData) {
-        console.error("키 조회 오류:", keyError);
+        await this.recordLoginAttempt(false);
         throw new Error("유효하지 않은 키입니다.");
       }
 
-      // 관리자 액세스 토큰 생성 (이 부분은 서버 측에서 수행해야 함)
-      // 클라이언트에서는 이 방법을 사용할 수 없으므로 대안 필요
-
-      // 대안: 키를 알고 있는 사용자에게 임시 로그인 링크 발송
-      const { data: userData, error: userError } = await supabase
-        .from("user_profiles")
-        .select("email")
-        .eq("user_id", keyData.user_id)
-        .single();
-
-      if (userError) {
-        console.error("사용자 조회 오류:", userError);
-        throw new Error("사용자 정보를 찾을 수 없습니다.");
+      // 만료 확인
+      if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
+        await this.recordLoginAttempt(false);
+        throw new Error("만료된 키입니다. 새 키를 생성해주세요.");
       }
 
-      // 임시 로그인 링크 발송
-      const { error: magicLinkError } = await supabase.auth.signInWithOtp({
-        email: userData.email,
+      // 익명 로그인 (임시 세션 생성)
+      const { data: authData, error: authError } =
+        await supabase.auth.signInAnonymously();
+
+      if (authError) {
+        await this.recordLoginAttempt(false);
+        throw authError;
+      }
+
+      // 사용자 메타데이터 업데이트 (실제 사용자 ID 연결)
+      await supabase.auth.updateUser({
+        data: {
+          original_user_id: keyData.user_id,
+          key_login: true,
+          login_method: "key",
+        },
       });
 
-      if (magicLinkError) {
-        console.error("매직 링크 발송 오류:", magicLinkError);
-        throw magicLinkError;
-      }
+      // 로그인 성공 기록
+      await this.recordLoginAttempt(true);
 
       return {
         success: true,
-        message: "로그인 링크가 이메일로 발송되었습니다.",
+        message: "로그인 성공",
+        key: cleanKey,
       };
     } catch (err) {
       console.error("키 로그인 실패:", err);
@@ -87,23 +154,39 @@ class AuthService {
     }
   }
 
-  // 키 생성 (회원가입) - 개선된 버전
+  // auth.ts의 generateAndStoreKey 함수 수정
   async generateAndStoreKey(email?: string) {
     try {
-      // 1. 랜덤 키 생성
-      const key = generateRandomKey(16);
+      // 이메일 유효성 검사
+      if (!email || email.trim() === "") {
+        throw new Error("이메일을 입력해주세요.");
+      }
 
-      // 2. 이메일/비밀번호로 회원가입
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error("유효한 이메일 주소를 입력해주세요.");
+      }
+
+      // 1. 랜덤 키 생성 (사용자에게 보여줄 원본 키)
+      const originalKey = generateRandomKey(16);
+
+      // 2. 솔트 생성
+      const salt = generateRandomKey(16);
+
+      // 3. 키 해싱
+      const hashedKey = await this.hashKeyWithSalt(originalKey, salt);
+
+      // 4. 이메일/비밀번호로 회원가입
       const password = generateRandomKey(12);
-      const userEmail = email || `user-${key}@amnesia.app`;
 
       const { data: userData, error: signUpError } = await supabase.auth.signUp(
         {
-          email: userEmail,
+          email: email,
           password: password,
           options: {
             data: {
-              key: key, // 사용자 메타데이터에 키 저장
+              key_prefix: originalKey.substring(0, 4), // 키 접두사만 저장
+              salt: salt, // 솔트도 메타데이터에 저장
             },
           },
         }
@@ -114,39 +197,44 @@ class AuthService {
         throw signUpError;
       }
 
-      // 3. 사용자가 생성되었으면 키 저장 (이메일 확인 여부와 무관하게)
-      if (userData.user) {
-        // 키 저장
-        const { error: keyError } = await supabase.from("user_keys").insert({
-          user_id: userData.user.id,
-          key: key,
-          created_at: new Date().toISOString(),
-          is_active: true,
-        });
-
-        if (keyError) {
-          console.error("키 저장 오류:", keyError);
-          // 키 저장 실패해도 계속 진행 (키는 이미 생성됨)
-        }
-
-        // 사용자 프로필 생성
-        const displayName = email ? email.split("@")[0] : "익명 사용자";
-        const { error: profileError } = await supabase
-          .from("user_profiles")
-          .insert({
-            user_id: userData.user.id,
-            display_name: displayName,
-            updated_at: new Date().toISOString(),
-          });
-
-        if (profileError) {
-          console.error("프로필 생성 오류:", profileError);
-          // 프로필 생성 실패해도 계속 진행
-        }
+      if (!userData.user) {
+        throw new Error("사용자 생성에 실패했습니다.");
       }
 
-      // 4. 키 반환 (로그인 여부와 무관하게)
-      return key;
+      // 5. 키 저장 (기존 스키마 사용)
+      const expiresAt = new Date();
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
+      const { error: keyError } = await supabase.from("user_keys").insert({
+        user_id: userData.user.id,
+        key: originalKey,
+        created_at: new Date().toISOString(),
+        is_active: true,
+        expires_at: expiresAt.toISOString(), // 만료 시간 설정
+      });
+
+      if (keyError) {
+        console.error("키 저장 오류:", keyError);
+        throw keyError;
+      }
+
+      // 6. 사용자 프로필 생성
+      const displayName = email.split("@")[0];
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .insert({
+          user_id: userData.user.id,
+          display_name: displayName,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error("프로필 생성 오류:", profileError);
+        // 프로필 생성 실패해도 계속 진행
+      }
+
+      // 7. 원본 키 반환 (사용자에게 보여줄 용도)
+      return originalKey;
     } catch (err) {
       console.error("키 생성 실패:", err);
       throw err;

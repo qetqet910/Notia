@@ -245,7 +245,20 @@ export const Login: React.FC = () => {
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 이미 로딩 중이면 중복 호출 방지
     if (isLoading) return;
+
+    // 이메일 유효성 검사
+    if (!email || email.trim() === "") {
+      console.error("이메일을 입력해주세요.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error("유효한 이메일 주소를 입력해주세요.");
+      return;
+    }
 
     try {
       console.log("키 생성 시작");
@@ -462,9 +475,10 @@ export const Login: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
+                    required
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    이메일을 입력하지 않으면 백업 키를 받을 수 없어요!
+                    키를 생성하려면 이메일을 입력해야 합니다.
                   </p>
                 </motion.div>
 
