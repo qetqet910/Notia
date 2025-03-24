@@ -44,12 +44,16 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@pages': path.resolve(__dirname, './src/pages'),
+      '@utils': path.resolve(__dirname, './src/utils'),
     },
   },
   build: {
     minify: false, // 코드 압축(난독화) 비활성화 → 빌드 속도 증가
-    // 배포 과정에선 당연히 true로 바꿀 것
+                   // 배포 과정에선 당연히 true로 바꿀 것
     rollupOptions: {
       input: {
         main: "index.html",
