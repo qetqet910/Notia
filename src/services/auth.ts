@@ -1,7 +1,13 @@
 import { supabase } from "./supabase";
 import { generateRandomKey, formatKey } from "@/utils/keys";
 
-type SocialProvider = "github" | "google";
+type SocialProvider = "google" | "github";
+
+interface LoginAttempt {
+  timestamp: string
+  success: boolean
+  ip: string
+}
 
 class AuthService {
   // 현재 사용자 가져오기
@@ -36,49 +42,50 @@ class AuthService {
   // 로그인 시도 제한 확인 (IP 기반)
   async checkLoginRateLimit(): Promise<boolean> {
     // 실제 구현에서는 클라이언트 IP를 가져와야 함
-    const clientIp = "client-ip";
+    const clientIp = "client-ip"
 
-    // 현재 시간에서 15분 전
-    const fifteenMinutesAgo = new Date();
-    fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15);
+  // 현재 시간에서 15분 전
+  const fifteenMinutesAgo = new Date()
+  fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15)
 
-    // 로그인 시도 횟수 확인 (메모리 또는 로컬 스토리지 사용)
-    // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
-    const loginAttempts = this.getLoginAttempts();
+  // 로그인 시도 횟수 확인 (메모리 또는 로컬 스토리지 사용)
+  // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
+  const loginAttempts = this.getLoginAttempts()
 
-    // 15분 이내의 실패한 로그인 시도 필터링
-    const recentFailedAttempts = loginAttempts.filter(
-      (attempt) =>
-        !attempt.success && new Date(attempt.timestamp) > fifteenMinutesAgo
-    );
+  // 15분 이내의 실패한 로그인 시도 필터링
+  const recentFailedAttempts = loginAttempts.filter(
+    (attempt) => !attempt.success && new Date(attempt.timestamp) > fifteenMinutesAgo,
+  )
 
-    // 5회 이상 실패 시 제한
-    return recentFailedAttempts.length >= 5;
+  // 5회 이상 실패 시 제한
+  return recentFailedAttempts.length >= 5;
   }
+
+
 
   // 로그인 시도 기록 (메모리 사용)
   async recordLoginAttempt(success: boolean) {
-    // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
-    const loginAttempts = this.getLoginAttempts();
+  // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
+  const loginAttempts = this.getLoginAttempts()
 
-    loginAttempts.push({
-      timestamp: new Date().toISOString(),
-      success: success,
-      ip: "client-ip", // 실제 구현에서는 클라이언트 IP 가져오기
-    });
+  loginAttempts.push({
+    timestamp: new Date().toISOString(),
+    success: success,
+    ip: "client-ip", // 실제 구현에서는 클라이언트 IP 가져오기
+  })
 
-    // 최대 100개만 저장
-    if (loginAttempts.length > 100) {
-      loginAttempts.shift();
-    }
+  // 최대 100개만 저장
+  if (loginAttempts.length > 100) {
+    loginAttempts.shift()
+  }
 
-    // 로컬 스토리지에 저장
-    localStorage.setItem("loginAttempts", JSON.stringify(loginAttempts));
+  // 로컬 스토리지에 저장
+  localStorage.setItem("loginAttempts", JSON.stringify(loginAttempts))
   }
 
   // 로그인 시도 가져오기
   getLoginAttempts() {
-    const storedAttempts = localStorage.getItem("loginAttempts");
+    const storedAttempts = localStorage.getItem("loginAttempts")
     return storedAttempts ? JSON.parse(storedAttempts) : [];
   }
 
@@ -90,67 +97,150 @@ class AuthService {
     return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  // auth.ts의 loginWithKey 함수 수정
   async loginWithKey(key: string) {
-    // 키로 사용자 찾기 (만료 확인 추가)
     try {
       // 키 형식 정리 (하이픈 제거)
-      const cleanKey = key.replace(/-/g, "");
-
+      const cleanKey = key.replace(/-/g, "")
+  
+      console.log("로그인 시도 키:", cleanKey)
+  
       // 로그인 시도 제한 확인 (IP 기반)
-      const isRateLimited = await this.checkLoginRateLimit();
+      const isRateLimited = await this.checkLoginRateLimit()
       if (isRateLimited) {
-        throw new Error("너무 많은 로그인 시도. 잠시 후 다시 시도해주세요.");
+        throw new Error("너무 많은 로그인 시도. 잠시 후 다시 시도해주세요.")
       }
-
-      // 키로 사용자 찾기 (기존 스키마 사용)
-      const { data: keyData, error: keyError } = await supabase
-        .from("user_keys")
-        .select("user_id, expires_at")
-        .eq("key", cleanKey)
-        .eq("is_active", true)
-        .single();
-
-      if (keyError || !keyData) {
-        await this.recordLoginAttempt(false);
-        throw new Error("유효하지 않은 키입니다.");
+  
+      // 키로 사용자 찾기 - 쿼리 방식 변경
+      // 1. RPC 함수 사용 (권장)
+      try {
+        const { data, error } = await supabase.rpc("find_user_by_key", {
+          key_value: cleanKey,
+        })
+  
+        if (error) throw error
+        if (!data || data.length === 0) {
+          await this.recordLoginAttempt(false)
+          throw new Error("유효하지 않은 키입니다.")
+        }
+  
+        const userId = data[0].user_id
+  
+        // 익명 로그인 (임시 세션 생성)
+        const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+  
+        if (authError) {
+          await this.recordLoginAttempt(false)
+          throw authError
+        }
+  
+        // 사용자 메타데이터 업데이트 (실제 사용자 ID 연결)
+        await supabase.auth.updateUser({
+          data: {
+            original_user_id: userId,
+            key_login: true,
+            login_method: "key",
+          },
+        })
+  
+        // 로그인 성공 기록
+        await this.recordLoginAttempt(true)
+  
+        return {
+          success: true,
+          message: "로그인 성공",
+          key: cleanKey
+        };
+      } catch (rpcError) {
+        console.error("RPC 호출 오류:", rpcError)
+  
+        // 2. 대체 방법: 직접 SQL 쿼리 (RPC가 없는 경우)
+        try {
+          // 백틱으로 컬럼 이름 감싸기
+          const { data: keyData, error: keyError } = await supabase
+            .from("user_keys")
+            .select("user_id")
+            .filter("key", "eq", cleanKey) // filter 메소드 사용
+            .eq("is_active", true)
+            .single()
+  
+          if (keyError || !keyData) {
+            // 3. 마지막 방법: 모든 키를 가져와서 JavaScript에서 필터링
+            const { data: allKeys, error: allKeysError } = await supabase
+              .from("user_keys")
+              .select("user_id, key, is_active")
+  
+            if (allKeysError) {
+              await this.recordLoginAttempt(false)
+              throw new Error("키 확인 중 오류가 발생했습니다.")
+            }
+  
+            const matchingKey = allKeys?.find((k) => k.key === cleanKey && k.is_active)
+            if (!matchingKey) {
+              await this.recordLoginAttempt(false)
+              throw new Error("유효하지 않은 키입니다.")
+            }
+  
+            // 익명 로그인 (임시 세션 생성)
+            const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+  
+            if (authError) {
+              await this.recordLoginAttempt(false)
+              throw authError
+            }
+  
+            // 사용자 메타데이터 업데이트
+            await supabase.auth.updateUser({
+              data: {
+                original_user_id: matchingKey.user_id,
+                key_login: true,
+                login_method: "key",
+              },
+            })
+  
+            // 로그인 성공 기록
+            await this.recordLoginAttempt(true)
+  
+            return {
+              success: true,
+              message: "로그인 성공",
+              key: cleanKey
+            };
+          }
+  
+          // 키를 찾은 경우 (두 번째 방법 성공)
+          // 익명 로그인 (임시 세션 생성)
+          const { data: authData, error: authError } = await supabase.auth.signInAnonymously()
+  
+          if (authError) {
+            await this.recordLoginAttempt(false)
+            throw authError
+          }
+  
+          // 사용자 메타데이터 업데이트
+          await supabase.auth.updateUser({
+            data: {
+              original_user_id: keyData.user_id,
+              key_login: true,
+              login_method: "key",
+            },
+          })
+  
+          // 로그인 성공 기록
+          await this.recordLoginAttempt(true)
+  
+          return {
+            success: true,
+            message: "로그인 성공",
+            key: cleanKey
+          };
+        } catch (directQueryError) {
+          console.error("직접 쿼리 오류:", directQueryError)
+          throw directQueryError
+        }
       }
-
-      // 만료 확인
-      if (keyData.expires_at && new Date(keyData.expires_at) < new Date()) {
-        await this.recordLoginAttempt(false);
-        throw new Error("만료된 키입니다. 새 키를 생성해주세요.");
-      }
-
-      // 익명 로그인 (임시 세션 생성)
-      const { data: authData, error: authError } =
-        await supabase.auth.signInAnonymously();
-
-      if (authError) {
-        await this.recordLoginAttempt(false);
-        throw authError;
-      }
-
-      // 사용자 메타데이터 업데이트 (실제 사용자 ID 연결)
-      await supabase.auth.updateUser({
-        data: {
-          original_user_id: keyData.user_id,
-          key_login: true,
-          login_method: "key",
-        },
-      });
-
-      // 로그인 성공 기록
-      await this.recordLoginAttempt(true);
-
-      return {
-        success: true,
-        message: "로그인 성공",
-        key: cleanKey,
-      };
     } catch (err) {
-      console.error("키 로그인 실패:", err);
-      throw err;
+      console.error("키 로그인 실패:", err)
+      throw err
     }
   }
 

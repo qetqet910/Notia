@@ -6,20 +6,8 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    "Supabase URL과 Anon Key가 설정되지 않았습니다. .env 파일을 확인하세요."
+    "Supabase URL과 Anon Key가 환경 변수에 설정되어 있지 않습니다."
   );
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  // auth: {
-  //   persistSession: true,
-  //   autoRefreshToken: true,
-  // },
-});
-
-// export type UserData = {
-//   id: string;
-//   email?: string;
-//   user_key?: string;
-//   created_at: string;
-// };
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);

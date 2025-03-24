@@ -61,28 +61,33 @@ export const Dashboard: React.FC = () => {
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
-  const { logout, userProfile, isAuthenticated } = useAuth();
+  const { signOut, userProfile, isAuthenticated } = useAuth();
 
   useEffect(() => {
     // 페이지 로드 시 세션 상태 확인
     const checkSession = async () => {
       try {
-        const { data } = await supabase.auth.getSession()
-        console.log("Dashboard - Current session:", data.session ? "exists" : "none")
-  
+        const { data } = await supabase.auth.getSession();
+        console.log(
+          "Dashboard - Current session:",
+          data.session ? "exists" : "none"
+        );
+
         // 세션이 없지만 인증 상태가 true인 경우 처리
         if (!data.session && isAuthenticated) {
-          console.error("Dashboard - 세션 불일치: 세션은 없지만 인증 상태는 true")
+          console.error(
+            "Dashboard - 세션 불일치: 세션은 없지만 인증 상태는 true"
+          );
           // 여기서 추가 처리 가능 (예: 로그아웃 또는 상태 초기화)
-          logout()
+          signOut();
         }
       } catch (err) {
-        console.error("Dashboard - 세션 확인 오류:", err)
+        console.error("Dashboard - 세션 확인 오류:", err);
       }
-    }
-  
-    checkSession()
-  }, [isAuthenticated, logout])
+    };
+
+    checkSession();
+  }, [isAuthenticated, signOut]);
 
   // Create a new note
   const handleCreateNote = () => {
@@ -226,7 +231,7 @@ export const Dashboard: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={logout}
+                  onClick={signOut}
                   className="flex items-center gap-1"
                 >
                   <LogOut className="w-4 h-4" />

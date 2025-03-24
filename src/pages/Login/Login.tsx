@@ -1,3 +1,5 @@
+"use client";
+
 import type React from "react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -7,7 +9,7 @@ import Lottie from "lottie-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -64,8 +66,19 @@ const SocialLoginButton: React.FC<{
   onClick: (provider: "github" | "google") => void;
   disabled: boolean;
   animate: boolean;
-}> = ({ provider, icon, color, label, onClick, disabled, animate }) => (
+  keyPrefix: string;
+}> = ({
+  provider,
+  icon,
+  color,
+  label,
+  onClick,
+  disabled,
+  animate,
+  keyPrefix,
+}) => (
   <motion.div
+    key={`${keyPrefix}-${provider}`}
     initial={animate ? { opacity: 0, y: 10 } : false}
     animate={animate ? { opacity: 1, y: 0 } : {}}
     transition={{ duration: 0.3 }}
@@ -94,6 +107,7 @@ const KeyDisplay: React.FC<{
   copied: boolean;
 }> = ({ formattedKey, onCopy, copied }) => (
   <motion.div
+    key="key-display"
     className="mt-6 pt-4 border-t"
     initial={{ opacity: 0, height: 0 }}
     animate={{ opacity: 1, height: "auto" }}
@@ -131,6 +145,7 @@ const KeyDisplay: React.FC<{
     <AnimatePresence mode="wait">
       {copied && (
         <motion.p
+          key="copied-message"
           className="text-xs text-green-600 mt-1 text-center"
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
@@ -156,6 +171,7 @@ const KeyDisplay: React.FC<{
 // 에러 메시지 컴포넌트
 const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
   <motion.div
+    key="error-message"
     className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded flex items-center gap-2 mt-4"
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
@@ -177,6 +193,7 @@ export const Login: React.FC = () => {
     isLoading,
     error,
     generateAndStoreKey,
+    generateAnonymousKey,
     loginWithSocial,
     createGroup,
     joinGroup,
@@ -244,32 +261,24 @@ export const Login: React.FC = () => {
   // 새 키 생성 핸들러
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // 이미 로딩 중이면 중복 호출 방지
-    if (isLoading) return;
-
-    // 이메일 유효성 검사
-    if (!email || email.trim() === "") {
-      console.error("이메일을 입력해주세요.");
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      console.error("유효한 이메일 주소를 입력해주세요.");
-      return;
-    }
-
     try {
-      console.log("키 생성 시작");
-      const key = await generateAndStoreKey(email);
-      console.log("키 생성 완료:", !!key);
+      await generateAndStoreKey(email);
+      setShowKey(true);
+    } catch (err) {
+      console.error("키 생성 오류:", err);
+    }
+  };
 
-      if (key) {
+  // 익명 키 생성 핸들러
+  const handleCreateAnonymousKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await generateAnonymousKey();
+      if (result) {
         setShowKey(true);
       }
     } catch (err) {
-      console.error("키 생성 핸들러 오류:", err);
+      console.error("익명 키 생성 오류:", err);
     }
   };
 
@@ -287,7 +296,7 @@ export const Login: React.FC = () => {
   // 로그인 탭 렌더링
   const renderLoginTab = () => (
     <motion.div
-      key="login-form"
+      key="login-form-tab"
       initial="hidden"
       animate="visible"
       exit="exit"
@@ -325,80 +334,86 @@ export const Login: React.FC = () => {
           </TabsList>
 
           <div className="min-h-[120px]">
-            <AnimatePresence mode="wait">
-              {activeAuthTab === "key" && (
+            {activeAuthTab === "key" ? (
+              <motion.div
+                key="key-login-tab"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={animations.tabContent}
+                className="space-y-4"
+              >
                 <motion.div
-                  key="key-tab"
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  variants={animations.tabContent}
-                  className="space-y-4"
+                  key="key-input"
+                  className="bg-[#f0faf7] p-4 rounded-lg"
+                  variants={animations.item}
                 >
-                  <motion.div
-                    className="bg-[#f0faf7] p-4 rounded-lg"
-                    variants={animations.item}
-                  >
-                    <InputOTPControlled />
-                  </motion.div>
-                  <motion.div variants={animations.item}>
-                    <Button
-                      type="submit"
-                      className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          처리 중...
-                        </>
-                      ) : (
-                        "로그인"
-                      )}
-                    </Button>
-                  </motion.div>
+                  <InputOTPControlled />
                 </motion.div>
-              )}
-
-              {activeAuthTab === "group" && (
+                <motion.div key="key-button" variants={animations.item}>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        처리 중...
+                      </>
+                    ) : (
+                      "로그인"
+                    )}
+                  </Button>
+                </motion.div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="group-login-tab"
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={animations.tabContent}
+                className="space-y-4"
+              >
                 <motion.div
-                  key="group-tab"
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  variants={animations.tabContent}
-                  className="space-y-4"
+                  key="group-input"
+                  className="bg-[#f0faf7] p-4 rounded-lg"
+                  variants={animations.item}
                 >
-                  <motion.div
-                    className="bg-[#f0faf7] p-4 rounded-lg"
-                    variants={animations.item}
-                  >
-                    <InputOTPControlled />
-                  </motion.div>
-                  <motion.div variants={animations.item}>
-                    <Button
-                      type="submit"
-                      className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                      disabled={isLoading}
-                    >
-                      그룹 참여하기
-                    </Button>
-                  </motion.div>
+                  <InputOTPControlled />
                 </motion.div>
-              )}
-            </AnimatePresence>
+                <motion.div key="group-button" variants={animations.item}>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+                    disabled={isLoading}
+                  >
+                    그룹 참여하기
+                  </Button>
+                </motion.div>
+              </motion.div>
+            )}
           </div>
         </Tabs>
       </form>
 
-      <motion.div className="relative my-4" variants={animations.item}>
+      <motion.div
+        key="login-separator"
+        className="relative my-4"
+        variants={animations.item}
+      >
         <Separator />
         <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
           또는
         </span>
       </motion.div>
 
-      <motion.div className="space-y-2" variants={animations.stagger}>
+      <motion.div
+        key="login-social"
+        className="space-y-2"
+        variants={animations.stagger}
+      >
         <SocialLoginButton
           provider="github"
           icon="/icons/github.svg"
@@ -407,6 +422,7 @@ export const Login: React.FC = () => {
           onClick={handleSocialLogin}
           disabled={isLoading}
           animate={!initialAnimationComplete}
+          keyPrefix="login"
         />
         <SocialLoginButton
           provider="google"
@@ -416,6 +432,7 @@ export const Login: React.FC = () => {
           onClick={handleSocialLogin}
           disabled={isLoading}
           animate={!initialAnimationComplete}
+          keyPrefix="login"
         />
       </motion.div>
     </motion.div>
@@ -424,7 +441,7 @@ export const Login: React.FC = () => {
   // 회원가입 탭 렌더링
   const renderSignupTab = () => (
     <motion.div
-      key="signup-form"
+      key="signup-form-tab"
       initial="hidden"
       animate="visible"
       exit="exit"
@@ -454,108 +471,120 @@ export const Login: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        <AnimatePresence mode="wait" initial={false}>
-          {signupTab === "key" && (
-            <motion.div
-              key="key-signup-tab"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={animations.tabContent}
-              className="space-y-4"
-            >
-              <form onSubmit={handleCreateKey} className="space-y-4">
-                <motion.div
-                  className="bg-[#f0faf7] p-4 rounded-lg"
-                  variants={animations.item}
+        {signupTab === "key" ? (
+          <div key="key-signup-content">
+            <div className="space-y-4">
+              {/* 이메일 입력 폼
+              <motion.div key="email-input" className="bg-[#f0faf7] p-4 rounded-lg" variants={animations.item}>
+                <Input
+                  type="email"
+                  placeholder="이메일"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
+                />
+                <p className="text-xs text-gray-500 mt-2">이메일을 입력하지 않으면 백업 키를 받을 수 없어요!</p>
+              </motion.div>
+
+              이메일로 키 생성 버튼
+              <motion.div key="create-key-button" variants={animations.item}>
+                <Button
+                  type="button"
+                  className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+                  disabled={isLoading}
+                  onClick={handleCreateKey}
                 >
-                  <Input
-                    type="email"
-                    placeholder="이메일"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    키를 생성하려면 이메일을 입력해야 합니다.
-                  </p>
-                </motion.div>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      처리 중...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="h-4 w-4 mr-2" />
+                      이메일로 키 만들기
+                    </>
+                  )}
+                </Button>
+              </motion.div> */}
 
-                <motion.div variants={animations.item}>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        처리 중...
-                      </>
-                    ) : (
-                      <>
-                        <Key className="h-4 w-4 mr-2" />새 키 만들기
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
-              </form>
-            </motion.div>
-          )}
-
-          {signupTab === "group" && (
-            <motion.div
-              key="group-signup-tab"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={animations.tabContent}
-              className="space-y-4"
-            >
-              <form onSubmit={handleCreateGroup} className="space-y-4">
-                <motion.div variants={animations.item}>
-                  <Button
-                    type="submit"
-                    className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        처리 중...
-                      </>
-                    ) : (
-                      <>
-                        <Users className="h-4 w-4 mr-2" />새 그룹 만들기
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {/* 익명 키 생성 버튼 (새로 추가) */}
+              <motion.div
+                key="create-anonymous-key-button"
+                variants={animations.item}
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
+                  disabled={isLoading}
+                  onClick={handleCreateAnonymousKey}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      처리 중...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="h-4 w-4 mr-2" />
+                      이메일 없이 키 만들기
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            </div>
+          </div>
+        ) : (
+          <div key="group-signup-content">
+            <form onSubmit={handleCreateGroup} className="space-y-4">
+              <motion.div key="create-group-button" variants={animations.item}>
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      처리 중...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="h-4 w-4 mr-2" />새 그룹 만들기
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            </form>
+          </div>
+        )}
       </Tabs>
 
-      <AnimatePresence mode="wait">
-        {userKey && showKey && (
-          <KeyDisplay
-            formattedKey={formattedKey || ""}
-            onCopy={copyToClipboard}
-            copied={copiedKey}
-          />
-        )}
-      </AnimatePresence>
+      {userKey && showKey && (
+        <KeyDisplay
+          formattedKey={formattedKey || ""}
+          onCopy={copyToClipboard}
+          copied={copiedKey}
+        />
+      )}
 
-      <motion.div className="relative my-4" variants={animations.item}>
+      <motion.div
+        key="signup-separator"
+        className="relative my-4"
+        variants={animations.item}
+      >
         <Separator />
         <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
           또는
         </span>
       </motion.div>
 
-      <motion.div className="space-y-2" variants={animations.stagger}>
+      <motion.div
+        key="signup-social"
+        className="space-y-2"
+        variants={animations.stagger}
+      >
         <SocialLoginButton
           provider="github"
           icon="/icons/github.svg"
@@ -564,6 +593,7 @@ export const Login: React.FC = () => {
           onClick={handleSocialLogin}
           disabled={isLoading}
           animate={!initialAnimationComplete}
+          keyPrefix="signup"
         />
         <SocialLoginButton
           provider="google"
@@ -573,6 +603,7 @@ export const Login: React.FC = () => {
           onClick={handleSocialLogin}
           disabled={isLoading}
           animate={!initialAnimationComplete}
+          keyPrefix="signup"
         />
       </motion.div>
     </motion.div>
@@ -630,7 +661,7 @@ export const Login: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br from-white to-[#e6f7f2] overflow-hidden">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br overflow-hidden from-white to-[#e6f7f2]">
       {/* 로그인 섹션 */}
       <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
         <motion.div
@@ -669,7 +700,7 @@ export const Login: React.FC = () => {
                       activeTab === "login" ? "text-[#61C9A8] bg-[#e6f7f2]" : ""
                     }
                   >
-                    들어가기
+                    로그인
                   </TabsTrigger>
                   <TabsTrigger
                     value="signup"
@@ -679,7 +710,7 @@ export const Login: React.FC = () => {
                         : ""
                     }
                   >
-                    생성하기
+                    만들기
                   </TabsTrigger>
                 </TabsList>
 
@@ -688,17 +719,12 @@ export const Login: React.FC = () => {
                   className="relative min-h-[280px]"
                   style={{ transformOrigin: "top" }}
                 >
-                  <AnimatePresence mode="wait">
-                    {activeTab === "login" && renderLoginTab()}
-                    {activeTab === "signup" && renderSignupTab()}
-                  </AnimatePresence>
+                  {activeTab === "login" ? renderLoginTab() : renderSignupTab()}
                 </div>
               </Tabs>
 
               {/* 에러 메시지 */}
-              <AnimatePresence mode="wait">
-                {error && <ErrorMessage message={error} />}
-              </AnimatePresence>
+              {error && <ErrorMessage message={error} />}
             </CardContent>
           </Card>
         </motion.div>
