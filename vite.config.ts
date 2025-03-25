@@ -42,6 +42,9 @@ export default defineConfig({
       },
     }),
   ],
+  optimizeDeps: {
+    exclude: ['lucide-react'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -49,7 +52,12 @@ export default defineConfig({
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@pages': path.resolve(__dirname, './src/pages'),
       '@utils': path.resolve(__dirname, './src/utils'),
-    },
+      '@services': path.resolve(__dirname, './src/services'),
+      '@types': path.resolve(__dirname, './src/types'),
+      '@styles': path.resolve(__dirname, './src/styles'),
+      '@stores': path.resolve(__dirname, './src/stores'),
+      '@platforms': path.resolve(__dirname, './src/platforms')
+    }
   },
   build: {
     minify: false, // 코드 압축(난독화) 비활성화 → 빌드 속도 증가
