@@ -1,25 +1,23 @@
-"use client";
-
-import type React from "react";
-import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthProvider";
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
   InputOTPSeparator,
-} from "@/components/ui/input-otp";
+} from '@/components/ui/input-otp';
+import { useAuthStore } from '@/stores/authStore';
 
 export const InputOTPControlled: React.FC = () => {
-  const [value, setValue] = useState("");
-  const { loginWithKey, isLoading } = useAuth();
+  const [value, setValue] = useState('');
+  const { loginWithKey, isLoading } = useAuthStore();
 
   // 키 입력 처리
   const handleValueChange = (newValue: string) => {
     setValue(newValue);
 
     // 하이픈 제거 후 16자리 키가 모두 입력되면 자동 로그인 시도
-    const cleanValue = newValue.replace(/-/g, "");
+    const cleanValue = newValue.replace(/-/g, '');
     if (cleanValue.length === 16) {
       handleSubmit(newValue);
     }
@@ -30,7 +28,7 @@ export const InputOTPControlled: React.FC = () => {
     try {
       await loginWithKey(keyValue);
     } catch (error) {
-      console.error("로그인 오류:", error);
+      console.error('로그인 오류:', error);
     }
   };
 
