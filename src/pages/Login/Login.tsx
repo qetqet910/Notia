@@ -1,23 +1,22 @@
-"use client";
+import type React from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Users } from 'react-feather';
+import { Copy, Key, AlertCircle, Loader2 } from 'lucide-react';
+import Lottie from 'lottie-react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
-import type React from "react";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Users } from "react-feather";
-import { Copy, Key, AlertCircle, Loader2 } from "lucide-react";
-import Lottie from "lottie-react";
-import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Card, CardContent } from "@/components/ui/card";
-import { InputOTPControlled } from "@/components/features/InputOtpControl/input-otp-control";
-import { useAuth } from "@/context/AuthProvider";
-import logoImage from "@/stores/images/Logo.png";
-import animationData from "@/stores/data/login-animation.json";
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
+import { InputOTPControlled } from '@/components/features/InputOtpControl/input-otp-control';
+import { useAuthStore } from '@/stores/authStore';
+import { useToast } from '@/hooks/use-toast';
+import logoImage from '@/stores/images/Logo.png';
+import animationData from '@/stores/data/login-animation.json';
 
 // 애니메이션 변수들
 const animations = {
@@ -26,7 +25,7 @@ const animations = {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: "easeOut" },
+      transition: { duration: 0.6, ease: 'easeOut' },
     },
   },
   tabContent: {
@@ -34,7 +33,7 @@ const animations = {
     visible: {
       opacity: 1,
       x: 0,
-      transition: { duration: 0.4, ease: "easeOut" },
+      transition: { duration: 0.4, ease: 'easeOut' },
     },
     exit: {
       opacity: 0,
@@ -59,11 +58,11 @@ const animations = {
 
 // 소셜 로그인 버튼 컴포넌트
 const SocialLoginButton: React.FC<{
-  provider: "github" | "google";
+  provider: 'github' | 'google';
   icon: string;
   color: string;
   label: string;
-  onClick: (provider: "github" | "google") => void;
+  onClick: (provider: 'github' | 'google') => void;
   disabled: boolean;
   animate: boolean;
   keyPrefix: string;
@@ -91,7 +90,7 @@ const SocialLoginButton: React.FC<{
       disabled={disabled}
     >
       <img
-        src={icon || "/placeholder.svg"}
+        src={icon || '/placeholder.svg'}
         alt={provider}
         className="w-5 h-5"
       />
@@ -110,7 +109,7 @@ const KeyDisplay: React.FC<{
     key="key-display"
     className="mt-6 pt-4 border-t"
     initial={{ opacity: 0, height: 0 }}
-    animate={{ opacity: 1, height: "auto" }}
+    animate={{ opacity: 1, height: 'auto' }}
     exit={{ opacity: 0, height: 0 }}
     transition={{ duration: 0.3 }}
   >
@@ -185,6 +184,7 @@ const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
 
 // 로그인 컴포넌트
 export const Login: React.FC = () => {
+  // Zustand 스토어 사용
   const {
     loginWithKey,
     isAuthenticated,
@@ -197,14 +197,15 @@ export const Login: React.FC = () => {
     loginWithSocial,
     createGroup,
     joinGroup,
-  } = useAuth();
+  } = useAuthStore();
 
-  const [email, setEmail] = useState("");
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [showKey, setShowKey] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
-  const [activeAuthTab, setActiveAuthTab] = useState("key");
-  const [signupTab, setSignupTab] = useState("key");
+  const [activeTab, setActiveTab] = useState('login');
+  const [activeAuthTab, setActiveAuthTab] = useState('key');
+  const [signupTab, setSignupTab] = useState('key');
   const [initialAnimationComplete, setInitialAnimationComplete] =
     useState(false);
   const navigate = useNavigate();
@@ -212,7 +213,7 @@ export const Login: React.FC = () => {
   // 인증 상태 변경 시 리디렉션
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      navigate("/dashboard");
+      navigate('/dashboard');
     }
   }, [isAuthenticated, isLoading, navigate]);
 
@@ -224,12 +225,23 @@ export const Login: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // 세션 체크
+  useEffect(() => {
+    useAuthStore.getState().checkSession();
+  }, []);
+
   // 키 복사 핸들러
   const copyToClipboard = () => {
     if (userKey) {
       navigator.clipboard.writeText(userKey);
       setCopiedKey(true);
       setTimeout(() => setCopiedKey(false), 2000);
+
+      toast({
+        title: '키 복사됨',
+        description:
+          '키가 클립보드에 복사되었습니다. 로그인 탭에서 사용하세요.',
+      });
     }
   };
 
@@ -243,18 +255,42 @@ export const Login: React.FC = () => {
   const handleGroupJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (formattedKey) {
-      joinGroup(formattedKey.replace(/-/g, ""));
+      joinGroup(formattedKey.replace(/-/g, ''))
+        .then(() => {
+          toast({
+            title: '그룹 참여 성공',
+            description: '그룹에 성공적으로 참여했습니다.',
+          });
+        })
+        .catch((err) => {
+          toast({
+            title: '그룹 참여 실패',
+            description:
+              err instanceof Error
+                ? err.message
+                : '알 수 없는 오류가 발생했습니다.',
+            variant: 'destructive',
+          });
+        });
     }
   };
 
   // 소셜 로그인 핸들러
-  const handleSocialLogin = async (provider: "github" | "google") => {
+  const handleSocialLogin = async (provider: 'github' | 'google') => {
     try {
       console.log(`${provider} 로그인 시도`);
       await new Promise((resolve) => setTimeout(resolve, 100));
       await loginWithSocial(provider);
     } catch (error) {
       console.error(`${provider} 로그인 오류:`, error);
+      toast({
+        title: `${provider} 로그인 실패`,
+        description:
+          error instanceof Error
+            ? error.message
+            : '알 수 없는 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -262,23 +298,86 @@ export const Login: React.FC = () => {
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await generateAndStoreKey(email);
-      setShowKey(true);
+      const result = await generateAndStoreKey(email);
+      if (result) {
+        setShowKey(true);
+        toast({
+          title: '키 생성 성공',
+          description: '키가 성공적으로 생성되었습니다. 안전하게 보관하세요.',
+        });
+      }
     } catch (err) {
-      console.error("키 생성 오류:", err);
+      console.error('키 생성 오류:', err);
+      toast({
+        title: '키 생성 실패',
+        description:
+          err instanceof Error
+            ? err.message
+            : '알 수 없는 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
     }
   };
 
   // 익명 키 생성 핸들러
   const handleCreateAnonymousKey = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 이미 처리 중이면 중복 요청 방지
+    if (isLoading) {
+      console.log('이미 처리 중입니다.');
+      return;
+    }
+
+    // 이미 키가 생성되어 있고 표시 중이면 중복 생성 방지
+    if (formattedKey && showKey) {
+      console.log('이미 키가 생성되어 있습니다.');
+      return;
+    }
+
     try {
+      // 버튼 클릭 시 상태 초기화
+      setShowKey(false);
+
       const result = await generateAnonymousKey();
-      if (result) {
+
+      if (result.success) {
+        // 성공 시에만 키 표시
         setShowKey(true);
+
+        toast({
+          title: '키 생성 성공',
+          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+        });
+
+        // 3초 후 로그인 탭으로 전환
+        // setTimeout(() => {
+        //   setActiveTab('login');
+        //   setShowKey(false); // 키 표시 숨기기
+
+        //   // 로그인 탭에서 키 입력 필드에 포커스
+        //   const firstInput = document.querySelector('input[name="0"]');
+        //   if (firstInput instanceof HTMLInputElement) {
+        //     firstInput.focus();
+        //   }
+        // }, 3000);
+      } else {
+        toast({
+          title: '키 생성 실패',
+          description: '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+          variant: 'destructive',
+        });
       }
     } catch (err) {
-      console.error("익명 키 생성 오류:", err);
+      console.error('익명 키 생성 오류:', err);
+      toast({
+        title: '키 생성 오류',
+        description:
+          err instanceof Error
+            ? err.message
+            : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -286,10 +385,22 @@ export const Login: React.FC = () => {
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const result = await createGroup("새 그룹");
-      console.log("그룹 생성 성공:", result);
+      const result = await createGroup('새 그룹');
+      console.log('그룹 생성 성공:', result);
+      toast({
+        title: '그룹 생성 성공',
+        description: '새 그룹이 성공적으로 생성되었습니다.',
+      });
     } catch (err: any) {
-      console.error("그룹 생성 오류:", err);
+      console.error('그룹 생성 오류:', err);
+      toast({
+        title: '그룹 생성 실패',
+        description:
+          err instanceof Error
+            ? err.message
+            : '알 수 없는 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -305,7 +416,7 @@ export const Login: React.FC = () => {
     >
       <form
         className="space-y-4 mb-6"
-        onSubmit={activeAuthTab === "key" ? handleKeyLogin : handleGroupJoin}
+        onSubmit={activeAuthTab === 'key' ? handleKeyLogin : handleGroupJoin}
       >
         <Tabs
           defaultValue="key"
@@ -316,7 +427,7 @@ export const Login: React.FC = () => {
             <TabsTrigger
               value="key"
               className={`flex items-center justify-center gap-2 ${
-                activeAuthTab === "key" ? "text-[#61C9A8] bg-[#e6f7f2]" : ""
+                activeAuthTab === 'key' ? 'text-[#61C9A8] bg-[#e6f7f2]' : ''
               }`}
             >
               <Key className="h-4 w-4" />
@@ -325,7 +436,7 @@ export const Login: React.FC = () => {
             <TabsTrigger
               value="group"
               className={`flex items-center justify-center gap-2 ${
-                activeAuthTab === "group" ? "text-[#61C9A8] bg-[#e6f7f2]" : ""
+                activeAuthTab === 'group' ? 'text-[#61C9A8] bg-[#e6f7f2]' : ''
               }`}
             >
               <Users className="h-4 w-4" />
@@ -334,7 +445,7 @@ export const Login: React.FC = () => {
           </TabsList>
 
           <div className="min-h-[120px]">
-            {activeAuthTab === "key" ? (
+            {activeAuthTab === 'key' ? (
               <motion.div
                 key="key-login-tab"
                 initial="hidden"
@@ -362,7 +473,7 @@ export const Login: React.FC = () => {
                         처리 중...
                       </>
                     ) : (
-                      "로그인"
+                      '로그인'
                     )}
                   </Button>
                 </motion.div>
@@ -471,44 +582,10 @@ export const Login: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        {signupTab === "key" ? (
+        {signupTab === 'key' ? (
           <div key="key-signup-content">
             <div className="space-y-4">
-              {/* 이메일 입력 폼
-              <motion.div key="email-input" className="bg-[#f0faf7] p-4 rounded-lg" variants={animations.item}>
-                <Input
-                  type="email"
-                  placeholder="이메일"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
-                />
-                <p className="text-xs text-gray-500 mt-2">이메일을 입력하지 않으면 백업 키를 받을 수 없어요!</p>
-              </motion.div>
-
-              이메일로 키 생성 버튼
-              <motion.div key="create-key-button" variants={animations.item}>
-                <Button
-                  type="button"
-                  className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isLoading}
-                  onClick={handleCreateKey}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      처리 중...
-                    </>
-                  ) : (
-                    <>
-                      <Key className="h-4 w-4 mr-2" />
-                      이메일로 키 만들기
-                    </>
-                  )}
-                </Button>
-              </motion.div> */}
-
-              {/* 익명 키 생성 버튼 (새로 추가) */}
+              {/* 익명 키 생성 버튼 */}
               <motion.div
                 key="create-anonymous-key-button"
                 variants={animations.item}
@@ -533,6 +610,15 @@ export const Login: React.FC = () => {
                   )}
                 </Button>
               </motion.div>
+
+              {/* 키 표시 - showKey 상태에 따라 표시 */}
+              {formattedKey && showKey && (
+                <KeyDisplay
+                  formattedKey={formattedKey}
+                  onCopy={copyToClipboard}
+                  copied={copiedKey}
+                />
+              )}
             </div>
           </div>
         ) : (
@@ -561,13 +647,13 @@ export const Login: React.FC = () => {
         )}
       </Tabs>
 
-      {userKey && showKey && (
+      {/* {userKey && showKey && (
         <KeyDisplay
-          formattedKey={formattedKey || ""}
+          formattedKey={formattedKey || ''}
           onCopy={copyToClipboard}
           copied={copiedKey}
         />
-      )}
+      )} */}
 
       <motion.div
         key="signup-separator"
@@ -624,7 +710,7 @@ export const Login: React.FC = () => {
           animate={!initialAnimationComplete ? { scale: 1 } : {}}
           transition={{
             duration: 0.8,
-            type: "spring",
+            type: 'spring',
             bounce: 0.3,
           }}
         >
@@ -665,8 +751,8 @@ export const Login: React.FC = () => {
       {/* 로그인 섹션 */}
       <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
         <motion.div
-          initial={!initialAnimationComplete ? "hidden" : false}
-          animate={!initialAnimationComplete ? "visible" : {}}
+          initial={!initialAnimationComplete ? 'hidden' : false}
+          animate={!initialAnimationComplete ? 'visible' : {}}
           variants={animations.card}
         >
           <Card className="relative w-full max-w-md shadow-lg border-[#d8f2ea] overflow-visible">
@@ -683,7 +769,7 @@ export const Login: React.FC = () => {
                 transition={{ duration: 0.5 }}
               >
                 <Link to="/" className="w-1/2 object-contain pointer">
-                  <img src={logoImage || "/placeholder.svg"} alt="로고" />
+                  <img src={logoImage || '/placeholder.svg'} alt="로고" />
                 </Link>
               </motion.div>
 
@@ -697,7 +783,7 @@ export const Login: React.FC = () => {
                   <TabsTrigger
                     value="login"
                     className={
-                      activeTab === "login" ? "text-[#61C9A8] bg-[#e6f7f2]" : ""
+                      activeTab === 'login' ? 'text-[#61C9A8] bg-[#e6f7f2]' : ''
                     }
                   >
                     로그인
@@ -705,9 +791,9 @@ export const Login: React.FC = () => {
                   <TabsTrigger
                     value="signup"
                     className={
-                      activeTab === "signup"
-                        ? "text-[#61C9A8] bg-[#e6f7f2]"
-                        : ""
+                      activeTab === 'signup'
+                        ? 'text-[#61C9A8] bg-[#e6f7f2]'
+                        : ''
                     }
                   >
                     만들기
@@ -717,14 +803,20 @@ export const Login: React.FC = () => {
                 {/* 탭 내용 */}
                 <div
                   className="relative min-h-[280px]"
-                  style={{ transformOrigin: "top" }}
+                  style={{ transformOrigin: 'top' }}
                 >
-                  {activeTab === "login" ? renderLoginTab() : renderSignupTab()}
+                  {activeTab === 'login' ? renderLoginTab() : renderSignupTab()}
                 </div>
               </Tabs>
 
               {/* 에러 메시지 */}
-              {error && <ErrorMessage message={error} />}
+              {error && (
+                <ErrorMessage
+                  message={
+                    error instanceof Error ? error.message : String(error)
+                  }
+                />
+              )}
             </CardContent>
           </Card>
         </motion.div>

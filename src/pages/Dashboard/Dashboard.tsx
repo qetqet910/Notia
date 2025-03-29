@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/services/supabase";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/services/supabase';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
-import { NoteList } from "@/components/features/NoteList";
-import { Editor } from "@/components/features/Editor";
-import { Calendar } from "@/components/features/Calendar";
-import { PlanManager } from "@/components/features/PlanManager";
-import { TimelineView } from "@/components/features/Timeline/TimelineView";
-import { Search } from "@/components/features/Search/Search";
+import { NoteList } from '@/components/features/NoteList';
+import { Editor } from '@/components/features/Editor';
+import { Calendar } from '@/components/features/Calendar';
+import { PlanManager } from '@/components/features/PlanManager';
+import { TimelineView } from '@/components/features/Timeline/TimelineView';
+import { Search } from '@/components/features/Search/Search';
 
-import { useAuth } from "@/context/AuthProvider";
-import { useNotes } from "@/hooks/useNotes";
-import { usePlans } from "@/hooks/usePlans";
-import { useSearch } from "@/hooks/useSearch";
+import { useAuth } from '@/hooks/useAuth';
+import { useNotes } from '@/hooks/useNotes';
+import { usePlans } from '@/hooks/usePlans';
+import { useSearch } from '@/hooks/useSearch';
 
 import {
   PlusCircle,
@@ -29,8 +29,8 @@ import {
   Menu,
   LogOut,
   User,
-} from "lucide-react";
-import logoImage from "@/stores/images/Logo.png";
+} from 'lucide-react';
+import logoImage from '@/stores/images/Logo.png';
 
 interface Note {
   id: string;
@@ -48,12 +48,12 @@ interface Plan {
   startDate: Date;
   endDate: Date;
   completed: boolean;
-  priority: "low" | "medium" | "high";
+  priority: 'low' | 'medium' | 'high';
   tags: string[];
 }
 
 export const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("notes");
+  const [activeTab, setActiveTab] = useState('notes');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -69,20 +69,20 @@ export const Dashboard: React.FC = () => {
       try {
         const { data } = await supabase.auth.getSession();
         console.log(
-          "Dashboard - Current session:",
-          data.session ? "exists" : "none"
+          'Dashboard - Current session:',
+          data.session ? 'exists' : 'none',
         );
 
         // 세션이 없지만 인증 상태가 true인 경우 처리
         if (!data.session && isAuthenticated) {
           console.error(
-            "Dashboard - 세션 불일치: 세션은 없지만 인증 상태는 true"
+            'Dashboard - 세션 불일치: 세션은 없지만 인증 상태는 true',
           );
           // 여기서 추가 처리 가능 (예: 로그아웃 또는 상태 초기화)
           signOut();
         }
       } catch (err) {
-        console.error("Dashboard - 세션 확인 오류:", err);
+        console.error('Dashboard - 세션 확인 오류:', err);
       }
     };
 
@@ -93,8 +93,8 @@ export const Dashboard: React.FC = () => {
   const handleCreateNote = () => {
     const newNote: Note = {
       id: Date.now().toString(),
-      title: "새로운 노트",
-      content: "",
+      title: '새로운 노트',
+      content: '',
       tags: [],
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -102,24 +102,24 @@ export const Dashboard: React.FC = () => {
 
     addNote(newNote);
     setSelectedNote(newNote);
-    setActiveTab("notes");
+    setActiveTab('notes');
   };
 
   // Create a new plan
   const handleCreatePlan = () => {
     const newPlan: Plan = {
       id: Date.now().toString(),
-      title: "새로운 일정",
-      description: "",
+      title: '새로운 일정',
+      description: '',
       startDate: new Date(),
       endDate: new Date(Date.now() + 3600000), // 1 hour later
       completed: false,
-      priority: "medium",
+      priority: 'medium',
       tags: [],
     };
 
     addPlan(newPlan);
-    setActiveTab("plans");
+    setActiveTab('plans');
   };
 
   return (
@@ -135,7 +135,7 @@ export const Dashboard: React.FC = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setActiveTab("search")}
+            onClick={() => setActiveTab('search')}
           >
             <SearchIcon className="h-5 w-5" />
           </Button>
@@ -165,33 +165,33 @@ export const Dashboard: React.FC = () => {
                   </Button>
                   <Separator />
                   <Button
-                    variant={activeTab === "notes" ? "default" : "ghost"}
+                    variant={activeTab === 'notes' ? 'default' : 'ghost'}
                     className="w-full justify-start"
-                    onClick={() => setActiveTab("notes")}
+                    onClick={() => setActiveTab('notes')}
                   >
                     <List className="mr-2 h-4 w-4" />
                     노트
                   </Button>
                   <Button
-                    variant={activeTab === "plans" ? "default" : "ghost"}
+                    variant={activeTab === 'plans' ? 'default' : 'ghost'}
                     className="w-full justify-start"
-                    onClick={() => setActiveTab("plans")}
+                    onClick={() => setActiveTab('plans')}
                   >
                     <Clock className="mr-2 h-4 w-4" />
                     일정
                   </Button>
                   <Button
-                    variant={activeTab === "calendar" ? "default" : "ghost"}
+                    variant={activeTab === 'calendar' ? 'default' : 'ghost'}
                     className="w-full justify-start"
-                    onClick={() => setActiveTab("calendar")}
+                    onClick={() => setActiveTab('calendar')}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     캘린더
                   </Button>
                   <Button
-                    variant={activeTab === "timeline" ? "default" : "ghost"}
+                    variant={activeTab === 'timeline' ? 'default' : 'ghost'}
                     className="w-full justify-start"
-                    onClick={() => setActiveTab("timeline")}
+                    onClick={() => setActiveTab('timeline')}
                   >
                     <List className="mr-2 h-4 w-4" />
                     타임라인
@@ -213,7 +213,7 @@ export const Dashboard: React.FC = () => {
                   <div className="flex items-center gap-2">
                     {userProfile.avatar_url ? (
                       <img
-                        src={userProfile.avatar_url || "/placeholder.svg"}
+                        src={userProfile.avatar_url || '/placeholder.svg'}
                         alt="프로필"
                         className="w-8 h-8 rounded-full"
                       />
@@ -223,7 +223,7 @@ export const Dashboard: React.FC = () => {
                     <span className="text-sm font-medium">
                       {userProfile.display_name ||
                         userProfile.email ||
-                        "사용자"}
+                        '사용자'}
                     </span>
                   </div>
                 )}
@@ -250,33 +250,33 @@ export const Dashboard: React.FC = () => {
           <div className="w-56 border-r bg-muted/10 p-4 hidden md:block">
             <div className="flex flex-col gap-2">
               <Button
-                variant={activeTab === "notes" ? "default" : "ghost"}
+                variant={activeTab === 'notes' ? 'default' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setActiveTab("notes")}
+                onClick={() => setActiveTab('notes')}
               >
                 <List className="mr-2 h-4 w-4" />
                 노트
               </Button>
               <Button
-                variant={activeTab === "plans" ? "default" : "ghost"}
+                variant={activeTab === 'plans' ? 'default' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setActiveTab("plans")}
+                onClick={() => setActiveTab('plans')}
               >
                 <Clock className="mr-2 h-4 w-4" />
                 일정
               </Button>
               <Button
-                variant={activeTab === "calendar" ? "default" : "ghost"}
+                variant={activeTab === 'calendar' ? 'default' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setActiveTab("calendar")}
+                onClick={() => setActiveTab('calendar')}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 캘린더
               </Button>
               <Button
-                variant={activeTab === "timeline" ? "default" : "ghost"}
+                variant={activeTab === 'timeline' ? 'default' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setActiveTab("timeline")}
+                onClick={() => setActiveTab('timeline')}
               >
                 <List className="mr-2 h-4 w-4" />
                 타임라인
@@ -287,7 +287,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 overflow-hidden">
-          {activeTab === "notes" && (
+          {activeTab === 'notes' && (
             <div className="flex h-full">
               <div className="w-1/3 border-r h-full">
                 <NoteList
@@ -322,7 +322,7 @@ export const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {activeTab === "plans" && (
+          {activeTab === 'plans' && (
             <PlanManager
               plans={plans}
               onAddPlan={addPlan}
@@ -331,7 +331,7 @@ export const Dashboard: React.FC = () => {
             />
           )}
 
-          {activeTab === "calendar" && (
+          {activeTab === 'calendar' && (
             <Calendar
               plans={plans}
               onSelectDate={setSelectedDate}
@@ -339,17 +339,17 @@ export const Dashboard: React.FC = () => {
             />
           )}
 
-          {activeTab === "timeline" && (
+          {activeTab === 'timeline' && (
             <TimelineView plans={plans} notes={notes} />
           )}
 
-          {activeTab === "search" && (
+          {activeTab === 'search' && (
             <Search
               onSearch={setSearchQuery}
               results={searchResults}
               onSelectNote={(note) => {
                 setSelectedNote(note);
-                setActiveTab("notes");
+                setActiveTab('notes');
               }}
             />
           )}
