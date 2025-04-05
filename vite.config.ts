@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import path from "path"
+import path from 'path';
 
 export default defineConfig({
   cacheDir: '.vite-cache',
@@ -42,9 +42,6 @@ export default defineConfig({
       },
     }),
   ],
-  optimizeDeps: {
-    exclude: ['lucide-react'],
-  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -56,21 +53,21 @@ export default defineConfig({
       '@types': path.resolve(__dirname, './src/types'),
       '@styles': path.resolve(__dirname, './src/styles'),
       '@stores': path.resolve(__dirname, './src/stores'),
-      '@platforms': path.resolve(__dirname, './src/platforms')
-    }
+      '@platforms': path.resolve(__dirname, './src/platforms'),
+    },
   },
   build: {
-    minify: false, // 코드 압축(난독화) 비활성화 → 빌드 속도 증가
-                   // 배포 과정에선 당연히 true로 바꿀 것
+    minify: false,
+    // 코드 압축(난독화) 비활성화 → 빌드 속도 증가 / 배포 과정에선 당연히 true로 바꿀 것
     rollupOptions: {
       input: {
-        main: "index.html",
+        main: 'index.html',
       },
       output: {
         manualChunks: {
-          web: ["./src/platforms/web"],
-          webapp: ["./src/platforms/webapp"],
-          extension: ["./src/platforms/extension"],
+          web: ['./src/platforms/web'],
+          webapp: ['./src/platforms/webapp'],
+          extension: ['./src/platforms/extension'],
         },
       },
     },
