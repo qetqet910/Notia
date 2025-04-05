@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabase';
+import { useNavigate } from 'react-router-dom';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,9 @@ import { Calendar } from '@/components/features/Calendar';
 import { PlanManager } from '@/components/features/PlanManager';
 import { TimelineView } from '@/components/features/Timeline/TimelineView';
 import { Search } from '@/components/features/Search/Search';
+import { UserProfile } from '@/components/features/UserProfile/user-profile';
 
+import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotes } from '@/hooks/useNotes';
 import { usePlans } from '@/hooks/usePlans';
@@ -61,33 +64,70 @@ export const Dashboard: React.FC = () => {
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
-  const { signOut, userProfile, isAuthenticated } = useAuth();
+  const { signOut } = useAuth();
+
+  const { isAuthenticated, isLoading, userProfile, user, checkSession } =
+    useAuthStore();
+  const navigate = useNavigate();
+  const [isClient, setIsClient] = useState(false);
+  const [localLoading, setLocalLoading] = useState(true);
 
   useEffect(() => {
-    // 페이지 로드 시 세션 상태 확인
-    const checkSession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        console.log(
-          'Dashboard - Current session:',
-          data.session ? 'exists' : 'none',
-        );
+    setIsClient(true);
 
-        // 세션이 없지만 인증 상태가 true인 경우 처리
-        if (!data.session && isAuthenticated) {
-          console.error(
-            'Dashboard - 세션 불일치: 세션은 없지만 인증 상태는 true',
-          );
-          // 여기서 추가 처리 가능 (예: 로그아웃 또는 상태 초기화)
-          signOut();
+    // 로컬 로딩 상태를 위한 타임아웃 설정
+    const loadingTimeout = setTimeout(() => {
+      console.log('Dashboard 로딩 타임아웃 발생');
+      setLocalLoading(false);
+
+      // 세션이 없으면 로그인 페이지로 리다이렉트
+      if (!useAuthStore.getState().isAuthenticated) {
+        navigate('/login');
+      }
+    }, 5000);
+
+    // 세션 확인
+    const checkAuthStatus = async () => {
+      try {
+        // checkSession이 boolean을 반환하도록 수정했으므로 직접 결과를 사용
+        const isAuth = await checkSession();
+        console.log("Dashboard - 세션 확인 결과:", isAuth ? "인증됨" : "인증 안됨");
+        
+        if (!isAuth) {
+          navigate("/login");
         }
       } catch (err) {
-        console.error('Dashboard - 세션 확인 오류:', err);
+        console.error("Dashboard - 세션 확인 오류:", err);
+        navigate("/login");
+      } finally {
+        setLocalLoading(false);
+        clearTimeout(loadingTimeout);
       }
     };
 
-    checkSession();
-  }, [isAuthenticated, signOut]);
+    checkAuthStatus();
+
+    return () => clearTimeout(loadingTimeout);
+  }, [navigate, checkSession]);
+
+  // 서버 사이드 렌더링 시 아무것도 표시하지 않음
+  if (!isClient) return null;
+
+  // 로딩 중이면 로딩 표시
+  if (isLoading || localLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#61C9A8]"></div>
+      </div>
+    );
+  }
+
+  // 인증되지 않았으면 로그인 페이지로 리다이렉트 (추가 안전장치)
+  if (!isAuthenticated) {
+    console.log("Dashboard - 인증 안됨, 로그인 페이지로 리다이렉트");
+    navigate("/login");
+    return null;
+  }
 
   // Create a new note
   const handleCreateNote = () => {

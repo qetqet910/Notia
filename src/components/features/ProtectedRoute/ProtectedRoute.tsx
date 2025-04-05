@@ -1,55 +1,55 @@
-"use client"
+// ProtectedRoute.tsx
+"use client";
 
-import type React from "react"
-import { useEffect } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
-import { useAuth } from "@/context/AuthProvider"
-import { supabase } from "@/services/supabase"
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/authStore";
 
-type ProtectedRouteProps = {
-  children: React.ReactNode
+interface ProtectedRouteProps {
+  children: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth()
-  const navigate = useNavigate()
+  const { isAuthenticated, isLoading, checkSession } = useAuthStore();
+  const [isChecking, setIsChecking] = useState(true);
+  const navigate = useNavigate();
 
-  // 컴포넌트 마운트 시 세션 상태 직접 확인
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession()
-
-        console.log("ProtectedRoute - 세션 확인:", data.session ? "있음" : "없음")
-
-        // 세션이 없지만 isAuthenticated가 true인 경우 로그인 페이지로 리디렉션
-        if (!data.session && isAuthenticated) {
-          console.log("세션은 없지만 인증 상태가 true, 로그인으로 리디렉션")
-          navigate("/login")
-        }
-      } catch (err) {
-        console.error("세션 확인 오류:", err)
+    const verifyAuth = async () => {
+      setIsChecking(true);
+      
+      // 세션 확인
+      await checkSession();
+      
+      const currentAuth = useAuthStore.getState().isAuthenticated;
+      console.log("ProtectedRoute - 세션 확인:", currentAuth ? "있음" : "없음");
+      
+      // 인증되지 않은 경우 로그인 페이지로 리다이렉트
+      if (!currentAuth) {
+        console.log("ProtectedRoute - 인증 안됨, 로그인 페이지로 리다이렉트");
+        navigate("/login", { replace: true });
       }
-    }
+      
+      setIsChecking(false);
+    };
 
-    // 로딩 중이 아닐 때만 세션 확인
-    if (!isLoading) {
-      checkSession()
-    }
-  }, [isAuthenticated, isLoading, navigate])
+    verifyAuth();
+  }, [navigate, checkSession]);
 
-  if (isLoading) {
+  // 로딩 중이거나 세션 확인 중이면 로딩 표시
+  if (isLoading || isChecking) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#61C9A8]"></div>
       </div>
-    )
+    );
   }
 
+  // 인증되지 않았으면 null 반환 (리다이렉트 처리 중)
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return null;
   }
 
-  return <>{children}</>
-}
-
+  // 인증된 경우 자식 컴포넌트 렌더링
+  return <>{children}</>;
+};

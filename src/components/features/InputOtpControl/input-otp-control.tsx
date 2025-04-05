@@ -7,13 +7,19 @@ import {
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
 import { useAuthStore } from '@/stores/authStore';
+import { useToast } from '@/hooks/use-toast';
 
 export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = useState('');
   const { loginWithKey, isLoading } = useAuthStore();
+  const [localLoading, setLocalLoading] = useState(false);
+  const { toast } = useToast();
 
   // 키 입력 처리
   const handleValueChange = (newValue: string) => {
+    // 이미 로딩 중이면 입력 무시
+    if (isLoading || localLoading) return;
+
     setValue(newValue);
 
     // 하이픈 제거 후 16자리 키가 모두 입력되면 자동 로그인 시도
@@ -25,10 +31,43 @@ export const InputOTPControlled: React.FC = () => {
 
   // 로그인 처리
   const handleSubmit = async (keyValue: string) => {
+    // 이미 로딩 중이면 중복 요청 방지
+    if (isLoading || localLoading) return;
+
     try {
-      await loginWithKey(keyValue);
+      // 로컬 로딩 상태 설정
+      setLocalLoading(true);
+
+      console.log(
+        '키 로그인 시도:',
+        keyValue.replace(/-/g, '').substring(0, 4) + '****',
+      );
+
+      // 로그인 시도
+      const result = await loginWithKey(keyValue);
+
+      if (!result.success) {
+        toast({
+          title: '로그인 실패',
+          description: result.message || '로그인에 실패했습니다.',
+          variant: 'destructive',
+        });
+      }
     } catch (error) {
       console.error('로그인 오류:', error);
+      toast({
+        title: '로그인 오류',
+        description:
+          error instanceof Error
+            ? error.message
+            : '로그인 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    } finally {
+      // 일정 시간 후 로컬 로딩 상태 해제 (UI 표시를 위해)
+      setTimeout(() => {
+        setLocalLoading(false);
+      }, 1000);
     }
   };
 
@@ -39,6 +78,9 @@ export const InputOTPControlled: React.FC = () => {
       firstInput.focus();
     }
   }, []);
+
+  // 전역 또는 로컬 로딩 상태 확인
+  const isProcessing = isLoading || localLoading;
 
   // 명시적으로 각 슬롯 렌더링
   return (

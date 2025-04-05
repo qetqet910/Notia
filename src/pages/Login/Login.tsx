@@ -209,11 +209,20 @@ export const Login: React.FC = () => {
   const [initialAnimationComplete, setInitialAnimationComplete] =
     useState(false);
   const navigate = useNavigate();
+  const [localLoading, setLocalLoading] = useState(false);
 
   // 인증 상태 변경 시 리디렉션
   useEffect(() => {
+    // 이미 인증된 상태이고 로딩 중이 아닐 때만 리디렉션
     if (isAuthenticated && !isLoading) {
-      navigate('/dashboard');
+      console.log('Login - 인증됨, 대시보드로 리디렉트');
+
+      // 약간의 지연 후 리디렉션 (UI 상태 업데이트를 위해)
+      const redirectTimer = setTimeout(() => {
+        navigate('/dashboard');
+      }, 100);
+
+      return () => clearTimeout(redirectTimer);
     }
   }, [isAuthenticated, isLoading, navigate]);
 
@@ -246,9 +255,27 @@ export const Login: React.FC = () => {
   };
 
   // 키 로그인 핸들러
-  const handleKeyLogin = (e: React.FormEvent) => {
+  const handleKeyLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // InputOTPControlled 컴포넌트에서 처리됨
+
+    // 이미 로딩 중이면 중복 요청 방지
+    if (isLoading || localLoading) return;
+
+    // 로컬 로딩 상태 설정
+    setLocalLoading(true);
+
+    try {
+      // 여기서 실제 로그인 로직 수행
+      // InputOTPControlled 컴포넌트에서 처리됨
+      // 로그인 성공 시 대시보드로 리디렉션은 useEffect에서 처리
+    } catch (error) {
+      console.error('로그인 오류:', error);
+    } finally {
+      // 일정 시간 후 로컬 로딩 상태 해제 (UI 표시를 위해)
+      setTimeout(() => {
+        setLocalLoading(false);
+      }, 1000);
+    }
   };
 
   // 그룹 참여 핸들러
@@ -465,12 +492,14 @@ export const Login: React.FC = () => {
                   <Button
                     type="submit"
                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                    disabled={isLoading}
+                    disabled={isLoading || localLoading}
                   >
-                    {isLoading ? (
+                    {isLoading || localLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        처리 중...
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <span>처리 중...</span>
+                        </div>
                       </>
                     ) : (
                       '로그인'
@@ -498,7 +527,7 @@ export const Login: React.FC = () => {
                   <Button
                     type="submit"
                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                    disabled={isLoading}
+                    disabled={isLoading || localLoading}
                   >
                     그룹 참여하기
                   </Button>
@@ -531,7 +560,7 @@ export const Login: React.FC = () => {
           color="#24292e"
           label="GitHub로 로그인"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isLoading || localLoading}
           animate={!initialAnimationComplete}
           keyPrefix="login"
         />
@@ -541,7 +570,7 @@ export const Login: React.FC = () => {
           color="#DB4437"
           label="Google로 로그인"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isLoading || localLoading}
           animate={!initialAnimationComplete}
           keyPrefix="login"
         />
@@ -594,10 +623,10 @@ export const Login: React.FC = () => {
                   type="button"
                   variant="outline"
                   className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-                  disabled={isLoading}
+                  disabled={isLoading || localLoading}
                   onClick={handleCreateAnonymousKey}
                 >
-                  {isLoading ? (
+                  {isLoading || localLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       처리 중...
@@ -628,9 +657,9 @@ export const Login: React.FC = () => {
                 <Button
                   type="submit"
                   className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isLoading}
+                  disabled={isLoading || localLoading}
                 >
-                  {isLoading ? (
+                  {isLoading || localLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       처리 중...
@@ -677,7 +706,7 @@ export const Login: React.FC = () => {
           color="#24292e"
           label="GitHub로 노트 만들기"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isLoading || localLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
@@ -687,7 +716,7 @@ export const Login: React.FC = () => {
           color="#DB4437"
           label="Google로 노트 만들기"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isLoading || localLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
