@@ -63,7 +63,7 @@ export const DownloadPage: React.FC = () => {
               alt="각 플랫폼별 미리보기 화면"
               className="mx-auto rounded-lg shadow-lg"
             />
-          </motion.div>
+          </motion.div> 
           <h1 className="text-4xl font-bold mb-4">
             오늘을 기억하자, 내일을 기록하자 
           </h1>

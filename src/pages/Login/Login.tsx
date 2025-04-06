@@ -1,3 +1,5 @@
+'use client';
+
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -213,16 +215,8 @@ export const Login: React.FC = () => {
 
   // 인증 상태 변경 시 리디렉션
   useEffect(() => {
-    // 이미 인증된 상태이고 로딩 중이 아닐 때만 리디렉션
     if (isAuthenticated && !isLoading) {
-      console.log('Login - 인증됨, 대시보드로 리디렉트');
-
-      // 약간의 지연 후 리디렉션 (UI 상태 업데이트를 위해)
-      const redirectTimer = setTimeout(() => {
-        navigate('/dashboard');
-      }, 100);
-
-      return () => clearTimeout(redirectTimer);
+      navigate('/dashboard');
     }
   }, [isAuthenticated, isLoading, navigate]);
 
@@ -241,8 +235,8 @@ export const Login: React.FC = () => {
 
   // 키 복사 핸들러
   const copyToClipboard = () => {
-    if (userKey) {
-      navigator.clipboard.writeText(userKey);
+    if (formattedKey) {
+      navigator.clipboard.writeText(formattedKey);
       setCopiedKey(true);
       setTimeout(() => setCopiedKey(false), 2000);
 
@@ -265,13 +259,15 @@ export const Login: React.FC = () => {
     setLocalLoading(true);
 
     try {
-      // 여기서 실제 로그인 로직 수행
+      // 여기서는 실제 로그인 로직을 수행하지 않고,
       // InputOTPControlled 컴포넌트에서 처리됨
+      console.log('로그인 폼 제출됨');
+
       // 로그인 성공 시 대시보드로 리디렉션은 useEffect에서 처리
     } catch (error) {
       console.error('로그인 오류:', error);
     } finally {
-      // 일정 시간 후 로컬 로딩 상태 해제 (UI 표시를 위해)
+      // 일정 시간 후 로컬 로딩 상태 해제
       setTimeout(() => {
         setLocalLoading(false);
       }, 1000);
@@ -378,16 +374,16 @@ export const Login: React.FC = () => {
         });
 
         // 3초 후 로그인 탭으로 전환
-        // setTimeout(() => {
-        //   setActiveTab('login');
-        //   setShowKey(false); // 키 표시 숨기기
+        setTimeout(() => {
+          setActiveTab('login');
+          setShowKey(false); // 키 표시 숨기기
 
-        //   // 로그인 탭에서 키 입력 필드에 포커스
-        //   const firstInput = document.querySelector('input[name="0"]');
-        //   if (firstInput instanceof HTMLInputElement) {
-        //     firstInput.focus();
-        //   }
-        // }, 3000);
+          // 로그인 탭에서 키 입력 필드에 포커스
+          const firstInput = document.querySelector('input[name="0"]');
+          if (firstInput instanceof HTMLInputElement) {
+            firstInput.focus();
+          }
+        }, 3000);
       } else {
         toast({
           title: '키 생성 실패',
@@ -495,12 +491,10 @@ export const Login: React.FC = () => {
                     disabled={isLoading || localLoading}
                   >
                     {isLoading || localLoading ? (
-                      <>
-                        <div className="flex items-center justify-center">
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          <span>처리 중...</span>
-                        </div>
-                      </>
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <span>처리 중...</span>
+                      </div>
                     ) : (
                       '로그인'
                     )}
@@ -527,7 +521,7 @@ export const Login: React.FC = () => {
                   <Button
                     type="submit"
                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                    disabled={isLoading || localLoading}
+                    disabled={isLoading}
                   >
                     그룹 참여하기
                   </Button>
@@ -560,7 +554,7 @@ export const Login: React.FC = () => {
           color="#24292e"
           label="GitHub로 로그인"
           onClick={handleSocialLogin}
-          disabled={isLoading || localLoading}
+          disabled={isLoading}
           animate={!initialAnimationComplete}
           keyPrefix="login"
         />
@@ -570,7 +564,7 @@ export const Login: React.FC = () => {
           color="#DB4437"
           label="Google로 로그인"
           onClick={handleSocialLogin}
-          disabled={isLoading || localLoading}
+          disabled={isLoading}
           animate={!initialAnimationComplete}
           keyPrefix="login"
         />
@@ -623,10 +617,10 @@ export const Login: React.FC = () => {
                   type="button"
                   variant="outline"
                   className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-                  disabled={isLoading || localLoading}
+                  disabled={isLoading}
                   onClick={handleCreateAnonymousKey}
                 >
-                  {isLoading || localLoading ? (
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       처리 중...
@@ -657,9 +651,9 @@ export const Login: React.FC = () => {
                 <Button
                   type="submit"
                   className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isLoading || localLoading}
+                  disabled={isLoading}
                 >
-                  {isLoading || localLoading ? (
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       처리 중...
@@ -676,13 +670,13 @@ export const Login: React.FC = () => {
         )}
       </Tabs>
 
-      {/* {userKey && showKey && (
+      {userKey && showKey && (
         <KeyDisplay
           formattedKey={formattedKey || ''}
           onCopy={copyToClipboard}
           copied={copiedKey}
         />
-      )} */}
+      )}
 
       <motion.div
         key="signup-separator"
@@ -706,7 +700,7 @@ export const Login: React.FC = () => {
           color="#24292e"
           label="GitHub로 노트 만들기"
           onClick={handleSocialLogin}
-          disabled={isLoading || localLoading}
+          disabled={isLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
@@ -716,7 +710,7 @@ export const Login: React.FC = () => {
           color="#DB4437"
           label="Google로 노트 만들기"
           onClick={handleSocialLogin}
-          disabled={isLoading || localLoading}
+          disabled={isLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />

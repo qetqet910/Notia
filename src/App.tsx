@@ -23,7 +23,6 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/download" element={<DownloadPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
-
         {/* 보호된 라우트 */}
         <Route
           path="/dashboard"
@@ -33,7 +32,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         {/* 기타 보호될 라우트들
         <Route 
           path="/profile" 
@@ -43,7 +41,6 @@ function App() {
             </ProtectedRoute>
           } 
         /> */}
-
         {/* 기본 리다이렉트 */}
         <Route path="/" element={<Navigate to="/Home" replace />} />
         <Route path="*" element={<Navigate to="/NotFound" replace />} />

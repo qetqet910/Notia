@@ -1,9 +1,11 @@
 // ProtectedRoute.tsx
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
+import type React from 'react';
+
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authStore';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,26 +15,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading, checkSession } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
   const navigate = useNavigate();
+  const sessionChecked = useRef(false);
 
   useEffect(() => {
     const verifyAuth = async () => {
       setIsChecking(true);
-      
-      // 세션 확인
       await checkSession();
-      
       const currentAuth = useAuthStore.getState().isAuthenticated;
-      console.log("ProtectedRoute - 세션 확인:", currentAuth ? "있음" : "없음");
-      
-      // 인증되지 않은 경우 로그인 페이지로 리다이렉트
       if (!currentAuth) {
-        console.log("ProtectedRoute - 인증 안됨, 로그인 페이지로 리다이렉트");
-        navigate("/login", { replace: true });
+        navigate('/login', { replace: true });
       }
-      
       setIsChecking(false);
     };
-
     verifyAuth();
   }, [navigate, checkSession]);
 

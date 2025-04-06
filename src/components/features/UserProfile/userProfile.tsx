@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import { User, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,18 +23,12 @@ export function UserProfile() {
   const handleSignOut = async () => {
     try {
       setIsLoggingOut(true);
-
-      // 로그아웃 함수 호출
       await signOut();
-
       toast({
         title: '로그아웃 성공',
         description: '성공적으로 로그아웃되었습니다.',
       });
-
-      // 약간의 지연 후 리디렉션 (상태 업데이트를 위해)
       setTimeout(() => {
-        // 로그아웃 후 로그인 페이지로 강제 리다이렉트
         window.location.href = '/login';
       }, 300);
     } catch (error) {
@@ -45,8 +38,6 @@ export function UserProfile() {
         description: '로그아웃 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
-
-      // 오류 발생 시에도 로그인 페이지로 리다이렉트 시도
       setTimeout(() => {
         window.location.href = '/login';
       }, 1000);
