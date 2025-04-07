@@ -29,7 +29,7 @@
     "@supabase/supabase-js": "^2.49.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "date-fns": "^2.30.0",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.4.10",
     "input-otp": "^1.4.2",
     "lottie-react": "^2.4.1",
