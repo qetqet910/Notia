@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   formattedKey: null,
   error: null,
   userProfile: null,
-  isLoading: true,
+  isLoading: false,
   isLoginLoading: false,
   isLogoutLoading: false,
   isSessionCheckLoading: false,
@@ -404,18 +404,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         userProfile: null,
       });
 
-      // 로그아웃 후 리다이렉트 처리
-      window.location.href = '/login';
-
+      // 로그아웃 성공
       return { success: true };
     } catch (error) {
       set({ error: error as Error });
-
-      // 오류 발생 시에도 리다이렉트 시도
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 1000);
-
       return { success: false, error };
     } finally {
       set({ isLoading: false });

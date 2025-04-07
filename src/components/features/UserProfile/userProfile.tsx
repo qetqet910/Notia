@@ -23,28 +23,42 @@ export function UserProfile() {
   const handleSignOut = async () => {
     try {
       setIsLoggingOut(true);
-      await signOut();
-      toast({
-        title: '로그아웃 성공',
-        description: '성공적으로 로그아웃되었습니다.',
-      });
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 300);
+      
+      // 반환값 처리 추가
+      const result = await signOut();
+      
+      if (result.success) {
+        toast({
+          title: "로그아웃 성공",
+          description: "성공적으로 로그아웃되었습니다.",
+        });
+        
+        // 강제 리다이렉트
+        window.location.href = "/login";
+      } else {
+        throw result.error || new Error("로그아웃 실패");
+      }
+      
+      // 강제 리다이렉트
+      window.location.href = "/login";
     } catch (error) {
-      console.error('로그아웃 오류:', error);
+      console.error("로그아웃 오류:", error);
       toast({
-        title: '로그아웃 실패',
-        description: '로그아웃 중 오류가 발생했습니다.',
-        variant: 'destructive',
+        title: "로그아웃 실패",
+        description: "로그아웃 중 오류가 발생했습니다.",
+        variant: "destructive",
       });
+      
+      // 오류 발생 시에도 리다이렉트
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = "/login";
       }, 1000);
     } finally {
       setIsLoggingOut(false);
     }
-  };
+  }
+
+  
 
   if (!isAuthenticated) {
     return null;
