@@ -1,5 +1,3 @@
-'use client';
-
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -193,6 +191,7 @@ export const Login: React.FC = () => {
     userKey,
     formattedKey,
     isLoading,
+    isLoginLoading,
     error,
     generateAndStoreKey,
     generateAnonymousKey,
@@ -214,11 +213,11 @@ export const Login: React.FC = () => {
   const [localLoading, setLocalLoading] = useState(false);
 
   // 인증 상태 변경 시 리디렉션
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, isLoading, navigate]);
+  // useEffect(() => {
+  //   if (isAuthenticated && !isLoading) {
+  //     navigate('/dashboard');
+  //   }
+  // }, [isAuthenticated, isLoading, navigate]);
 
   // 애니메이션 완료 타이머
   useEffect(() => {
@@ -374,16 +373,16 @@ export const Login: React.FC = () => {
         });
 
         // 3초 후 로그인 탭으로 전환
-        setTimeout(() => {
-          setActiveTab('login');
-          setShowKey(false); // 키 표시 숨기기
+        // setTimeout(() => {
+        //   setActiveTab('login');
+        //   setShowKey(false); // 키 표시 숨기기
 
-          // 로그인 탭에서 키 입력 필드에 포커스
-          const firstInput = document.querySelector('input[name="0"]');
-          if (firstInput instanceof HTMLInputElement) {
-            firstInput.focus();
-          }
-        }, 3000);
+        //   // 로그인 탭에서 키 입력 필드에 포커스
+        //   const firstInput = document.querySelector('input[name="0"]');
+        //   if (firstInput instanceof HTMLInputElement) {
+        //     firstInput.focus();
+        //   }
+        // }, 3000);
       } else {
         toast({
           title: '키 생성 실패',
@@ -617,10 +616,10 @@ export const Login: React.FC = () => {
                   type="button"
                   variant="outline"
                   className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-                  disabled={isLoading}
+                  disabled={isLoginLoading}
                   onClick={handleCreateAnonymousKey}
                 >
-                  {isLoading ? (
+                  {isLoginLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       처리 중...

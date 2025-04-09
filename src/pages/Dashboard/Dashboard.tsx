@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/services/supabase";
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/services/supabase';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import {
   User,
 } from 'lucide-react';
 import logoImage from '@/stores/images/Logo.png';
+import { useNavigate } from 'react-router-dom';
 
 interface Note {
   id: string;
@@ -78,10 +79,10 @@ export const Dashboard: React.FC = () => {
       try {
         const isAuth = await checkSession();
         if (!isAuth) {
-          navigate("/login");
+          navigate('/login');
         }
       } catch (err) {
-        navigate("/login");
+        navigate('/login');
       } finally {
         setLocalLoading(false);
       }
@@ -90,7 +91,7 @@ export const Dashboard: React.FC = () => {
   }, [navigate, checkSession]);
 
   // 서버 사이드 렌더링 시 아무것도 표시하지 않음
-  if (!isClient) return null
+  if (!isClient) return null;
 
   // 로딩 중이면 로딩 표시
   if (isLoading || localLoading) {
@@ -98,14 +99,14 @@ export const Dashboard: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#61C9A8]"></div>
       </div>
-    )
+    );
   }
 
   // 인증되지 않았으면 로그인 페이지로 리다이렉트 (추가 안전장치)
   if (!isAuthenticated) {
-    console.log("Dashboard - 인증 안됨, 로그인 페이지로 리다이렉트")
-    navigate("/login")
-    return null
+    console.log('Dashboard - 인증 안됨, 로그인 페이지로 리다이렉트');
+    navigate('/login');
+    return null;
   }
 
   // Create a new note
@@ -227,36 +228,7 @@ export const Dashboard: React.FC = () => {
                 <PlusCircle className="mr-2 h-4 w-4" />새 일정
               </Button>
               {/* 유저 프로필 */}
-              <div className="flex items-center gap-4">
-                {userProfile && (
-                  <div className="flex items-center gap-2">
-                    {userProfile.avatar_url ? (
-                      <img
-                        src={userProfile.avatar_url || '/placeholder.svg'}
-                        alt="프로필"
-                        className="w-8 h-8 rounded-full"
-                      />
-                    ) : (
-                      <User className="w-6 h-6 text-gray-500" />
-                    )}
-                    <span className="text-sm font-medium">
-                      {userProfile.display_name ||
-                        userProfile.email ||
-                        '사용자'}
-                    </span>
-                  </div>
-                )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={signOut}
-                  className="flex items-center gap-1"
-                >
-                  <LogOut className="w-4 h-4" />
-                  로그아웃
-                </Button>
-              </div>
+              <UserProfile />
             </div>
           )}
         </div>

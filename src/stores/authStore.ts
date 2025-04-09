@@ -108,7 +108,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       // 두 프로미스 중 먼저 완료되는 것으로 처리
       return await Promise.race([sessionPromise, timeoutPromise]);
     } catch (error) {
-      console.error('세션 확인 오류:', error);
       set({ error: error as Error });
       return false;
     } finally {
@@ -159,7 +158,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // Key-based authentication
   loginWithKey: async (key: string) => {
     try {
-      set({ isLoading: true, error: null });
+      set({ isLoginLoading: true, error: null });
       const cleanKey = key.replace(/-/g, '');
 
       const { data: allKeys, error: allKeysError } = await supabase
@@ -200,11 +199,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       return { success: true, message: '로그인 성공' };
     } catch (error) {
-      set({ error: error as Error, isLoading: false });
+      set({ error: error as Error });
       return {
         success: false,
         message: error instanceof Error ? error.message : '로그인 실패',
       };
+    } finally {
+      // 로그인 로딩 상태만 false로 변경
+      set({ isLoginLoading: false });
     }
   },
 
@@ -267,7 +269,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   generateAnonymousKey: async () => {
     try {
       // 이미 로딩 중이면 중복 요청 방지
-      if (get().isLoading) {
+      if (get().isLoginLoading) {
         return {
           success: false,
           key: '',
@@ -275,7 +277,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         };
       }
 
-      set({ isLoading: true, error: null });
+      set({ isLoginLoading: true, error: null });
 
       // 외부 서비스 함수 호출
       const { success, key, formattedKey, error } = await createAnonymousKey();
@@ -288,7 +290,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({
         userKey: key,
         formattedKey,
-        isLoading: false,
+        isLoginLoading: false,
       });
 
       return {
@@ -298,7 +300,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       };
     } catch (error) {
       console.error('익명 키 생성 오류:', error);
-      set({ error: error as Error, isLoading: false });
+      set({ error: error as Error, isLoginLoading: false });
       return {
         success: false,
         key: '',
@@ -391,7 +393,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // authStore.ts
   signOut: async () => {
     try {
-      set({ isLoading: true, error: null });
+      set({ isLogoutLoading: true, error: null });
       await supabase.auth.signOut();
 
       // 상태 초기화
@@ -410,7 +412,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ error: error as Error });
       return { success: false, error };
     } finally {
-      set({ isLoading: false });
+      set({ isLogoutLoading: false });
     }
   },
 

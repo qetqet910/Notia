@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { User, Settings, LogOut } from 'lucide-react';
+import { User, Settings, LogOut, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -12,53 +12,42 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 export function UserProfile() {
-  const { user, userProfile, isAuthenticated, signOut } = useAuthStore();
+  const { user, userProfile, isLogoutLoading, isAuthenticated, signOut } =
+    useAuthStore();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // UserProfile.tsx - handleSignOut 함수 수정
   const handleSignOut = async () => {
     try {
-      setIsLoggingOut(true);
-      
       // 반환값 처리 추가
       const result = await signOut();
-      
-      if (result.success) {
-        toast({
-          title: "로그아웃 성공",
-          description: "성공적으로 로그아웃되었습니다.",
-        });
-        
-        // 강제 리다이렉트
-        window.location.href = "/login";
-      } else {
-        throw result.error || new Error("로그아웃 실패");
-      }
-      
-      // 강제 리다이렉트
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("로그아웃 오류:", error);
-      toast({
-        title: "로그아웃 실패",
-        description: "로그아웃 중 오류가 발생했습니다.",
-        variant: "destructive",
-      });
-      
-      // 오류 발생 시에도 리다이렉트
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 1000);
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }
 
-  
+      if (result.success) {
+        // toast({
+        //   title: '로그아웃 성공',
+        //   description: '성공적으로 로그아웃되었습니다.',
+        // });
+
+        navigate('/login');
+      } else {
+        throw result.error || new Error('로그아웃 실패');
+      }
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+      toast({
+        title: '로그아웃 실패',
+        description: '로그아웃 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    } finally {
+      navigate('/login');
+    }
+  };
 
   if (!isAuthenticated) {
     return null;
@@ -100,10 +89,16 @@ export function UserProfile() {
           <span>설정</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} disabled={isLoggingOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>{isLoggingOut ? '로그아웃 중...' : '로그아웃'}</span>
-        </DropdownMenuItem>
+        <Button onClick={handleSignOut} disabled={isLogoutLoading}>
+          {isLogoutLoading ? (
+            <div className="flex items-center justify-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span>로그아웃 중...</span>
+            </div>
+          ) : (
+            '로그아웃'
+          )}
+        </Button>
       </DropdownMenuContent>
     </DropdownMenu>
   );
