@@ -213,11 +213,12 @@ export const Login: React.FC = () => {
   const [localLoading, setLocalLoading] = useState(false);
 
   // 인증 상태 변경 시 리디렉션
-  // useEffect(() => {
-  //   if (isAuthenticated && !isLoading) {
-  //     navigate('/dashboard');
-  //   }
-  // }, [isAuthenticated, isLoading, navigate]);
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      console.log('인증됨, 대시보드로 리다이렉션');
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   // 애니메이션 완료 타이머
   useEffect(() => {

@@ -3,6 +3,7 @@ import { supabase } from '@/services/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { generateRandomKey, formatKey } from '@/utils/keys';
 import { createAnonymousKey } from '@/services/anonymous-key';
+import { Navigate } from 'react-router-dom';
 
 interface AuthState {
   user: User | null;
@@ -47,6 +48,7 @@ interface AuthStore extends AuthState {
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>;
   setError: (error: Error | null) => void;
   clearUserKey: () => void;
+  restoreSession: () => void;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -63,52 +65,153 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isLogoutLoading: false,
   isSessionCheckLoading: false,
 
-  // Session management
+  // authStore.ts의 checkSession 함수 수정
+  restoreSession: async () => {
+    try {
+      console.log('세션 복원 시도');
+      set({ isLoading: true });
+
+      // 로컬스토리지에서 세션 키 확인
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const authKey =
+        'sb-' +
+        import.meta.env.VITE_SUPABASE_URL.replace('https://', '').replace(
+          '.supabase.co',
+          '',
+        ) +
+        '-auth-token';
+      const storedSession = localStorage.getItem(authKey);
+
+      if (!storedSession) {
+        console.log('저장된 세션 없음');
+        set({ isLoading: false });
+        return false;
+      }
+
+      // 세션 새로고침 시도
+      const { data, error } = await supabase.auth.refreshSession();
+
+      if (error) {
+        console.error('세션 새로고침 오류:', error);
+        set({ isLoading: false });
+        return false;
+      }
+
+      if (!data.session) {
+        console.log('새로고침 후에도 세션 없음');
+        set({ isLoading: false });
+        return false;
+      }
+
+      // 세션 복원 성공
+      console.log('세션 복원 성공:', data.session.user.id);
+
+      // 사용자 프로필 가져오기
+      const profile = await get().fetchUserProfile(data.session.user.id);
+
+      // 상태 업데이트
+      set({
+        session: data.session,
+        user: data.session.user,
+        isAuthenticated: true,
+        userProfile: profile,
+        isLoading: false,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('세션 복원 실패:', error);
+      set({ isLoading: false });
+      return false;
+    }
+  },
+
   checkSession: async () => {
     try {
       set({ isSessionCheckLoading: true, error: null });
+      console.log('로컬스토리지 모든 키:', Object.keys(localStorage));
 
-      // 타임아웃 설정
-      const timeoutPromise = new Promise<boolean>((resolve) => {
-        setTimeout(() => {
-          console.warn('세션 확인 타임아웃 발생');
-          resolve(false);
-        }, 5000);
-      });
+      // 직접 로컬스토리지에서 세션 데이터 확인
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const authKey =
+        'sb-' +
+        import.meta.env.VITE_SUPABASE_URL.replace('https://', '').replace(
+          '.supabase.co',
+          '',
+        ) +
+        '-auth-token';
+      console.log(authKey);
+      const storedSession = localStorage.getItem(authKey);
 
-      // 실제 세션 확인
-      const sessionPromise = new Promise<boolean>(async (resolve) => {
-        try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          const user = session?.user ?? null;
+      console.log('로컬스토리지 세션 데이터 존재:', !!storedSession);
 
-          // 상태 업데이트
-          set({
-            session,
-            user,
-            isAuthenticated: !!session,
-            isSessionCheckLoading: false,
-          });
+      // 세션 가져오기 전 짧은 지연 추가 (브라우저 안정화를 위해)
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-          // 사용자 프로필 가져오기
-          if (user) {
-            const profile = await get().fetchUserProfile(user.id);
-            set({ userProfile: profile });
+      // 세션 가져오기 시도
+      console.log('세션 가져오기 시작...');
+      let sessionResult;
+
+      try {
+        sessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('세션 가져오기 타임아웃')), 3000),
+          ),
+        ]);
+      } catch (timeoutError) {
+        console.error('세션 가져오기 실패:', timeoutError);
+
+        // 타임아웃 발생 시 로컬스토리지에서 직접 세션 복원 시도
+        if (storedSession) {
+          console.log('로컬스토리지에서 세션 복원 시도');
+          try {
+            // 세션 새로고침 시도
+            const refreshResult = await supabase.auth.refreshSession();
+            sessionResult = refreshResult;
+            console.log('세션 새로고침 결과:', refreshResult);
+          } catch (refreshError) {
+            console.error('세션 새로고침 실패:', refreshError);
           }
-
-          resolve(!!session);
-        } catch (error) {
-          console.error('세션 확인 오류:', error);
-          resolve(false);
         }
+      }
+
+      // 세션 결과 처리
+      const session = sessionResult?.data?.session;
+      console.log('세션 가져오기 완료:', session ? '성공' : '실패');
+
+      if (!session) {
+        console.log('세션이 없음, 인증되지 않음으로 설정');
+        set({
+          isAuthenticated: false,
+          user: null,
+          session: null,
+          isSessionCheckLoading: false,
+        });
+        return false;
+      }
+
+      // 세션이 있는 경우 처리
+      const user = session.user;
+
+      // 사용자 프로필 가져오기
+      console.log('사용자 프로필 가져오기 시작...');
+      const profile = await get().fetchUserProfile(user.id);
+      console.log('사용자 프로필 가져오기 완료:', profile);
+
+      // 상태 업데이트
+      set({
+        session,
+        user,
+        isAuthenticated: true,
+        userProfile: profile,
+        isSessionCheckLoading: false,
       });
 
-      // 두 프로미스 중 먼저 완료되는 것으로 처리
-      return await Promise.race([sessionPromise, timeoutPromise]);
+      return true;
     } catch (error) {
-      set({ error: error as Error });
+      console.error('세션 확인 전체 오류:', error);
+      set({ error: error as Error, isSessionCheckLoading: false });
       return false;
     } finally {
       set({ isSessionCheckLoading: false });

@@ -28,10 +28,10 @@ export function UserProfile() {
       const result = await signOut();
 
       if (result.success) {
-        // toast({
-        //   title: '로그아웃 성공',
-        //   description: '성공적으로 로그아웃되었습니다.',
-        // });
+        toast({
+          title: '로그아웃 성공',
+          description: '성공적으로 로그아웃되었습니다.',
+        });
 
         navigate('/login');
       } else {

@@ -74,10 +74,27 @@ export const AuthCallback = () => {
         }
 
         // 상태 업데이트
-        useAuthStore.getState().checkSession();
+        useAuthStore.setState({
+          user: user,
+          session: data.session,
+          isAuthenticated: true,
+        });
 
-        // 대시보드로 리다이렉트
-        navigate('/dashboard');
+        // 프로필 가져오기
+        const profile = await useAuthStore.getState().fetchUserProfile(user.id);
+        useAuthStore.setState({ userProfile: profile });
+
+        // 세션 정보 로컬스토리지에 저장 확인
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const authKey = `sb-${supabaseUrl.replace('https://', '')}-auth-token`;
+        console.log(
+          `세션 저장 확인 (${authKey}):`,
+          !!localStorage.getItem(authKey),
+        );
+
+        // 대시보드로 리다이렉트 (window.location 사용)
+        console.log('대시보드로 리다이렉트');
+        window.location.href = '/dashboard';
       } catch (err) {
         console.error('Auth callback 처리 오류:', err);
         setError('인증 처리 중 오류가 발생했습니다.');
