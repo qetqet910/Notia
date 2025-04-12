@@ -9,6 +9,13 @@ export default defineConfig({
     hmr: {
       overlay: false,
     },
+    fs: {
+      allow: ['.'],
+    },
+    headers: {
+      // 서비스 워커에 올바른 MIME 타입 설정
+      'Service-Worker-Allowed': '/',
+    }
   },
   plugins: [
     react(),
