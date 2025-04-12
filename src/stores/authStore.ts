@@ -48,7 +48,8 @@ interface AuthStore extends AuthState {
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>;
   setError: (error: Error | null) => void;
   clearUserKey: () => void;
-  restoreSession: () => void;
+  restoreSession: () => Promise<boolean>;
+  resetSupabaseClient: () => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -56,73 +57,170 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   session: null,
   isAuthenticated: false,
-  userKey: null,
-  formattedKey: null,
-  error: null,
-  userProfile: null,
   isLoading: false,
   isLoginLoading: false,
   isLogoutLoading: false,
   isSessionCheckLoading: false,
+  userKey: null,
+  formattedKey: null,
+  error: null,
+  userProfile: null,
+
+  resetSupabaseClient: async () => {
+    try {
+      console.log('Supabase 클라이언트 재설정 시도');
+
+      // 기존 세션 데이터 백업
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      // 새 클라이언트 생성
+      const { createClient } = await import('@supabase/supabase-js');
+      const newClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: localStorage,
+        },
+      });
+
+      // 기존 클라이언트 교체
+      Object.assign(supabase, newClient);
+
+      console.log('Supabase 클라이언트 재설정 완료');
+      return true;
+    } catch (error) {
+      console.error('Supabase 클라이언트 재설정 실패:', error);
+      return false;
+    }
+  },
 
   // authStore.ts의 checkSession 함수 수정
   restoreSession: async () => {
     try {
-      console.log('세션 복원 시도');
-      set({ isLoading: true });
+      console.log('로컬스토리지에서 세션 복원 시도');
+      set({ isLoading: true, error: null });
 
-      // 로컬스토리지에서 세션 키 확인
+      // 로컬스토리지에서 세션 데이터 가져오기
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const authKey =
         'sb-' +
-        import.meta.env.VITE_SUPABASE_URL.replace('https://', '').replace(
-          '.supabase.co',
-          '',
-        ) +
+        supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
         '-auth-token';
       const storedSession = localStorage.getItem(authKey);
 
       if (!storedSession) {
-        console.log('저장된 세션 없음');
+        console.log('로컬스토리지에 세션 데이터 없음');
         set({ isLoading: false });
         return false;
       }
 
-      // 세션 새로고침 시도
-      const { data, error } = await supabase.auth.refreshSession();
+      try {
+        // 세션 데이터 파싱
+        const parsedSession = JSON.parse(storedSession);
 
-      if (error) {
-        console.error('세션 새로고침 오류:', error);
+        if (!parsedSession || !parsedSession.user) {
+          console.log('유효하지 않은 세션 데이터');
+          set({ isLoading: false });
+          return false;
+        }
+
+        // 세션 만료 확인
+        const expiresAt = parsedSession.expires_at * 1000; // 밀리초로 변환
+        const now = Date.now();
+
+        console.log('세션 만료 정보:', {
+          expiresAt: new Date(expiresAt).toLocaleString(),
+          timeUntilExpiry: `${((expiresAt - now) / 1000 / 60).toFixed(2)}분 후`,
+          isExpired: expiresAt < now,
+        });
+
+        if (expiresAt < now) {
+          console.log('세션 만료됨, 새로고침 시도');
+
+          // 세션 새로고침 시도
+          try {
+            const { data: refreshData, error: refreshError } =
+              await supabase.auth.refreshSession({
+                refresh_token: parsedSession.refresh_token,
+              });
+
+            if (refreshError || !refreshData.session) {
+              console.error('세션 새로고침 실패:', refreshError);
+              set({
+                isAuthenticated: false,
+                user: null,
+                session: null,
+                isLoading: false,
+              });
+              return false;
+            }
+
+            // 새로고침 성공, 새 세션 사용
+            console.log('세션 새로고침 성공');
+            const user = refreshData.session.user;
+
+            // 사용자 프로필 가져오기
+            const profile = await get().fetchUserProfile(user.id);
+
+            // 상태 업데이트
+            set({
+              session: refreshData.session,
+              user,
+              isAuthenticated: true,
+              userProfile: profile,
+              isLoading: false,
+            });
+
+            return true;
+          } catch (refreshError) {
+            console.error('세션 새로고침 중 오류:', refreshError);
+            set({
+              isAuthenticated: false,
+              user: null,
+              session: null,
+              isLoading: false,
+            });
+            return false;
+          }
+        }
+
+        // 세션이 유효한 경우 직접 사용
+        console.log('유효한 세션 발견, 직접 사용');
+        const user = parsedSession.user;
+
+        // 사용자 프로필 가져오기
+        const profile = await get().fetchUserProfile(user.id);
+
+        // 상태 업데이트
+        set({
+          session: {
+            access_token: parsedSession.access_token,
+            refresh_token: parsedSession.refresh_token,
+            expires_at: parsedSession.expires_at,
+            expires_in: parsedSession.expires_in,
+            token_type: parsedSession.token_type,
+            user: parsedSession.user,
+          },
+          user,
+          isAuthenticated: true,
+          userProfile: profile,
+          isLoading: false,
+        });
+
+        return true;
+      } catch (parseError) {
+        console.error('세션 데이터 파싱 오류:', parseError);
         set({ isLoading: false });
         return false;
       }
-
-      if (!data.session) {
-        console.log('새로고침 후에도 세션 없음');
-        set({ isLoading: false });
-        return false;
-      }
-
-      // 세션 복원 성공
-      console.log('세션 복원 성공:', data.session.user.id);
-
-      // 사용자 프로필 가져오기
-      const profile = await get().fetchUserProfile(data.session.user.id);
-
-      // 상태 업데이트
-      set({
-        session: data.session,
-        user: data.session.user,
-        isAuthenticated: true,
-        userProfile: profile,
-        isLoading: false,
-      });
-
-      return true;
     } catch (error) {
       console.error('세션 복원 실패:', error);
-      set({ isLoading: false });
+      set({ error: error as Error, isLoading: false });
       return false;
+    } finally {
+      set({ isLoading: false });
     }
   },
 
@@ -135,18 +233,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const authKey =
         'sb-' +
-        import.meta.env.VITE_SUPABASE_URL.replace('https://', '').replace(
-          '.supabase.co',
-          '',
-        ) +
+        supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
         '-auth-token';
-      console.log(authKey);
       const storedSession = localStorage.getItem(authKey);
 
       console.log('로컬스토리지 세션 데이터 존재:', !!storedSession);
-
-      // 세션 가져오기 전 짧은 지연 추가 (브라우저 안정화를 위해)
-      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 세션 가져오기 시도
       console.log('세션 가져오기 시작...');
@@ -164,16 +255,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
         // 타임아웃 발생 시 로컬스토리지에서 직접 세션 복원 시도
         if (storedSession) {
-          console.log('로컬스토리지에서 세션 복원 시도');
-          try {
-            // 세션 새로고침 시도
-            const refreshResult = await supabase.auth.refreshSession();
-            sessionResult = refreshResult;
-            console.log('세션 새로고침 결과:', refreshResult);
-          } catch (refreshError) {
-            console.error('세션 새로고침 실패:', refreshError);
-          }
+          console.log(
+            '세션 가져오기 타임아웃, 로컬스토리지에서 직접 복원 시도',
+          );
+          return await get().restoreSession();
         }
+
+        set({
+          isAuthenticated: false,
+          user: null,
+          session: null,
+          isSessionCheckLoading: false,
+        });
+        return false;
       }
 
       // 세션 결과 처리
@@ -215,6 +309,51 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return false;
     } finally {
       set({ isSessionCheckLoading: false });
+    }
+  },
+
+  // authStore.ts에 추가
+  setSessionFromLocalStorage: async () => {
+    try {
+      console.log('로컬스토리지에서 세션 설정 시도');
+
+      // 로컬스토리지에서 세션 데이터 가져오기
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const authKey =
+        'sb-' +
+        supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
+        '-auth-token';
+      const storedSession = localStorage.getItem(authKey);
+
+      if (!storedSession) {
+        console.log('로컬스토리지에 세션 데이터 없음');
+        return false;
+      }
+
+      // 세션 데이터 파싱
+      const parsedSession = JSON.parse(storedSession);
+
+      if (!parsedSession || !parsedSession.user) {
+        console.log('유효하지 않은 세션 데이터');
+        return false;
+      }
+
+      // 세션 설정
+      set({
+        user: parsedSession.user,
+        session: parsedSession,
+        isAuthenticated: true,
+      });
+
+      // 사용자 프로필 가져오기
+      const profile = await get().fetchUserProfile(parsedSession.user.id);
+      set({ userProfile: profile });
+
+      console.log('로컬스토리지에서 세션 설정 성공');
+      return true;
+    } catch (error) {
+      console.error('로컬스토리지에서 세션 설정 실패:', error);
+      return false;
     }
   },
 
@@ -414,10 +553,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   loginWithSocial: async (provider: 'github' | 'google') => {
     // 이미 진행 중인 로그인이 있으면 중복 실행 방지
-    if (get().isLoading) return;
+    if (get().isLoginLoading) return;
 
     try {
-      set({ isLoading: true, error: null });
+      set({ isLoginLoading: true, error: null });
+
+      // 기존 세션 확인 및 로그아웃
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        console.log('기존 세션 발견, 로그아웃 처리');
+        await supabase.auth.signOut({ scope: 'global' });
+
+        // 세션 정리를 위한 짧은 지연
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
@@ -428,9 +577,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       if (error) throw error;
     } catch (error) {
+      console.error(`${provider} 로그인 오류:`, error);
       set({ error: error as Error });
     } finally {
-      set({ isLoading: false });
+      set({ isLoginLoading: false });
     }
   },
 
@@ -494,10 +644,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   // authStore.ts
+  // 로그아웃 함수 개선
   signOut: async () => {
     try {
       set({ isLogoutLoading: true, error: null });
-      await supabase.auth.signOut();
+
+      // 로그아웃 전 현재 URL 저장 (필요한 경우)
+      const currentPath = window.location.pathname;
+      console.log('로그아웃 시작, 현재 경로:', currentPath);
+
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
 
       // 상태 초기화
       set({
@@ -509,10 +666,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         userProfile: null,
       });
 
-      // 로그아웃 성공
+      // 로컬스토리지에서 세션 데이터 확인 및 삭제
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const authKey = `sb-${supabaseUrl
+        .replace('https://', '')
+        .replace('.supabase.co', '')}-auth-token`;
+
+      if (localStorage.getItem(authKey)) {
+        console.log('로컬스토리지 세션 데이터 삭제');
+        localStorage.removeItem(authKey);
+      }
+
+      console.log('로그아웃 완료, 로그인 페이지로 리디렉션');
+
+      // 로그인 페이지로 강제 리디렉션
+      window.location.href = '/login';
+
       return { success: true };
     } catch (error) {
+      console.error('로그아웃 오류:', error);
       set({ error: error as Error });
+
+      // 오류 발생 시에도 로그인 페이지로 리디렉션 시도
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1000);
+
       return { success: false, error };
     } finally {
       set({ isLogoutLoading: false });
@@ -527,32 +706,29 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 // 이벤트 리스너에 가드 추가
 let isProcessingAuthChange = false;
 
-supabase.auth.onAuthStateChange(async (_event, session) => {
-  // 이미 처리 중인 경우 중복 처리 방지
-  if (isProcessingAuthChange) return;
-  isProcessingAuthChange = true;
-
-  try {
-    const user = session?.user ?? null;
-    const currentState = useAuthStore.getState();
-
-    // 세션 상태가 변경되었을 때만 업데이트
-    if (currentState.session !== session) {
-      useAuthStore.setState({
-        session,
-        user,
-        isAuthenticated: !!session,
-      });
-
-      // 사용자 프로필 가져오기
-      if (user) {
-        const profile = await useAuthStore.getState().fetchUserProfile(user.id);
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Auth 상태 변경:', event, session ? '세션 있음' : '세션 없음');
+  
+  if (session) {
+    // 세션이 있으면 인증 상태 업데이트
+    useAuthStore.setState({
+      user: session.user,
+      session: session,
+      isAuthenticated: true,
+    });
+    
+    // 사용자 프로필 가져오기
+    useAuthStore.getState().fetchUserProfile(session.user.id)
+      .then(profile => {
         useAuthStore.setState({ userProfile: profile });
-      } else {
-        useAuthStore.setState({ userProfile: null });
-      }
-    }
-  } finally {
-    isProcessingAuthChange = false;
+      });
+  } else if (event === 'SIGNED_OUT') {
+    // 로그아웃 이벤트인 경우 상태 초기화
+    useAuthStore.setState({
+      user: null,
+      session: null,
+      isAuthenticated: false,
+      userProfile: null,
+    });
   }
 });

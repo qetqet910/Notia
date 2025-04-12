@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Users } from 'react-feather';
 import { Copy, Key, AlertCircle, Loader2 } from 'lucide-react';
 import Lottie from 'lottie-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -209,16 +209,17 @@ export const Login: React.FC = () => {
   const [signupTab, setSignupTab] = useState('key');
   const [initialAnimationComplete, setInitialAnimationComplete] =
     useState(false);
-  const navigate = useNavigate();
   const [localLoading, setLocalLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // 인증 상태 변경 시 리디렉션
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      console.log('인증됨, 대시보드로 리다이렉션');
-      navigate('/dashboard');
+    if (isAuthenticated) {
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, navigate, location]);
 
   // 애니메이션 완료 타이머
   useEffect(() => {
