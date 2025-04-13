@@ -303,7 +303,7 @@ export const Login: React.FC = () => {
   const handleSocialLogin = async (provider: 'github' | 'google') => {
     try {
       console.log(`${provider} 로그인 시도`);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // 불필요한 지연 제거
       await loginWithSocial(provider);
     } catch (error) {
       console.error(`${provider} 로그인 오류:`, error);
@@ -317,7 +317,6 @@ export const Login: React.FC = () => {
       });
     }
   };
-
   // 새 키 생성 핸들러
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();

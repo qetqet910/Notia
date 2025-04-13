@@ -5,7 +5,7 @@ export default async function initWeb() {
       const registration = await navigator.serviceWorker.register(
         './service-worker.js',
       );
-      console.log('🔴 Ready To Service Worker :', !!registration);
+      console.log('1️⃣ Ready To Service Worker :', !!registration);
     } catch (error) {
       console.error('Service worker registration failed:', error);
     }
@@ -52,6 +52,6 @@ function initWebAnalytics() {
 async function checkNotificationPermission() {
   if ('Notification' in window) {
     const permission = await Notification.requestPermission();
-    console.log('🔘 Notification Permission:', permission);
+    console.log('➕ Notification Permission:', permission);
   }
 }

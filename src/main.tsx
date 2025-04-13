@@ -12,7 +12,7 @@ async function initializePlatform(platformName: string): Promise<boolean> {
     const module = await import(`./platforms/${platformName}/index.tsx`);
     const initPlatform = module.default;
     await initPlatform();
-    console.log(`🟠 Platform : ¦¦¦${platformName}¦¦¦ Initialized Successfully`);
+    console.log(`2️⃣ Platform : ¦¦¦${platformName}¦¦¦ Initialized Successfully`);
     return true;
   } catch (error) {
     console.error(`Failed to initialize platform ${platformName}:`, error);
@@ -34,7 +34,7 @@ function renderReactApp(): boolean {
     const root = ReactDOM.createRoot(rootElement);
     root.render(<App />);
 
-    console.log('🟡 React app rendered successfully');
+    console.log('3️⃣ React app rendered successfully');
     return true;
   } catch (error) {
     console.error('Failed to render React app:', error);
@@ -58,7 +58,7 @@ async function initializeApp(): Promise<void> {
 
     // 4. 전체 초기화 결과 로깅
     if (platformInitialized) {
-      console.log('🟢 Application initialized successfully');
+      console.log('4️⃣ Application initialized successfully');
     } else {
       console.warn(
         'Application initialized with warnings (platform initialization failed)',
