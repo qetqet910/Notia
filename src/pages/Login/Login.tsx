@@ -14,7 +14,9 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { InputOTPControlled } from '@/components/features/InputOtpControl/input-otp-control';
 import { useAuthStore } from '@/stores/authStore';
+import { KeyDisplay } from '@/components/features/KeyDisplay';
 import { useToast } from '@/hooks/use-toast';
+
 import logoImage from '@/stores/images/Logo.png';
 import animationData from '@/stores/data/login-animation.json';
 
@@ -99,74 +101,6 @@ const SocialLoginButton: React.FC<{
   </motion.div>
 );
 
-// 키 표시 컴포넌트
-const KeyDisplay: React.FC<{
-  formattedKey: string;
-  onCopy: () => void;
-  copied: boolean;
-}> = ({ formattedKey, onCopy, copied }) => (
-  <motion.div
-    key="key-display"
-    className="mt-6 pt-4 border-t"
-    initial={{ opacity: 0, height: 0 }}
-    animate={{ opacity: 1, height: 'auto' }}
-    exit={{ opacity: 0, height: 0 }}
-    transition={{ duration: 0.3 }}
-  >
-    <div className="flex items-center mb-3">
-      <Key size={18} className="mr-2 text-[#61C9A8]" />
-      <h3 className="text-md font-medium text-[#61C9A8]">노트 키</h3>
-    </div>
-
-    <motion.div
-      className="flex"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-    >
-      <div className="flex-grow relative">
-        <Input
-          readOnly
-          value={formattedKey}
-          className="font-mono text-center tracking-wide border-[#c5e9de]"
-        />
-      </div>
-      <Button
-        variant="outline"
-        size="icon"
-        className="ml-2 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-        onClick={onCopy}
-      >
-        <Copy size={16} className="text-[#61C9A8]" />
-      </Button>
-    </motion.div>
-
-    <AnimatePresence mode="wait">
-      {copied && (
-        <motion.p
-          key="copied-message"
-          className="text-xs text-green-600 mt-1 text-center"
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          노트 키가 복사되었습니다!
-        </motion.p>
-      )}
-    </AnimatePresence>
-
-    <motion.p
-      className="text-xs text-muted-foreground mt-2"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.2 }}
-    >
-      키를 잃어버리면 데이터에 접근할 수 없습니다. 안전하게 보관하세요.
-    </motion.p>
-  </motion.div>
-);
-
 // 에러 메시지 컴포넌트
 const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
   <motion.div
@@ -188,7 +122,7 @@ export const Login: React.FC = () => {
   const {
     loginWithKey,
     isAuthenticated,
-    userKey,
+    userKey, // authStore 에서 조정하기 KeyDisplay 2개 뜨는 이유
     formattedKey,
     isLoading,
     isLoginLoading,
@@ -203,13 +137,13 @@ export const Login: React.FC = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
-  const [showKey, setShowKey] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [activeAuthTab, setActiveAuthTab] = useState('key');
   const [signupTab, setSignupTab] = useState('key');
   const [initialAnimationComplete, setInitialAnimationComplete] =
     useState(false);
   const [localLoading, setLocalLoading] = useState(false);
+  const [showKey, setShowKey] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -235,17 +169,71 @@ export const Login: React.FC = () => {
   }, []);
 
   // 키 복사 핸들러
-  const copyToClipboard = () => {
-    if (formattedKey) {
-      navigator.clipboard.writeText(formattedKey);
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
       setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2000);
-
       toast({
-        title: '키 복사됨',
-        description:
-          '키가 클립보드에 복사되었습니다. 로그인 탭에서 사용하세요.',
+        title: '클립보드에 복사됨',
+        description: '키가 클립보드에 복사되었습니다.',
       });
+      setTimeout(() => setCopiedKey(false), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('클립보드 복사 오류:', err);
+      toast({
+        title: '클립보드 복사 오류',
+        description: '클립보드에 복사하는 데 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreateEmailKey = async (e: React.FormEvent) => {
+    e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
+
+    // 이미 처리 중이면 중복 요청 방지
+    if (isLoading) {
+      console.log('이미 처리 중입니다.');
+      return;
+    }
+
+    try {
+      // setIsLoading(true)
+      // 버튼 클릭 시 상태 초기화
+      setShowKey(false);
+
+      console.log('이메일 키 생성 시작:', email);
+      const result = await generateAndStoreKey(email);
+      console.log('이메일 키 생성 결과:', result);
+
+      if (result) {
+        // setFormattedKey(result)
+        // 성공 시에만 키 표시
+        setShowKey(true);
+
+        toast({
+          title: '키 생성 성공',
+          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+        });
+      } else {
+        toast({
+          title: '키 생성 실패',
+          description: '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      console.error('이메일 키 생성 오류:', err);
+      toast({
+        title: '키 생성 오류',
+        description:
+          err instanceof Error
+            ? err.message
+            : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      // setIsLoading(false)
     }
   };
 
@@ -344,9 +332,9 @@ export const Login: React.FC = () => {
 
   // 익명 키 생성 핸들러
   const handleCreateAnonymousKey = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
 
-    // 이미 처리 중이면 중복 요청 방지
+    // 이미 로딩 중이면 중복 요청 방지
     if (isLoading) {
       console.log('이미 처리 중입니다.');
       return;
@@ -362,7 +350,9 @@ export const Login: React.FC = () => {
       // 버튼 클릭 시 상태 초기화
       setShowKey(false);
 
+      console.log('익명 키 생성 시작');
       const result = await generateAnonymousKey();
+      console.log('익명 키 생성 결과:', result);
 
       if (result.success) {
         // 성공 시에만 키 표시
@@ -373,17 +363,7 @@ export const Login: React.FC = () => {
           description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
         });
 
-        // 3초 후 로그인 탭으로 전환
-        // setTimeout(() => {
-        //   setActiveTab('login');
-        //   setShowKey(false); // 키 표시 숨기기
-
-        //   // 로그인 탭에서 키 입력 필드에 포커스
-        //   const firstInput = document.querySelector('input[name="0"]');
-        //   if (firstInput instanceof HTMLInputElement) {
-        //     firstInput.focus();
-        //   }
-        // }, 3000);
+        // 중요: 여기서 리디렉션하지 않음
       } else {
         toast({
           title: '키 생성 실패',
@@ -401,6 +381,7 @@ export const Login: React.FC = () => {
             : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
         variant: 'destructive',
       });
+    } finally {
     }
   };
 
@@ -608,6 +589,42 @@ export const Login: React.FC = () => {
         {signupTab === 'key' ? (
           <div key="key-signup-content">
             <div className="space-y-4">
+              {/* 이메일 키 생성 폼 추가 */}
+              <motion.div
+                key="create-email-key-form"
+                variants={animations.item}
+              >
+                <form onSubmit={handleCreateEmailKey} className="space-y-3">
+                  <div>
+                    <Input
+                      type="email"
+                      placeholder="이메일 주소"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="h-11 border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+                    disabled={isLoading || !email.trim()}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        처리 중...
+                      </>
+                    ) : (
+                      <>
+                        <Key className="h-4 w-4 mr-2" />
+                        이메일로 키 만들기
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </motion.div>
               {/* 익명 키 생성 버튼 */}
               <motion.div
                 key="create-anonymous-key-button"
@@ -617,10 +634,10 @@ export const Login: React.FC = () => {
                   type="button"
                   variant="outline"
                   className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-                  disabled={isLoginLoading}
+                  disabled={isLoading}
                   onClick={handleCreateAnonymousKey}
                 >
-                  {isLoginLoading ? (
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       처리 중...
@@ -638,8 +655,9 @@ export const Login: React.FC = () => {
               {formattedKey && showKey && (
                 <KeyDisplay
                   formattedKey={formattedKey}
-                  onCopy={copyToClipboard}
+                  onCopy={() => copyToClipboard(formattedKey)}
                   copied={copiedKey}
+                  autoCopy={true} // 자동 복사 활성화
                 />
               )}
             </div>

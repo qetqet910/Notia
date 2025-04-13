@@ -19,9 +19,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   global: {
     headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      apikey: supabaseAnonKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
   },
 });
@@ -29,11 +28,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export const resetSupabaseClient = () => {
   try {
     console.log('Supabase 클라이언트 재설정 시도');
-    
+
     // 기존 세션 데이터 백업
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
+
     // 새 클라이언트 생성
     const newClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -43,10 +42,10 @@ export const resetSupabaseClient = () => {
         storage: localStorage,
       },
     });
-    
+
     // 기존 클라이언트 교체
     Object.assign(supabase, newClient);
-    
+
     console.log('Supabase 클라이언트 재설정 완료');
     return true;
   } catch (error) {

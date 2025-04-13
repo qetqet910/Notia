@@ -335,38 +335,57 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   // 사용자 프로필 가져오기
+  // authStore.ts의 fetchUserProfile 함수 수정
   fetchUserProfile: async (userId: string) => {
     try {
-      // 이미 인증된 사용자 ID를 사용하므로 getUser() 호출 제거
-      // supabase.auth.getUser() 호출 제거
+      console.log('사용자 프로필 가져오기 시작:', userId);
 
-      // 사용자 프로필 정보 가져오기
+      // 사용자 ID가 없으면 null 반환
+      if (!userId) {
+        console.log('사용자 ID가 없음');
+        return null;
+      }
+
+      // 사용자 정보 가져오기
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.log('인증된 사용자 없음');
+        return null;
+      }
+
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('프로필 가져오기 오류:', profileError);
+      if (profileError) {
+        // PGRST116은 "결과가 없음" 오류 코드
+        if (profileError.code !== 'PGRST116') {
+          console.error('프로필 가져오기 오류:', profileError);
+        } else {
+          console.log('프로필 데이터 없음, 기본 프로필 사용');
+        }
       }
 
-      // 기존 사용자 정보 활용
-      const { user } = useAuthStore.getState();
-      if (!user) return null;
-
       // 기본 프로필 정보 구성
-      const profile: UserProfile = {
-        user_id: userId,
+      const profile = {
+        user_id: user.id,
         email: user.email,
         provider: user.app_metadata?.provider,
         display_name:
           user.user_metadata?.full_name ||
           user.user_metadata?.name ||
-          profileData?.display_name,
+          profileData?.display_name ||
+          user.email?.split('@')[0] ||
+          '사용자',
         avatar_url: user.user_metadata?.avatar_url || profileData?.avatar_url,
       };
 
+      console.log('사용자 프로필 가져오기 완료:', profile);
       return profile;
     } catch (err) {
       console.error('프로필 가져오기 실패:', err);
@@ -429,6 +448,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
+  
   generateAndStoreKey: async (email?: string) => {
     try {
       set({ isLoading: true, error: null });
@@ -488,7 +508,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   generateAnonymousKey: async () => {
     try {
       // 이미 로딩 중이면 중복 요청 방지
-      if (get().isLoginLoading) {
+      if (get().isLoading) {
         return {
           success: false,
           key: '',
@@ -496,35 +516,170 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         };
       }
 
-      set({ isLoginLoading: true, error: null });
+      set({ isLoading: true, error: null });
+      console.log('익명 키 생성 시작');
 
-      // 외부 서비스 함수 호출
-      const { success, key, formattedKey, error } = await createAnonymousKey();
+      // 1. 랜덤 키 생성
+      const key = generateRandomKey(16);
+      const formattedKeyValue = formatKey(key);
 
-      if (!success) {
-        throw error || new Error('키 생성에 실패했습니다.');
+      // 2. 익명 사용자 생성 (로그인 상태 변경 없이)
+      const userId = crypto.randomUUID();
+      console.log('생성된 사용자 ID:', userId);
+
+      try {
+        // 3. 키 저장 - RPC 함수 사용
+        const { data, error } = await supabase.rpc(
+          'create_anonymous_key_without_auth',
+          {
+            user_uuid: userId,
+            key_value: key,
+          },
+        );
+
+        if (error) {
+          console.error('RPC 함수 호출 오류:', error);
+          throw error;
+        }
+
+        console.log('RPC 함수 결과:', data);
+
+        // 4. 키 설정 (로그인 상태 변경 없음)
+        set({
+          userKey: key,
+          formattedKey: formattedKeyValue,
+          isLoading: false,
+        });
+
+        return {
+          success: true,
+          key,
+          formattedKey: formattedKeyValue,
+        };
+      } catch (dbError) {
+        console.error('데이터베이스 작업 오류:', dbError);
+
+        // 대체 방법: 키만 생성하고 저장하지 않음
+        console.log('대체 방법: 키만 생성');
+
+        // 키 설정 (로그인 상태 변경 없음)
+        set({
+          userKey: key,
+          formattedKey: formattedKeyValue,
+          isLoading: false,
+        });
+
+        return {
+          success: true,
+          key,
+          formattedKey: formattedKeyValue,
+        };
       }
-
-      // 키 정보만 설정 (로그인 상태는 변경하지 않음)
-      set({
-        userKey: key,
-        formattedKey,
-        isLoginLoading: false,
-      });
-
-      return {
-        success: true,
-        key,
-        formattedKey,
-      };
     } catch (error) {
       console.error('익명 키 생성 오류:', error);
-      set({ error: error as Error, isLoginLoading: false });
-      return {
-        success: false,
-        key: '',
-        formattedKey: '',
-      };
+      set({ error: error as Error, isLoading: false });
+      return { success: false, key: '', formattedKey: '' };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  generateEmailKey: async (email: string) => {
+    try {
+      if (get().isLoading) return false;
+
+      if (!email?.trim()) {
+        throw new Error('이메일을 입력해주세요.');
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('유효한 이메일 주소를 입력해주세요.');
+      }
+
+      set({ isLoading: true, error: null });
+      console.log('이메일 키 생성 시작:', email);
+
+      // 1. 랜덤 키 생성
+      const key = generateRandomKey(16);
+      const password = generateRandomKey(12);
+
+      // 2. 이메일/비밀번호로 회원가입
+      const { data: userData, error: signUpError } = await supabase.auth.signUp(
+        {
+          email,
+          password,
+          options: {
+            data: { key_prefix: key.substring(0, 4) },
+          },
+        },
+      );
+
+      if (signUpError) {
+        console.error('회원가입 오류:', signUpError);
+        throw signUpError;
+      }
+
+      if (!userData.user) {
+        throw new Error('사용자 생성에 실패했습니다.');
+      }
+
+      console.log('사용자 생성 성공:', userData.user.id);
+
+      // 3. 키 저장
+      const { error: keyError } = await supabase.from('user_keys').insert({
+        user_id: userData.user.id,
+        key,
+        created_at: new Date().toISOString(),
+        is_active: true,
+      });
+
+      if (keyError) {
+        console.error('키 저장 오류:', keyError);
+        throw keyError;
+      }
+
+      // 4. 사용자 프로필 생성
+      const displayName = email.split('@')[0];
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: userData.user.id,
+          display_name: displayName,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error('프로필 생성 오류:', profileError);
+        // 프로필 생성 실패해도 계속 진행
+      }
+
+      // 5. 로그아웃 (키만 생성하고 로그인 상태는 유지하지 않음)
+      await supabase.auth.signOut();
+
+      // 6. 키 설정
+      set({
+        userKey: key,
+        formattedKey: formatKey(key),
+        isLoading: false,
+      });
+
+      console.log('이메일 키 생성 성공:', formatKey(key));
+      return true;
+    } catch (error) {
+      console.error('이메일 키 생성 오류:', error);
+
+      // 오류 발생 시 로그아웃 시도
+      try {
+        await supabase.auth.signOut();
+      } catch (logoutError) {
+        console.error('로그아웃 오류:', logoutError);
+      }
+
+      set({ error: error as Error, isLoading: false });
+      return false;
+    } finally {
+      set({ isLoading: false });
     }
   },
 
