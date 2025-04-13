@@ -52,6 +52,16 @@ interface AuthStore extends AuthState {
   resetSupabaseClient: () => Promise<boolean>;
 }
 
+// 로컬스토리지 키 가져오기 함수
+const getAuthStorageKey = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return (
+    'sb-' +
+    supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
+    '-auth-token'
+  );
+};
+
 export const useAuthStore = create<AuthStore>((set, get) => ({
   // Initial state
   user: null,
@@ -68,27 +78,28 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   resetSupabaseClient: async () => {
     try {
-      console.log('Supabase 클라이언트 재설정 시도');
+      // 이미 클라이언트가 정상 작동 중이면 재설정 생략
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log('기존 클라이언트 정상 작동 중, 재설정 생략');
+        return true;
+      }
 
-      // 기존 세션 데이터 백업
+      // 필요한 경우에만 클라이언트 재설정
+      console.log('Supabase 클라이언트 재설정');
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      // 새 클라이언트 생성
       const { createClient } = await import('@supabase/supabase-js');
       const newClient = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storage: localStorage,
         },
       });
 
-      // 기존 클라이언트 교체
       Object.assign(supabase, newClient);
-
-      console.log('Supabase 클라이언트 재설정 완료');
       return true;
     } catch (error) {
       console.error('Supabase 클라이언트 재설정 실패:', error);
@@ -96,7 +107,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // authStore.ts의 checkSession 함수 수정
   restoreSession: async () => {
     try {
       console.log('로컬스토리지에서 세션 복원 시도');
@@ -227,82 +237,49 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   checkSession: async () => {
     try {
       set({ isSessionCheckLoading: true, error: null });
-      console.log('로컬스토리지 모든 키:', Object.keys(localStorage));
 
-      // 직접 로컬스토리지에서 세션 데이터 확인
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const authKey =
-        'sb-' +
-        supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
-        '-auth-token';
-      const storedSession = localStorage.getItem(authKey);
-
-      console.log('로컬스토리지 세션 데이터 존재:', !!storedSession);
-
-      // 세션 가져오기 시도
-      console.log('세션 가져오기 시작...');
-      let sessionResult;
-
+      // 세션 확인 간소화 - 타임아웃 축소
       try {
-        sessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('세션 가져오기 타임아웃')), 3000),
-          ),
-        ]);
-      } catch (timeoutError) {
-        console.error('세션 가져오기 실패:', timeoutError);
+        // 타입 문제를 해결하기 위해 Promise.race 대신 직접 타임아웃 처리
+        const sessionPromise = supabase.auth.getSession();
 
-        // 타임아웃 발생 시 로컬스토리지에서 직접 세션 복원 시도
-        if (storedSession) {
-          console.log(
-            '세션 가져오기 타임아웃, 로컬스토리지에서 직접 복원 시도',
-          );
-          return await get().restoreSession();
+        // 타임아웃 설정
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        // 세션 가져오기 실행
+        const { data } = await sessionPromise;
+        clearTimeout(timeoutId); // 성공적으로 완료되면 타임아웃 취소
+
+        if (data?.session) {
+          const user = data.session.user;
+          // 프로필 가져오기를 병렬로 처리
+          const profile = await get().fetchUserProfile(user.id);
+
+          set({
+            session: data.session,
+            user,
+            isAuthenticated: true,
+            userProfile: profile,
+            isSessionCheckLoading: false,
+          });
+          return true;
         }
+      } catch (error) {
+        console.log('세션 가져오기 실패, 로컬스토리지 확인');
+      }
 
+      // 로컬스토리지에서 세션 복구 시도
+      const restored = await get().restoreSession();
+      if (!restored) {
         set({
           isAuthenticated: false,
           user: null,
           session: null,
           isSessionCheckLoading: false,
         });
-        return false;
       }
-
-      // 세션 결과 처리
-      const session = sessionResult?.data?.session;
-      console.log('세션 가져오기 완료:', session ? '성공' : '실패');
-
-      if (!session) {
-        console.log('세션이 없음, 인증되지 않음으로 설정');
-        set({
-          isAuthenticated: false,
-          user: null,
-          session: null,
-          isSessionCheckLoading: false,
-        });
-        return false;
-      }
-
-      // 세션이 있는 경우 처리
-      const user = session.user;
-
-      // 사용자 프로필 가져오기
-      console.log('사용자 프로필 가져오기 시작...');
-      const profile = await get().fetchUserProfile(user.id);
-      console.log('사용자 프로필 가져오기 완료:', profile);
-
-      // 상태 업데이트
-      set({
-        session,
-        user,
-        isAuthenticated: true,
-        userProfile: profile,
-        isSessionCheckLoading: false,
-      });
-
-      return true;
+      return restored;
     } catch (error) {
       console.error('세션 확인 전체 오류:', error);
       set({ error: error as Error, isSessionCheckLoading: false });
@@ -552,22 +529,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   loginWithSocial: async (provider: 'github' | 'google') => {
-    // 이미 진행 중인 로그인이 있으면 중복 실행 방지
     if (get().isLoginLoading) return;
 
     try {
       set({ isLoginLoading: true, error: null });
 
-      // 기존 세션 확인 및 로그아웃
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        console.log('기존 세션 발견, 로그아웃 처리');
-        await supabase.auth.signOut({ scope: 'global' });
-
-        // 세션 정리를 위한 짧은 지연
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-
+      // 불필요한 세션 확인 및 로그아웃 과정 제거
+      // OAuth는 브라우저 리디렉션을 통해 새 세션을 생성하므로 기존 세션 확인이 불필요할 수 있음
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -707,8 +675,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 let isProcessingAuthChange = false;
 
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth 상태 변경:', event, session ? '세션 있음' : '세션 없음');
-  
+  // console.log('Auth 상태 변경:', event, session ? '세션 있음' : '세션 없음');
+
   if (session) {
     // 세션이 있으면 인증 상태 업데이트
     useAuthStore.setState({
@@ -716,10 +684,12 @@ supabase.auth.onAuthStateChange((event, session) => {
       session: session,
       isAuthenticated: true,
     });
-    
+
     // 사용자 프로필 가져오기
-    useAuthStore.getState().fetchUserProfile(session.user.id)
-      .then(profile => {
+    useAuthStore
+      .getState()
+      .fetchUserProfile(session.user.id)
+      .then((profile) => {
         useAuthStore.setState({ userProfile: profile });
       });
   } else if (event === 'SIGNED_OUT') {
