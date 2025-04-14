@@ -1,20 +1,21 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Star, Calendar, Bell, KeyRound, Users, Clock } from "lucide-react";
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Star, Calendar, Bell, KeyRound, Users, Clock } from 'lucide-react';
+import { Toaster } from '@/components/ui/toaster';
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Header } from "@/components/ui/_Header";
+} from '@/components/ui/accordion';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Header } from '@/components/ui/_Header';
 
-import logoImage from "@/stores/images/Logo.png";
-import PlaceHolder from "@/stores/images/Placeholder.png";
+import logoImage from '@/stores/images/Logo.png';
+import PlaceHolder from '@/stores/images/Placeholder.png';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -41,53 +42,54 @@ export const Home: React.FC = () => {
   const userProfiles = [
     {
       icon: <Users className="w-8 h-8 text-[#61C9A8] mb-2" />,
-      title: "바쁜 직장인",
-      description: "바쁜 업무중, 빠르게 기록하세요. 기억은 대신 해드립니다.",
+      title: '바쁜 직장인',
+      description: '바쁜 업무중, 빠르게 기록하세요. 기억은 대신 해드립니다.',
     },
     {
       icon: <Clock className="w-8 h-8 text-[#61C9A8] mb-2" />,
-      title: "군인",
+      title: '군인',
       description:
-        "느려터진 컴퓨터에서도 빠르게 동작합니다. 더이상 스트레스 받지 마십시오.",
+        '느려터진 컴퓨터에서도 빠르게 동작합니다. 더이상 스트레스 받지 마십시오.',
     },
     {
       icon: <Star className="w-8 h-8 text-[#61C9A8] mb-2" />,
-      title: "학생",
+      title: '학생',
       description:
-        "연필보다 키보드가 익숙하신 여러분들을 위해 준비했습니다, 책보다 모니터를 더 많이 보잖아요~",
+        '연필보다 키보드가 익숙하신 여러분들을 위해 준비했습니다, 책보다 모니터를 더 많이 보잖아요~',
     },
   ];
 
   const faqItems = [
     {
-      question: "무료로 이용할 수 있나요?",
+      question: '무료로 이용할 수 있나요?',
       answer:
-        "네. 무료로 이용 가능합니다, 유료 페이지처럼 만들어놨지만 유료 기능은 없습니다.",
+        '네. 무료로 이용 가능합니다, 유료 페이지처럼 만들어놨지만 유료 기능은 없습니다.',
     },
     {
-      question: "모바일에서도 사용할 수 있나요?",
+      question: '모바일에서도 사용할 수 있나요?',
       answer:
-        "네, React-Native로 만드려다가 포기(증발)했습니다. 하지만 PWA로 모바일에서도 사용 가능합니다.",
+        '네, React-Native로 만드려다가 포기(증발)했습니다. 하지만 PWA로 모바일에서도 사용 가능합니다.',
     },
     {
-      question: "데이터는 안전하게 보관되나요?",
+      question: '데이터는 안전하게 보관되나요?',
       answer:
-        "네, 데이터는 안전하게 보관됩니다. 데이터는 암호화되어 저장되며, 외부로 유출되지 않습니다.",
+        '네, 데이터는 안전하게 보관됩니다. 데이터는 암호화되어 저장되며, 외부로 유출되지 않습니다.',
     },
     {
-      question: "다른 앱과 연동이 가능한가요?",
+      question: '다른 앱과 연동이 가능한가요?',
       answer:
-        "아직은 불가능합니다. 하지만 추후에 가능하도록 업데이트 할 예정입니다.",
+        '아직은 불가능합니다. 하지만 추후에 가능하도록 업데이트 할 예정입니다.',
     },
     {
-      question: "무슨 목적으로 만들어진 서비스인가요?",
+      question: '무슨 목적으로 만들어진 서비스인가요?',
       answer:
-        "제가 쓰려고 만들었는데, 포폴로도 사용할 수 있으면 좋을 것 같아서 해봤습니다, 근데 요즘 시대에 이런 것도 포폴로 쳐주나요..?",
+        '제가 쓰려고 만들었는데, 포폴로도 사용할 수 있으면 좋을 것 같아서 해봤습니다, 근데 요즘 시대에 이런 것도 포폴로 쳐주나요..?',
     },
   ];
 
   return (
     <div className="min-h-screen overflow-hidden">
+      <Toaster />
       {/* Navigation Bar */}
       <Header />
 
@@ -112,7 +114,7 @@ export const Home: React.FC = () => {
                 <Button
                   className="bg-[#61C9A8] hover:bg-[#61C9A8] hover:scale-105 transition-all text-white"
                   size="lg"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate('/login')}
                 >
                   시작하기
                 </Button>
@@ -144,7 +146,7 @@ export const Home: React.FC = () => {
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: '-100px' }}
             variants={staggerContainer}
             className="grid md:grid-cols-3 gap-8"
           >
@@ -197,7 +199,7 @@ export const Home: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
@@ -212,7 +214,7 @@ export const Home: React.FC = () => {
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: '-100px' }}
             variants={staggerContainer}
             className="grid md:grid-cols-3 gap-8"
           >
@@ -243,7 +245,7 @@ export const Home: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.6 }}
             className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-12 text-center max-w-4xl mx-auto relative overflow-hidden"
           >
@@ -263,7 +265,7 @@ export const Home: React.FC = () => {
                 <Button
                   className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 text-white md:px-8 hover:scale-105 transition-transform"
                   size="lg"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate('/login')}
                 >
                   맛만 보기
                 </Button>
@@ -285,7 +287,7 @@ export const Home: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
@@ -297,7 +299,7 @@ export const Home: React.FC = () => {
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: '-100px' }}
             variants={staggerContainer}
           >
             <Accordion type="single" collapsible className="w-full">

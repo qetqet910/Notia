@@ -1,15 +1,15 @@
-import type React from "react"
-import { useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Key, Copy, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import type React from 'react';
+import { useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Key, Copy, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface KeyDisplayProps {
-  formattedKey: string
-  onCopy: () => void
-  copied: boolean
-  autoCopy?: boolean // 자동 복사 옵션 추가
+  formattedKey: string;
+  onCopy: () => void;
+  copied: boolean;
+  autoCopy?: boolean; // 자동 복사 옵션 추가
 }
 
 export const KeyDisplay: React.FC<KeyDisplayProps> = ({
@@ -18,19 +18,23 @@ export const KeyDisplay: React.FC<KeyDisplayProps> = ({
   copied,
   autoCopy = false, // 기본값은 false
 }) => {
-  // 자동 복사 기능 추가
+  // 자동 복사 기능 - 무한 루프 방지를 위한 ref 사용
+  const hasCopied = useRef(false);
+
   useEffect(() => {
-    if (autoCopy && formattedKey) {
-      onCopy()
+    // 이미 복사했으면 다시 복사하지 않음
+    if (autoCopy && formattedKey && !hasCopied.current) {
+      onCopy();
+      hasCopied.current = true;
     }
-  }, [autoCopy, formattedKey, onCopy])
+  }, [autoCopy, formattedKey, onCopy]);
 
   return (
     <motion.div
       key="key-display"
       className="mt-6 pt-4 border-t"
       initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
+      animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.3 }}
     >
@@ -59,7 +63,11 @@ export const KeyDisplay: React.FC<KeyDisplayProps> = ({
           className="ml-2 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
           onClick={onCopy}
         >
-          {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} className="text-[#61C9A8]" />}
+          {copied ? (
+            <Check size={16} className="text-green-500" />
+          ) : (
+            <Copy size={16} className="text-[#61C9A8]" />
+          )}
         </Button>
       </motion.div>
 
@@ -85,10 +93,10 @@ export const KeyDisplay: React.FC<KeyDisplayProps> = ({
         transition={{ delay: 0.2 }}
       >
         <p className="text-xs text-amber-800">
-          <strong>중요:</strong> 이 키는 노트에 접근하는 유일한 방법입니다. 안전한 곳에 보관하세요. 키를 잃어버리면
-          데이터에 접근할 수 없습니다.
+          <strong>중요:</strong> 이 키는 노트에 접근하는 유일한 방법입니다.
+          안전한 곳에 보관하세요. 키를 잃어버리면 데이터에 접근할 수 없습니다.
         </p>
       </motion.div>
     </motion.div>
-  )
-}
+  );
+};

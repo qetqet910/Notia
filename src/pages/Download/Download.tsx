@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Header } from '@/components/ui/_Header';
+import { Toaster } from '@/components/ui/toaster';
 
 import logoImage from "@/stores/Logo.png";
 
@@ -41,6 +42,7 @@ export const DownloadPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <Toaster />
       <Header />
 
       {/* Main Content */}

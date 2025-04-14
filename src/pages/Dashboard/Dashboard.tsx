@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Toaster } from '@/components/ui/toaster';
 
 import { NoteList } from '@/components/features/NoteList';
 import { Editor } from '@/components/features/Editor';
@@ -144,6 +145,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      <Toaster />
       {/* Header */}
       <header className="flex justify-between items-center px-4 py-3 border-b">
         <div className="flex items-center">

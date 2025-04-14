@@ -396,59 +396,67 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // Key-based authentication
   loginWithKey: async (key: string) => {
     try {
-      set({ isLoginLoading: true, error: null });
+      set({ isLoading: true, error: null });
+
+      // 키 형식 정리 (하이픈 제거)
       const cleanKey = key.replace(/-/g, '');
 
-      const { data: allKeys, error: allKeysError } = await supabase
-        .from('user_keys')
-        .select('user_id, key, is_active');
+      // 1. 익명 로그인 (임시 세션 생성)
+      const { data: authData, error: authError } =
+        await supabase.auth.signInAnonymously();
 
-      if (allKeysError) throw allKeysError;
+      if (authError) {
+        throw authError;
+      }
 
-      const matchingKey = allKeys?.find(
-        (k) => k.key === cleanKey && k.is_active,
+      // 2. 키로 사용자 찾기 (메타데이터 검색은 불가능하므로 RPC 함수 사용)
+      const { data: userData, error: userError } = await supabase.rpc(
+        'find_user_by_key',
+        {
+          key_value: cleanKey,
+        },
       );
-      if (!matchingKey) {
+
+      if (userError || !userData || userData.length === 0) {
+        // 로그아웃
+        await supabase.auth.signOut();
         throw new Error('유효하지 않은 키입니다.');
       }
 
-      const { data: authData, error: authError } =
-        await supabase.auth.signInAnonymously();
-      if (authError) throw authError;
-
+      // 3. 사용자 메타데이터 업데이트
       await supabase.auth.updateUser({
         data: {
-          original_user_id: matchingKey.user_id,
+          original_user_id: userData[0].user_id,
           key_login: true,
           login_method: 'key',
         },
       });
 
-      // 사용자 프로필 가져오기
-      const profile = await get().fetchUserProfile(matchingKey.user_id);
-
+      // 4. 상태 업데이트
       set({
         userKey: cleanKey,
         formattedKey: formatKey(cleanKey),
         isAuthenticated: true,
-        userProfile: profile,
         isLoading: false,
       });
 
-      return { success: true, message: '로그인 성공' };
+      return {
+        success: true,
+        message: '로그인 성공',
+      };
     } catch (error) {
-      set({ error: error as Error });
+      console.error('키 로그인 실패:', error);
+      set({ error: error as Error, isLoading: false });
       return {
         success: false,
-        message: error instanceof Error ? error.message : '로그인 실패',
+        message:
+          error instanceof Error
+            ? error.message
+            : '로그인 중 오류가 발생했습니다.',
       };
-    } finally {
-      // 로그인 로딩 상태만 false로 변경
-      set({ isLoginLoading: false });
     }
   },
 
-  
   generateAndStoreKey: async (email?: string) => {
     try {
       set({ isLoading: true, error: null });
@@ -507,44 +515,33 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   generateAnonymousKey: async () => {
     try {
-      // 이미 로딩 중이면 중복 요청 방지
-      if (get().isLoading) {
-        return {
-          success: false,
-          key: '',
-          formattedKey: '',
-        };
+      set({ isLoading: true, error: null });
+
+      // 1. 키 생성 (RPC 함수 사용)
+      const { data: keyData, error: keyError } = await supabase.rpc(
+        'create_anonymous_user_with_key',
+      );
+
+      if (keyError) {
+        console.error('키 생성 오류:', keyError);
+        throw keyError;
       }
 
-      set({ isLoading: true, error: null });
-      console.log('익명 키 생성 시작');
+      if (!keyData.success) {
+        console.error('키 생성 실패:', keyData.error);
+        throw new Error(keyData.error || '키 생성 실패');
+      }
 
-      // 1. 랜덤 키 생성
-      const key = generateRandomKey(16);
+      const key = keyData.key;
       const formattedKeyValue = formatKey(key);
 
-      // 2. 익명 사용자 생성 (로그인 상태 변경 없이)
-      const userId = crypto.randomUUID();
-      console.log('생성된 사용자 ID:', userId);
+      // 2. 익명 사용자 생성
+      const { data: authData, error: authError } =
+        await supabase.auth.signInAnonymously();
 
-      try {
-        // 3. 키 저장 - RPC 함수 사용
-        const { data, error } = await supabase.rpc(
-          'create_anonymous_key_without_auth',
-          {
-            user_uuid: userId,
-            key_value: key,
-          },
-        );
-
-        if (error) {
-          console.error('RPC 함수 호출 오류:', error);
-          throw error;
-        }
-
-        console.log('RPC 함수 결과:', data);
-
-        // 4. 키 설정 (로그인 상태 변경 없음)
+      if (authError) {
+        console.error('익명 사용자 생성 오류:', authError);
+        // 사용자 생성에 실패해도 키는 반환
         set({
           userKey: key,
           formattedKey: formattedKeyValue,
@@ -555,30 +552,52 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           success: true,
           key,
           formattedKey: formattedKeyValue,
-        };
-      } catch (dbError) {
-        console.error('데이터베이스 작업 오류:', dbError);
-
-        // 대체 방법: 키만 생성하고 저장하지 않음
-        console.log('대체 방법: 키만 생성');
-
-        // 키 설정 (로그인 상태 변경 없음)
-        set({
-          userKey: key,
-          formattedKey: formattedKeyValue,
-          isLoading: false,
-        });
-
-        return {
-          success: true,
-          key,
-          formattedKey: formattedKeyValue,
+          warning: '익명 사용자 생성에 실패했지만 키는 생성되었습니다.',
         };
       }
+
+      // 3. 사용자 메타데이터에 키 저장
+      await supabase.auth.updateUser({
+        data: {
+          anonymous_key: key,
+          key_created_at: new Date().toISOString(),
+        },
+      });
+
+      // 4. 로그아웃 (키만 생성하고 로그인 상태는 유지하지 않음)
+      await supabase.auth.signOut();
+
+      // 5. 상태 업데이트
+      set({
+        userKey: key,
+        formattedKey: formattedKeyValue,
+        isLoading: false,
+      });
+
+      return {
+        success: true,
+        key,
+        formattedKey: formattedKeyValue,
+      };
     } catch (error) {
       console.error('익명 키 생성 오류:', error);
       set({ error: error as Error, isLoading: false });
-      return { success: false, key: '', formattedKey: '' };
+
+      // 오류가 발생해도 키는 생성해서 반환
+      const key = generateRandomKey(16);
+      const formattedKeyValue = formatKey(key);
+
+      set({
+        userKey: key,
+        formattedKey: formattedKeyValue,
+      });
+
+      return {
+        success: true,
+        key,
+        formattedKey: formattedKeyValue,
+        warning: '오류가 발생했지만 키는 생성되었습니다.',
+      };
     } finally {
       set({ isLoading: false });
     }

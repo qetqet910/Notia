@@ -6,6 +6,7 @@ import { Copy, Key, AlertCircle, Loader2 } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Toaster } from '@/components/ui/toaster';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -169,24 +170,31 @@ export const Login: React.FC = () => {
   }, []);
 
   // 키 복사 핸들러
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedKey(true);
-      toast({
-        title: '클립보드에 복사됨',
-        description: '키가 클립보드에 복사되었습니다.',
-      });
-      setTimeout(() => setCopiedKey(false), 2000); // Reset after 2 seconds
-    } catch (err) {
-      console.error('클립보드 복사 오류:', err);
-      toast({
-        title: '클립보드 복사 오류',
-        description: '클립보드에 복사하는 데 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
+// 키 복사 핸들러 - 하이픈 제거 버전
+const copyToClipboard = async (text: string) => {
+  try {
+    // 하이픈 제거
+    const cleanText = text.replace(/-/g, '');
+    
+    // 클립보드에 복사
+    await navigator.clipboard.writeText(cleanText);
+    setCopiedKey(true);
+    
+    toast({
+      title: '클립보드에 복사됨',
+      description: '하이픈이 제거된 키가 클립보드에 복사되었습니다.',
+    });
+    
+    setTimeout(() => setCopiedKey(false), 2000); // Reset after 2 seconds
+  } catch (err) {
+    console.error('클립보드 복사 오류:', err);
+    toast({
+      title: '클립보드 복사 오류',
+      description: '클립보드에 복사하는 데 실패했습니다.',
+      variant: 'destructive',
+    });
+  }
+};
 
   const handleCreateEmailKey = async (e: React.FormEvent) => {
     e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
@@ -342,7 +350,10 @@ export const Login: React.FC = () => {
 
     // 이미 키가 생성되어 있고 표시 중이면 중복 생성 방지
     if (formattedKey && showKey) {
-      console.log('이미 키가 생성되어 있습니다.');
+      toast({
+        title: '이미 키가 생성되어 있습니다',
+        description: '생성된 키를 복사해서 사용하세요.',
+      });
       return;
     }
 
@@ -652,7 +663,7 @@ export const Login: React.FC = () => {
               </motion.div>
 
               {/* 키 표시 - showKey 상태에 따라 표시 */}
-              {formattedKey && showKey && (
+              {!!formattedKey && !!showKey && (
                 <KeyDisplay
                   formattedKey={formattedKey}
                   onCopy={() => copyToClipboard(formattedKey)}
@@ -688,13 +699,13 @@ export const Login: React.FC = () => {
         )}
       </Tabs>
 
-      {userKey && showKey && (
+      {/* {!!userKey && !!showKey && (
         <KeyDisplay
           formattedKey={formattedKey || ''}
           onCopy={copyToClipboard}
           copied={copiedKey}
         />
-      )}
+      )} */}
 
       <motion.div
         key="signup-separator"
@@ -790,6 +801,7 @@ export const Login: React.FC = () => {
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br overflow-hidden from-white to-[#e6f7f2]">
       {/* 로그인 섹션 */}
+      <Toaster />
       <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
         <motion.div
           initial={!initialAnimationComplete ? 'hidden' : false}
