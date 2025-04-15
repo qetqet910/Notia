@@ -22,7 +22,8 @@ v0 번호 2번 부터 ㄱㄱ
 authStore.ts:239 로컬스토리지 세션 데이터 존재: false 로그인 이동 시마다 뜨는 거 확인하기
 로그아웃 redirectTo 확인하고 고치기
 
-4/14엔 dashboard 리디자인 기능구상하기
+키 생성 시 supabase Auth dashboard에 뜨는 경로로 리다이렉트가 안 일어나게 하는 중
+claude부터 보기
 
 ## Tech Stack
 

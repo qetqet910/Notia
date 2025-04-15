@@ -2,10 +2,10 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users } from 'react-feather';
-import { Copy, Key, AlertCircle, Loader2 } from 'lucide-react';
+import { Key, AlertCircle, Loader2 } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,6 +17,7 @@ import { InputOTPControlled } from '@/components/features/InputOtpControl/input-
 import { useAuthStore } from '@/stores/authStore';
 import { KeyDisplay } from '@/components/features/KeyDisplay';
 import { useToast } from '@/hooks/use-toast';
+import { generateRandomKey, formatKey } from '@/utils/keys';
 
 import logoImage from '@/stores/images/Logo.png';
 import animationData from '@/stores/data/login-animation.json';
@@ -170,31 +171,31 @@ export const Login: React.FC = () => {
   }, []);
 
   // 키 복사 핸들러
-// 키 복사 핸들러 - 하이픈 제거 버전
-const copyToClipboard = async (text: string) => {
-  try {
-    // 하이픈 제거
-    const cleanText = text.replace(/-/g, '');
-    
-    // 클립보드에 복사
-    await navigator.clipboard.writeText(cleanText);
-    setCopiedKey(true);
-    
-    toast({
-      title: '클립보드에 복사됨',
-      description: '하이픈이 제거된 키가 클립보드에 복사되었습니다.',
-    });
-    
-    setTimeout(() => setCopiedKey(false), 2000); // Reset after 2 seconds
-  } catch (err) {
-    console.error('클립보드 복사 오류:', err);
-    toast({
-      title: '클립보드 복사 오류',
-      description: '클립보드에 복사하는 데 실패했습니다.',
-      variant: 'destructive',
-    });
-  }
-};
+  // 키 복사 핸들러 - 하이픈 제거 버전
+  const copyToClipboard = async (text: string) => {
+    try {
+      // 하이픈 제거
+      const cleanText = text.replace(/-/g, '');
+
+      // 클립보드에 복사
+      await navigator.clipboard.writeText(cleanText);
+      setCopiedKey(true);
+
+      toast({
+        title: '클립보드에 복사됨',
+        description: '하이픈이 제거된 키가 클립보드에 복사되었습니다.',
+      });
+
+      setTimeout(() => setCopiedKey(false), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('클립보드 복사 오류:', err);
+      toast({
+        title: '클립보드 복사 오류',
+        description: '클립보드에 복사하는 데 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleCreateEmailKey = async (e: React.FormEvent) => {
     e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
@@ -360,28 +361,33 @@ const copyToClipboard = async (text: string) => {
     try {
       // 버튼 클릭 시 상태 초기화
       setShowKey(false);
-
+      setLocalLoading(true);
       console.log('익명 키 생성 시작');
-      const result = await generateAnonymousKey();
-      console.log('익명 키 생성 결과:', result);
 
-      if (result.success) {
-        // 성공 시에만 키 표시
-        setShowKey(true);
+      // 키 즉시 생성 및 표시 (UI 업데이트)
+      const key = generateRandomKey(16);
+      const formattedKeyValue = formatKey(key);
 
-        toast({
-          title: '키 생성 성공',
-          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+      // 상태 업데이트
+      useAuthStore.setState({
+        userKey: key,
+        formattedKey: formattedKeyValue,
+      });
+      setShowKey(true);
+
+      // 토스트 메시지 표시
+      toast({
+        title: '키 생성 성공',
+        description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+      });
+
+      generateAnonymousKey()
+        .then((result) => {
+          console.log('백그라운드 키 저장 결과:', result);
+        })
+        .catch((err) => {
+          console.error('백그라운드 키 저장 오류:', err);
         });
-
-        // 중요: 여기서 리디렉션하지 않음
-      } else {
-        toast({
-          title: '키 생성 실패',
-          description: '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
-          variant: 'destructive',
-        });
-      }
     } catch (err) {
       console.error('익명 키 생성 오류:', err);
       toast({
@@ -393,6 +399,7 @@ const copyToClipboard = async (text: string) => {
         variant: 'destructive',
       });
     } finally {
+      setLocalLoading(false);
     }
   };
 

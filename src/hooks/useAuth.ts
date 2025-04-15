@@ -1,6 +1,7 @@
 // src/hooks/useAuth.ts
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { resetSupabaseClient } from '@/services/supabase';
 
 interface UserProfile {
   user_id: string;
@@ -33,7 +34,6 @@ export const useAuth = () => {
     generateAnonymousKey,
     fetchUserProfile,
     restoreSession,
-    resetSupabaseClient,
   } = store;
 
   // 초기 세션 확인

@@ -15,8 +15,38 @@ import { AuthCallback } from '@/components/features/AuthCallback';
 import { ProtectedRoute } from '@/components/features/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 
+import { useAuthStore } from '@/stores/authStore';
+import { supabase } from '@/services/supabase';
+
 function App() {
   const { isInitializing } = useAuth();
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth 상태 변경:', event, session);
+
+      // 현재 isGeneratingKey 상태 가져오기
+      const isGeneratingKey = useAuthStore.getState().isGeneratingKey;
+
+      // 키 생성 중에는 리디렉션 방지
+      if (isGeneratingKey) {
+        console.log('키 생성 중 리디렉션 방지');
+        return;
+      }
+
+      if (event === 'SIGNED_IN' && session) {
+        // 로그인 처리
+      } else if (event === 'SIGNED_OUT') {
+        // 로그아웃 처리
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // 앱 초기화 중에는 간단한 로딩 화면 표시
   if (isInitializing) {

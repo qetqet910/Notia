@@ -17,6 +17,7 @@ interface AuthState {
   isLoginLoading: boolean;
   isLogoutLoading: boolean;
   isSessionCheckLoading: boolean;
+  isGeneratingKey: boolean | null;
 }
 
 interface UserProfile {
@@ -49,7 +50,6 @@ interface AuthStore extends AuthState {
   setError: (error: Error | null) => void;
   clearUserKey: () => void;
   restoreSession: () => Promise<boolean>;
-  resetSupabaseClient: () => Promise<boolean>;
 }
 
 // 로컬스토리지 키 가져오기 함수
@@ -75,37 +75,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   formattedKey: null,
   error: null,
   userProfile: null,
-
-  resetSupabaseClient: async () => {
-    try {
-      // 이미 클라이언트가 정상 작동 중이면 재설정 생략
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        console.log('기존 클라이언트 정상 작동 중, 재설정 생략');
-        return true;
-      }
-
-      // 필요한 경우에만 클라이언트 재설정
-      console.log('Supabase 클라이언트 재설정');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const { createClient } = await import('@supabase/supabase-js');
-      const newClient = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-        },
-      });
-
-      Object.assign(supabase, newClient);
-      return true;
-    } catch (error) {
-      console.error('Supabase 클라이언트 재설정 실패:', error);
-      return false;
-    }
-  },
+  isGeneratingKey: false,
 
   restoreSession: async () => {
     try {
@@ -515,7 +485,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   generateAnonymousKey: async () => {
     try {
-      set({ isLoading: true, error: null });
+      set({ isLoading: true, isGeneratingKey: true, error: null }); // 플래그 설정
 
       // 1. 키 생성 (RPC 함수 사용)
       const { data: keyData, error: keyError } = await supabase.rpc(
@@ -565,7 +535,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
 
       // 4. 로그아웃 (키만 생성하고 로그인 상태는 유지하지 않음)
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({
+        scope: 'local', // 로컬 세션만 삭제
+      });
 
       // 5. 상태 업데이트
       set({
@@ -598,8 +570,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         formattedKey: formattedKeyValue,
         warning: '오류가 발생했지만 키는 생성되었습니다.',
       };
-    } finally {
-      set({ isLoading: false });
     }
   },
 
