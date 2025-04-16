@@ -506,8 +506,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const formattedKeyValue = formatKey(key);
 
       // 2. 익명 사용자 생성
-      const { data: authData, error: authError } =
-        await supabase.auth.signInAnonymously();
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
+        data: {
+          anonymous_key: key
+        },
+        options: {
+          skipBrowserRedirect: true,
+          redirectTo: window.location.href
+        }
+      });
 
       if (authError) {
         console.error('익명 사용자 생성 오류:', authError);

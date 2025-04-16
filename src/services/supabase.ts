@@ -15,6 +15,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
+    // 옵션 추가: 리다이렉트 URL을 현재 페이지로 설정
+    redirectTo: window.location.origin + window.location.pathname,
     storage: localStorage,
   },
   global: {
