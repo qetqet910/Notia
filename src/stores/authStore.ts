@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import { supabase } from '@/services/supabase';
+import {
+  supabase,
+  signInAnonymouslyWithoutRedirect,
+} from '@/services/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { generateRandomKey, formatKey } from '@/utils/keys';
-import { createAnonymousKey } from '@/services/anonymous-key';
 import { Navigate } from 'react-router-dom';
 
 interface AuthState {
@@ -485,74 +487,31 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   generateAnonymousKey: async () => {
     try {
-      set({ isLoading: true, isGeneratingKey: true, error: null }); // 플래그 설정
+      set({ isLoading: true, isGeneratingKey: true, error: null });
 
-      // 1. 키 생성 (RPC 함수 사용)
-      const { data: keyData, error: keyError } = await supabase.rpc(
-        'create_anonymous_user_with_key',
-      );
-
-      if (keyError) {
-        console.error('키 생성 오류:', keyError);
-        throw keyError;
-      }
-
-      if (!keyData.success) {
-        console.error('키 생성 실패:', keyData.error);
-        throw new Error(keyData.error || '키 생성 실패');
-      }
-
-      const key = keyData.key;
+      // 1. 랜덤 키 생성 (클라이언트에서 직접 생성)
+      const key = generateRandomKey(16);
       const formattedKeyValue = formatKey(key);
 
-      // 2. 익명 사용자 생성
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
-        data: {
-          anonymous_key: key
-        },
-        options: {
-          skipBrowserRedirect: true,
-          redirectTo: window.location.href
-        }
-      });
+      // 2. Edge Function 호출 (배포된 경우)
+      // const { data: userData, error: createError } = await supabase.functions.invoke("create-anonymous-user", {
+      //   body: { key },
+      // });
 
-      if (authError) {
-        console.error('익명 사용자 생성 오류:', authError);
-        // 사용자 생성에 실패해도 키는 반환
-        set({
-          userKey: key,
-          formattedKey: formattedKeyValue,
-          isLoading: false,
-        });
+      // if (createError) {
+      //   console.error('사용자 생성 오류:', createError);
+      //   throw createError;
+      // }
 
-        return {
-          success: true,
-          key,
-          formattedKey: formattedKeyValue,
-          warning: '익명 사용자 생성에 실패했지만 키는 생성되었습니다.',
-        };
-      }
-
-      // 3. 사용자 메타데이터에 키 저장
-      await supabase.auth.updateUser({
-        data: {
-          anonymous_key: key,
-          key_created_at: new Date().toISOString(),
-        },
-      });
-
-      // 4. 로그아웃 (키만 생성하고 로그인 상태는 유지하지 않음)
-      await supabase.auth.signOut({
-        scope: 'local', // 로컬 세션만 삭제
-      });
-
-      // 5. 상태 업데이트
+      // 3. 상태 업데이트
       set({
         userKey: key,
         formattedKey: formattedKeyValue,
         isLoading: false,
+        isGeneratingKey: false,
       });
 
+      // 4. 성공 반환
       return {
         success: true,
         key,
@@ -560,7 +519,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       };
     } catch (error) {
       console.error('익명 키 생성 오류:', error);
-      set({ error: error as Error, isLoading: false });
+      set({ error: error as Error, isLoading: false, isGeneratingKey: false });
 
       // 오류가 발생해도 키는 생성해서 반환
       const key = generateRandomKey(16);
