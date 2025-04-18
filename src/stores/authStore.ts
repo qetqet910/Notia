@@ -1,8 +1,5 @@
 import { create } from 'zustand';
-import {
-  supabase,
-  signInAnonymouslyWithoutRedirect,
-} from '@/services/supabase';
+import { supabase } from '@/services/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import { generateRandomKey, formatKey } from '@/utils/keys';
 import { Navigate } from 'react-router-dom';
@@ -52,6 +49,7 @@ interface AuthStore extends AuthState {
   setError: (error: Error | null) => void;
   clearUserKey: () => void;
   restoreSession: () => Promise<boolean>;
+  createAnonymousUserWithEdgeFunction: (key: string) => void;
 }
 
 // 로컬스토리지 키 가져오기 함수
@@ -369,19 +367,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loginWithKey: async (key: string) => {
     try {
       set({ isLoading: true, error: null });
-
-      // 키 형식 정리 (하이픈 제거)
       const cleanKey = key.replace(/-/g, '');
-
-      // 1. 익명 로그인 (임시 세션 생성)
-      const { data: authData, error: authError } =
-        await supabase.auth.signInAnonymously();
-
-      if (authError) {
-        throw authError;
-      }
-
-      // 2. 키로 사용자 찾기 (메타데이터 검색은 불가능하므로 RPC 함수 사용)
+      // 1. 키로 사용자 찾기 (메타데이터 검색은 불가능하므로 RPC 함수 사용)
       const { data: userData, error: userError } = await supabase.rpc(
         'find_user_by_key',
         {
@@ -389,10 +376,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         },
       );
 
+      // 2. 익명 로그인 (임시 세션 생성)
+      const { data: authData, error: authError } =
+        await supabase.auth.signInAnonymously();
+
+      if (authError) {
+        throw authError;
+      }
+
       if (userError || !userData || userData.length === 0) {
-        // 로그아웃
-        await supabase.auth.signOut();
         throw new Error('유효하지 않은 키입니다.');
+        // await supabase.auth.signOut();
       }
 
       // 3. 사용자 메타데이터 업데이트
@@ -412,10 +406,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         isLoading: false,
       });
 
-      return {
-        success: true,
-        message: '로그인 성공',
-      };
+      return { success: true, user: authData.user, message: '로그인 성공' };
     } catch (error) {
       console.error('키 로그인 실패:', error);
       set({ error: error as Error, isLoading: false });
@@ -426,6 +417,23 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             ? error.message
             : '로그인 중 오류가 발생했습니다.',
       };
+    }
+  },
+
+  createAnonymousUserWithEdgeFunction: async (key: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'create-anonymous-user',
+        {
+          body: { key },
+        },
+      );
+
+      if (error) throw error;
+      return { success: true, userId: data.user_id };
+    } catch (error) {
+      console.error('Edge Function 호출 오류:', error);
+      return { success: false, error };
     }
   },
 
