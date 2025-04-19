@@ -24,6 +24,8 @@ authStore.ts:239 로컬스토리지 세션 데이터 존재: false 로그인 이
 
 키 생성 시 supabase Auth dashboard에 뜨는 경로로 리다이렉트가 안 일어나게 하는 중
 claude부터 보기
+<br/><br/>
+하 진전이 없다 시ㅡ발
 
 ## Tech Stack
 

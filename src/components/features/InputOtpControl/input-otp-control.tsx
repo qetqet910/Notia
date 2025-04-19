@@ -28,7 +28,7 @@ export const InputOTPControlled: React.FC = () => {
     // 하이픈 제거 후 16자리 키가 모두 입력되면 자동 로그인 시도
     const cleanValue = newValue.replace(/-/g, '');
     if (cleanValue.length === 16) {
-      handleSubmit(newValue);
+      handleSubmit(cleanValue);
     }
   };
 
@@ -38,16 +38,9 @@ export const InputOTPControlled: React.FC = () => {
     if (isLoading || localLoading || isSubmitting) return;
 
     try {
-      // 로컬 로딩 상태 설정
       setLocalLoading(true);
       setIsSubmitting(true);
 
-      console.log(
-        '키 로그인 시도:',
-        keyValue.replace(/-/g, '').substring(0, 4) + '****',
-      );
-
-      // 로그인 시도
       const result = await loginWithKey(keyValue);
 
       if (!result.success) {
