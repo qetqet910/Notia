@@ -6,24 +6,25 @@ import { generateRandomKey, formatKey } from '@/utils/keys';
 import { Navigate } from 'react-router-dom';
 
 interface AuthState {
+  // 사용자 상태
   user: User | null;
-  session: Session | null;
+  session: any | null;
+  userProfile: UserProfile | null;
   isAuthenticated: boolean;
+
+  // 키 관련 상태
   userKey: string | null;
   formattedKey: string | null;
-  error: Error | null;
-  userProfile: UserProfile | null;
+
+  // 로딩 상태
   isLoading: boolean;
   isLoginLoading: boolean;
   isLogoutLoading: boolean;
   isSessionCheckLoading: boolean;
-  isGeneratingKey: boolean | null;
+  isGeneratingKey: boolean;
 
-  setUserKey: (key: string | null) => void;
-  setFormattedKey: (key: string | null) => void;
-  setUser: (user: User | null) => void;
-  setIsAuthenticated: (isAuthenticated: boolean) => void;
-  clearState: () => void;
+  // 오류 상태
+  error: Error | null;
 }
 
 interface UserProfile {
@@ -35,35 +36,45 @@ interface UserProfile {
 }
 
 interface AuthStore extends AuthState {
-  // Auth methods
+  // 기본 상태 관리 메서드
+  setUserKey: (key: string | null) => void;
+  setFormattedKey: (key: string | null) => void;
+  setUser: (user: User | null) => void;
+  setIsAuthenticated: (isAuthenticated: boolean) => void;
+  setError: (error: Error | null) => void;
+  clearState: () => void;
+  clearUserKey: () => void;
+
+  // 인증 메서드
   loginWithKey: (key: string) => Promise<{
     success: boolean;
     message?: string;
+    user?: User | null;
+    error?: Error | null;
   }>;
-  generateAndStoreKey: (email?: string) => Promise<boolean>;
+  generateEmailKey: (email?: string) => Promise<boolean>;
   generateAnonymousKey: () => Promise<{
     success: boolean;
     key: string;
     formattedKey: string;
+    warning?: string;
   }>;
   loginWithSocial: (provider: 'github' | 'google') => Promise<void>;
   signOut: () => Promise<{ success: boolean; error?: any }>;
-  // Group methods
+
+  // 그룹 관련 메서드
   createGroup: (name: string) => Promise<any>;
   joinGroup: (key: string) => Promise<any>;
-  // Session management
+
+  // 세션 관리
   checkSession: () => Promise<boolean>;
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>;
-  setError: (error: Error | null) => void;
-  clearUserKey: () => void;
   restoreSession: () => Promise<boolean>;
   createAnonymousUserWithEdgeFunction: (key: string) => Promise<{
     success: boolean;
     userId?: User;
     error?: Error;
   }>;
-  lastAuthEvent: string | null;
-  lastAuthEventTime: number;
 }
 
 // 로컬스토리지 키 가져오기 함수
@@ -79,9 +90,9 @@ const getAuthStorageKey = () => {
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
-      // Initial state
       user: null,
       session: null,
+      userProfile: null,
       isAuthenticated: false,
       isLoading: false,
       isLoginLoading: false,
@@ -90,203 +101,53 @@ export const useAuthStore = create<AuthStore>()(
       userKey: null,
       formattedKey: null,
       error: null,
-      userProfile: null,
       isGeneratingKey: false,
-      lastAuthEvent: null,
-      lastAuthEventTime: 0,
 
       // 첫 번째 코드의 기본 메서드
       setUserKey: (key) => set({ userKey: key }),
       setFormattedKey: (key) => set({ formattedKey: key }),
       setUser: (user) => set({ user }),
       setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
+      setError: (error) => set({ error }),
       clearState: () =>
         set({
           userKey: null,
           formattedKey: null,
           user: null,
           isAuthenticated: false,
+          error: null,
         }),
-      setLastAuthEvent: (event) => set({ lastAuthEvent: event }),
-      setLastAuthEventTime: (time) => set({ lastAuthEventTime: time }),
-      restoreSession: async () => {
-        try {
-          console.log('로컬스토리지에서 세션 복원 시도');
-          set({ isLoading: true, error: null });
-
-          // 로컬스토리지에서 세션 데이터 가져오기
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const authKey =
-            'sb-' +
-            supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
-            '-auth-token';
-          const storedSession = localStorage.getItem(authKey);
-
-          if (!storedSession) {
-            console.log('로컬스토리지에 세션 데이터 없음');
-            set({ isLoading: false });
-            return false;
-          }
-
-          try {
-            // 세션 데이터 파싱
-            const parsedSession = JSON.parse(storedSession);
-
-            if (!parsedSession || !parsedSession.user) {
-              console.log('유효하지 않은 세션 데이터');
-              set({ isLoading: false });
-              return false;
-            }
-
-            // 세션 만료 확인
-            const expiresAt = parsedSession.expires_at * 1000; // 밀리초로 변환
-            const now = Date.now();
-
-            console.log('세션 만료 정보:', {
-              expiresAt: new Date(expiresAt).toLocaleString(),
-              timeUntilExpiry: `${((expiresAt - now) / 1000 / 60).toFixed(
-                2,
-              )}분 후`,
-              isExpired: expiresAt < now,
-            });
-
-            if (expiresAt < now) {
-              console.log('세션 만료됨, 새로고침 시도');
-
-              // 세션 새로고침 시도
-              try {
-                const { data: refreshData, error: refreshError } =
-                  await supabase.auth.refreshSession({
-                    refresh_token: parsedSession.refresh_token,
-                  });
-
-                if (refreshError || !refreshData.session) {
-                  console.error('세션 새로고침 실패:', refreshError);
-                  set({
-                    isAuthenticated: false,
-                    user: null,
-                    session: null,
-                    isLoading: false,
-                  });
-                  return false;
-                }
-
-                // 새로고침 성공, 새 세션 사용
-                console.log('세션 새로고침 성공');
-                const user = refreshData.session.user;
-
-                // 사용자 프로필 가져오기
-                const profile = await get().fetchUserProfile(user.id);
-
-                // 상태 업데이트
-                set({
-                  session: refreshData.session,
-                  user,
-                  isAuthenticated: true,
-                  userProfile: profile,
-                  isLoading: false,
-                });
-
-                return true;
-              } catch (refreshError) {
-                console.error('세션 새로고침 중 오류:', refreshError);
-                set({
-                  isAuthenticated: false,
-                  user: null,
-                  session: null,
-                  isLoading: false,
-                });
-                return false;
-              }
-            }
-
-            // 세션이 유효한 경우 직접 사용
-            console.log('유효한 세션 발견, 직접 사용');
-            const user = parsedSession.user;
-
-            // 사용자 프로필 가져오기
-            const profile = await get().fetchUserProfile(user.id);
-
-            // 상태 업데이트
-            set({
-              session: {
-                access_token: parsedSession.access_token,
-                refresh_token: parsedSession.refresh_token,
-                expires_at: parsedSession.expires_at,
-                expires_in: parsedSession.expires_in,
-                token_type: parsedSession.token_type,
-                user: parsedSession.user,
-              },
-              user,
-              isAuthenticated: true,
-              userProfile: profile,
-              isLoading: false,
-            });
-
-            return true;
-          } catch (parseError) {
-            console.error('세션 데이터 파싱 오류:', parseError);
-            set({ isLoading: false });
-            return false;
-          }
-        } catch (error) {
-          console.error('세션 복원 실패:', error);
-          set({ error: error as Error, isLoading: false });
-          return false;
-        } finally {
-          set({ isLoading: false });
-        }
-      },
+      clearUserKey: () => set({ userKey: null }),
 
       checkSession: async () => {
         try {
-          set({ isSessionCheckLoading: true, error: null });
+          set({ isSessionCheckLoading: true });
 
-          // 세션 확인 간소화 - 타임아웃 축소
-          try {
-            // 타입 문제를 해결하기 위해 Promise.race 대신 직접 타임아웃 처리
-            const sessionPromise = supabase.auth.getSession();
+          const {
+            data: { session },
+            error,
+          } = await supabase.auth.getSession();
 
-            // 타임아웃 설정
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000);
+          if (error) throw error;
 
-            // 세션 가져오기 실행
-            const { data } = await sessionPromise;
-            clearTimeout(timeoutId); // 성공적으로 완료되면 타임아웃 취소
-
-            if (data?.session) {
-              const user = data.session.user;
-              // 프로필 가져오기를 병렬로 처리
-              const profile = await get().fetchUserProfile(user.id);
-
-              set({
-                session: data.session,
-                user,
-                isAuthenticated: true,
-                userProfile: profile,
-                isSessionCheckLoading: false,
-              });
-              return true;
-            }
-          } catch (error) {
-            console.log('세션 가져오기 실패, 로컬스토리지 확인');
-          }
-
-          // 로컬스토리지에서 세션 복구 시도
-          const restored = await get().restoreSession();
-          if (!restored) {
+          if (session) {
             set({
-              isAuthenticated: false,
+              user: session.user,
+              session,
+              isAuthenticated: true,
+            });
+            return true;
+          } else {
+            set({
               user: null,
               session: null,
-              isSessionCheckLoading: false,
+              isAuthenticated: false,
             });
+            return false;
           }
-          return restored;
         } catch (error) {
-          console.error('세션 확인 전체 오류:', error);
-          set({ error: error as Error, isSessionCheckLoading: false });
+          console.error('세션 확인 오류:', error);
+          set({ error: error as Error });
           return false;
         } finally {
           set({ isSessionCheckLoading: false });
@@ -338,129 +199,100 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // 사용자 프로필 가져오기
-      // authStore.ts의 fetchUserProfile 함수 수정
       fetchUserProfile: async (userId: string) => {
         try {
-          console.log('사용자 프로필 가져오기 시작:', userId);
-
-          // 사용자 ID가 없으면 null 반환
-          if (!userId) {
-            console.log('사용자 ID가 없음');
-            return null;
-          }
-
-          // 사용자 정보 가져오기
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-
-          if (!user) {
-            console.log('인증된 사용자 없음');
-            return null;
-          }
-
-          const { data: profileData, error: profileError } = await supabase
+          const { data: profile, error } = await supabase
             .from('user_profiles')
             .select('*')
             .eq('user_id', userId)
             .single();
 
-          if (profileError) {
-            // PGRST116은 "결과가 없음" 오류 코드
-            if (profileError.code !== 'PGRST116') {
-              console.error('프로필 가져오기 오류:', profileError);
-            } else {
-              console.log('프로필 데이터 없음, 기본 프로필 사용');
-            }
+          if (error) throw error;
+
+          if (profile) {
+            set({ userProfile: profile });
+            return profile;
           }
 
-          // 기본 프로필 정보 구성
-          const profile = {
-            user_id: user.id,
-            email: user.email,
-            provider: user.app_metadata?.provider,
-            display_name:
-              user.user_metadata?.full_name ||
-              user.user_metadata?.name ||
-              profileData?.display_name ||
-              user.email?.split('@')[0] ||
-              '사용자',
-            avatar_url:
-              user.user_metadata?.avatar_url || profileData?.avatar_url,
-          };
-
-          console.log('사용자 프로필 가져오기 완료:', profile);
-          return profile;
-        } catch (err) {
-          console.error('프로필 가져오기 실패:', err);
+          return null;
+        } catch (error) {
+          console.error('프로필 조회 오류:', error);
           return null;
         }
       },
 
-      // Key-based authentication
+      // 세션 복원
+      restoreSession: async () => {
+        try {
+          const {
+            data: { session },
+            error,
+          } = await supabase.auth.getSession();
+
+          if (error) throw error;
+
+          if (session) {
+            set({
+              user: session.user,
+              session,
+              isAuthenticated: true,
+            });
+
+            // 사용자 프로필 조회
+            if (session.user) {
+              await get().fetchUserProfile(session.user.id);
+            }
+
+            return true;
+          }
+
+          return false;
+        } catch (error) {
+          console.error('세션 복원 오류:', error);
+          return false;
+        }
+      },
+
       loginWithKey: async (key: string) => {
         try {
           set({ isLoading: true, error: null });
+          const cleanKey = key.replace(/-/g, '');
 
-          // 디버깅을 위한 로그
-          console.log(
-            '키 로그인 시도(마스킹됨):',
-            key.substring(0, 4) + '****',
-          );
+          // 디버깅 로그 (보안을 위해 키 일부만 표시)
+          console.log('키 로그인 시도:', cleanKey.substring(0, 4) + '****');
 
           // 1. 키로 사용자 찾기
-          const { data: keyData, error: keyError } = await supabase.rpc(
+          const { data: userData, error: userError } = await supabase.rpc(
             'find_user_by_key',
-            { key_value: key },
+            { key_value: cleanKey },
           );
 
-          if (keyError || !keyData || keyData.length === 0) {
+          if (userError || !userData || userData.length === 0) {
             throw new Error('유효하지 않은 키입니다.');
           }
 
-          const userData = keyData[0];
-          console.log('키 검색 결과:', userData);
+          // 2. 익명 로그인 (임시 세션 생성)
+          const { data: authData, error: authError } =
+            await supabase.auth.signInAnonymously();
 
-          // 2. 해당 user_id로 세션 생성
-          let authData;
-
-          // 이미 로그인된 상태인지 확인
-          const { data: sessionData } = await supabase.auth.getSession();
-          const currentUserId = sessionData?.session?.user?.id;
-
-          // 다른 사용자로 로그인된 경우 로그아웃 후 재로그인
-          if (currentUserId && currentUserId !== userData.user_id) {
-            await supabase.auth.signOut();
+          if (authError) {
+            throw authError;
           }
 
-          // 로그인 처리
-          if (!currentUserId || currentUserId !== userData.user_id) {
-            const { data, error: authError } =
-              await supabase.auth.signInAnonymously();
+          // 3. 사용자 메타데이터 업데이트
+          await supabase.auth.updateUser({
+            data: {
+              original_user_id: userData[0].user_id,
+              key_type: userData[0].key_type,
+              key_login: true,
+              login_method: 'key',
+            },
+          });
 
-            if (authError) {
-              throw authError;
-            }
-
-            authData = data;
-
-            // 사용자 메타데이터 업데이트
-            await supabase.auth.updateUser({
-              data: {
-                key_type: userData.key_type,
-                key_login: true,
-                login_method: 'key',
-              },
-            });
-          } else {
-            authData = { user: sessionData.session?.user };
-          }
-
-          // 3. 상태 업데이트
+          // 4. 상태 업데이트
           set({
-            userKey: key,
-            formattedKey: formatKey(key),
+            userKey: cleanKey,
+            formattedKey: formatKey(cleanKey),
             isAuthenticated: true,
             isLoading: false,
             user: authData.user,
@@ -476,78 +308,91 @@ export const useAuthStore = create<AuthStore>()(
               error instanceof Error
                 ? error.message
                 : '로그인 중 오류가 발생했습니다.',
+            error: error as Error,
           };
         }
       },
 
-      createAnonymousUserWithEdgeFunction: async (key: string) => {
+      generateEmailKey: async (email?: string) => {
         try {
-          const { data, error } = await supabase.functions.invoke(
-            'create-anonymous-user',
-            {
-              body: { key },
-            },
-          );
+          set({ isLoading: true, isGeneratingKey: true, error: null });
 
-          if (error) throw error;
-          return { success: true, userId: data.user_id };
-        } catch (error) {
-          console.error('Edge Function 호출 오류:', error);
-          return { success: false, error };
-        }
-      },
-
-      generateAndStoreKey: async (email?: string) => {
-        try {
-          set({ isLoading: true, error: null });
-
-          if (!email?.trim()) {
-            throw new Error('이메일을 입력해주세요.');
+          // 1. 이메일 유효성 검사 (선택 사항)
+          if (email) {
+            const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            if (!isValid) {
+              throw new Error('유효하지 않은 이메일 형식입니다.');
+            }
           }
 
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(email)) {
-            throw new Error('유효한 이메일 주소를 입력해주세요.');
-          }
-
+          // 2. 랜덤 키 생성
           const key = generateRandomKey(16);
-          const password = generateRandomKey(12);
+          const formattedKeyValue = formatKey(key);
 
-          const { data: userData, error: signUpError } =
-            await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                data: { key_prefix: key.substring(0, 4) },
-              },
-            });
+          // 3. 사용자 생성 (이메일이 있으면 이메일로, 없으면 익명)
+          let userData;
 
-          if (signUpError) throw signUpError;
-          if (!userData.user) throw new Error('사용자 생성에 실패했습니다.');
+          if (email) {
+            // 이메일로 가입된 사용자가 있는지 확인
+            const { data: existingUser } = await supabase
+              .from('auth.users')
+              .select('id')
+              .eq('email', email)
+              .single();
 
-          await supabase.from('user_keys').insert({
-            user_id: userData.user.id,
-            key,
-            created_at: new Date().toISOString(),
+            if (existingUser) {
+              // 기존 사용자에게 키 연결
+              userData = { user: existingUser };
+            } else {
+              // 새 사용자 생성 (이메일 초대)
+              const { data, error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                  shouldCreateUser: true,
+                },
+              });
+
+              if (error) throw error;
+              userData = data;
+            }
+          } else {
+            // 익명 사용자 생성
+            const { data, error } = await supabase.auth.signInAnonymously();
+            if (error) throw error;
+            userData = data;
+          }
+
+          // 4. 키 저장 (통합 keys 테이블에)
+          const { error: insertError } = await supabase.from('keys').insert({
+            key: key,
+            type: email ? 'user' : 'anonymous',
+            user_id: userData.user?.id,
             is_active: true,
           });
 
-          const displayName = email.split('@')[0];
-          await supabase.from('user_profiles').insert({
-            user_id: userData.user.id,
-            display_name: displayName,
-            updated_at: new Date().toISOString(),
-          });
+          if (insertError) {
+            console.error('키 저장 오류:', insertError);
+            throw insertError;
+          }
 
+          // 5. 상태 업데이트
           set({
             userKey: key,
-            formattedKey: formatKey(key),
+            formattedKey: formattedKeyValue,
+            user: userData.user,
+            isAuthenticated: true,
             isLoading: false,
+            isGeneratingKey: false,
           });
 
           return true;
         } catch (error) {
-          set({ error: error as Error, isLoading: false });
+          console.error('키 생성 및 저장 오류:', error);
+          set({
+            error: error as Error,
+            isLoading: false,
+            isGeneratingKey: false,
+          });
           return false;
         }
       },
@@ -556,29 +401,42 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoading: true, isGeneratingKey: true, error: null });
 
-          // 1. 랜덤 키 생성 (클라이언트에서 직접 생성)
+          // 1. 랜덤 키 생성
           const key = generateRandomKey(16);
           const formattedKeyValue = formatKey(key);
 
-          // 2. Edge Function 호출 (배포된 경우)
-          // const { data: userData, error: createError } = await supabase.functions.invoke("create-anonymous-user", {
-          //   body: { key },
-          // });
+          // 2. 사용자 생성 (익명 로그인)
+          const { data: authData, error: authError } =
+            await supabase.auth.signInAnonymously();
 
-          // if (createError) {
-          //   console.error('사용자 생성 오류:', createError);
-          //   throw createError;
-          // }
+          if (authError) {
+            throw authError;
+          }
 
-          // 3. 상태 업데이트
+          // 3. 키 저장 (새로운 keys 테이블에)
+          const { error: insertError } = await supabase.from('keys').insert({
+            key: key,
+            type: 'anonymous',
+            user_id: authData.user?.id,
+            is_active: true,
+          });
+
+          if (insertError) {
+            console.error('키 저장 오류:', insertError);
+            throw insertError;
+          }
+
+          // 4. 상태 업데이트
           set({
             userKey: key,
             formattedKey: formattedKeyValue,
+            user: authData.user,
+            isAuthenticated: true,
             isLoading: false,
             isGeneratingKey: false,
           });
 
-          // 4. 성공 반환
+          // 5. 성공 반환
           return {
             success: true,
             key,
@@ -586,125 +444,26 @@ export const useAuthStore = create<AuthStore>()(
           };
         } catch (error) {
           console.error('익명 키 생성 오류:', error);
-          set({
-            error: error as Error,
-            isLoading: false,
-            isGeneratingKey: false,
-          });
 
-          // 오류가 발생해도 키는 생성해서 반환
+          // 오류 발생 시에도 키는 생성해서 클라이언트에 반환
           const key = generateRandomKey(16);
           const formattedKeyValue = formatKey(key);
 
           set({
             userKey: key,
             formattedKey: formattedKeyValue,
+            error: error as Error,
+            isLoading: false,
+            isGeneratingKey: false,
           });
 
           return {
-            success: true,
+            success: true, // 프론트엔드에서는 성공으로 처리
             key,
             formattedKey: formattedKeyValue,
-            warning: '오류가 발생했지만 키는 생성되었습니다.',
+            warning:
+              '백엔드 저장 과정에서 오류가 발생했지만 키는 생성되었습니다.',
           };
-        }
-      },
-
-      generateEmailKey: async (email: string) => {
-        try {
-          if (get().isLoading) return false;
-
-          if (!email?.trim()) {
-            throw new Error('이메일을 입력해주세요.');
-          }
-
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(email)) {
-            throw new Error('유효한 이메일 주소를 입력해주세요.');
-          }
-
-          set({ isLoading: true, error: null });
-          console.log('이메일 키 생성 시작:', email);
-
-          // 1. 랜덤 키 생성
-          const key = generateRandomKey(16);
-          const password = generateRandomKey(12);
-
-          // 2. 이메일/비밀번호로 회원가입
-          const { data: userData, error: signUpError } =
-            await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                data: { key_prefix: key.substring(0, 4) },
-              },
-            });
-
-          if (signUpError) {
-            console.error('회원가입 오류:', signUpError);
-            throw signUpError;
-          }
-
-          if (!userData.user) {
-            throw new Error('사용자 생성에 실패했습니다.');
-          }
-
-          console.log('사용자 생성 성공:', userData.user.id);
-
-          // 3. 키 저장
-          const { error: keyError } = await supabase.from('user_keys').insert({
-            user_id: userData.user.id,
-            key,
-            created_at: new Date().toISOString(),
-            is_active: true,
-          });
-
-          if (keyError) {
-            console.error('키 저장 오류:', keyError);
-            throw keyError;
-          }
-
-          // 4. 사용자 프로필 생성
-          const displayName = email.split('@')[0];
-          const { error: profileError } = await supabase
-            .from('user_profiles')
-            .insert({
-              user_id: userData.user.id,
-              display_name: displayName,
-              updated_at: new Date().toISOString(),
-            });
-
-          if (profileError) {
-            console.error('프로필 생성 오류:', profileError);
-            // 프로필 생성 실패해도 계속 진행
-          }
-
-          // 5. 로그아웃 (키만 생성하고 로그인 상태는 유지하지 않음)
-          await supabase.auth.signOut();
-
-          // 6. 키 설정
-          set({
-            userKey: key,
-            formattedKey: formatKey(key),
-            isLoading: false,
-          });
-
-          console.log('이메일 키 생성 성공:', formatKey(key));
-          return true;
-        } catch (error) {
-          console.error('이메일 키 생성 오류:', error);
-
-          // 오류 발생 시 로그아웃 시도
-          try {
-            await supabase.auth.signOut();
-          } catch (logoutError) {
-            console.error('로그아웃 오류:', logoutError);
-          }
-
-          set({ error: error as Error, isLoading: false });
-          return false;
-        } finally {
-          set({ isLoading: false });
         }
       },
 
@@ -714,8 +473,6 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoginLoading: true, error: null });
 
-          // 불필요한 세션 확인 및 로그아웃 과정 제거
-          // OAuth는 브라우저 리디렉션을 통해 새 세션을 생성하므로 기존 세션 확인이 불필요할 수 있음
           const { error } = await supabase.auth.signInWithOAuth({
             provider,
             options: {
@@ -734,75 +491,97 @@ export const useAuthStore = create<AuthStore>()(
 
       createGroup: async (name: string) => {
         try {
-          set({ isLoading: true, error: null });
-          const { user } = get();
+          const userId = get().user?.id;
+          if (!userId) {
+            throw new Error('로그인이 필요합니다.');
+          }
 
-          if (!user) throw new Error('로그인이 필요합니다.');
+          // 그룹 키 생성
+          const groupKey = generateRandomKey(8);
 
-          const { data, error } = await supabase
-            .from('groups')
+          // 그룹 생성
+          const { data: group, error } = await supabase
+            .from('user_groups')
             .insert({
               name,
-              created_by: user.id,
-              created_at: new Date().toISOString(),
+              owner_id: userId,
+              key: groupKey,
             })
             .select()
             .single();
 
           if (error) throw error;
-          return data;
-        } catch (error) {
-          set({ error: error as Error });
-          throw error;
-        } finally {
-          set({ isLoading: false });
-        }
-      },
 
-      joinGroup: async (key: string) => {
-        try {
-          set({ isLoading: true, error: null });
-          const cleanKey = key.replace(/-/g, '');
-
-          const { data: keyData, error: keyError } = await supabase
-            .from('group_keys')
-            .select('group_id')
-            .eq('key', cleanKey)
-            .eq('is_active', true)
-            .single();
-
-          if (keyError || !keyData)
-            throw new Error('유효하지 않은 그룹 키입니다.');
-
-          const { user } = get();
-          if (!user) throw new Error('로그인이 필요합니다.');
-
+          // 그룹 멤버 추가 (소유자)
           await supabase.from('group_members').insert({
-            group_id: keyData.group_id,
-            user_id: user.id,
-            role: 'member',
+            group_id: group.id,
+            user_id: userId,
           });
 
-          return { success: true, groupId: keyData.group_id };
+          return { success: true, group, key: groupKey };
         } catch (error) {
-          set({ error: error as Error });
-          throw error;
-        } finally {
-          set({ isLoading: false });
+          console.error('그룹 생성 오류:', error);
+          return { success: false, error };
         }
       },
 
-      // authStore.ts
-      // 로그아웃 함수 개선
+      joinGroup: async (groupKey: string) => {
+        try {
+          const userId = get().user?.id;
+          if (!userId) {
+            throw new Error('로그인이 필요합니다.');
+          }
+
+          // 그룹 찾기
+          const { data: group, error: groupError } = await supabase
+            .from('user_groups')
+            .select('id')
+            .eq('key', groupKey)
+            .single();
+
+          if (groupError || !group) {
+            throw new Error('유효하지 않은 그룹 키입니다.');
+          }
+
+          // 이미 멤버인지 확인
+          const { data: existingMember } = await supabase
+            .from('group_members')
+            .select('id')
+            .eq('group_id', group.id)
+            .eq('user_id', userId)
+            .single();
+
+          if (existingMember) {
+            return { success: true, message: '이미 그룹 멤버입니다.', group };
+          }
+
+          // 그룹 멤버 추가
+          const { error: joinError } = await supabase
+            .from('group_members')
+            .insert({
+              group_id: group.id,
+              user_id: userId,
+            });
+
+          if (joinError) throw joinError;
+
+          return { success: true, message: '그룹에 참여했습니다.', group };
+        } catch (error) {
+          console.error('그룹 참여 오류:', error);
+          return {
+            success: false,
+            error,
+            message: error instanceof Error ? error.message : '알 수 없는 오류',
+          };
+        }
+      },
+
+      // 로그아웃
       signOut: async () => {
         try {
-          set({ isLogoutLoading: true, error: null });
-
-          // 로그아웃 전 현재 URL 저장 (필요한 경우)
-          const currentPath = window.location.pathname;
-          console.log('로그아웃 시작, 현재 경로:', currentPath);
-
+          set({ isLogoutLoading: true });
           const { error } = await supabase.auth.signOut();
+
           if (error) throw error;
 
           // 상태 초기화
@@ -810,46 +589,36 @@ export const useAuthStore = create<AuthStore>()(
             user: null,
             session: null,
             isAuthenticated: false,
-            userKey: null,
-            formattedKey: null,
-            userProfile: null,
+            isLogoutLoading: false,
+            // 키는 유지 (재로그인 가능하게)
           });
-
-          // 로컬스토리지에서 세션 데이터 확인 및 삭제
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const authKey = `sb-${supabaseUrl
-            .replace('https://', '')
-            .replace('.supabase.co', '')}-auth-token`;
-
-          if (localStorage.getItem(authKey)) {
-            console.log('로컬스토리지 세션 데이터 삭제');
-            localStorage.removeItem(authKey);
-          }
-
-          console.log('로그아웃 완료, 로그인 페이지로 리디렉션');
-
-          // 로그인 페이지로 강제 리디렉션
-          window.location.href = '/login';
 
           return { success: true };
         } catch (error) {
           console.error('로그아웃 오류:', error);
-          set({ error: error as Error });
-
-          // 오류 발생 시에도 로그인 페이지로 리디렉션 시도
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 1000);
-
+          set({ error: error as Error, isLogoutLoading: false });
           return { success: false, error };
-        } finally {
-          set({ isLogoutLoading: false });
         }
       },
 
-      setError: (error: Error | null) => set({ error }),
+      // Edge 함수로 익명 사용자 생성 (옵션)
+      createAnonymousUserWithEdgeFunction: async (key: string) => {
+        try {
+          const { data, error } = await supabase.functions.invoke(
+            'create_anonymous_user',
+            {
+              body: { key },
+            },
+          );
 
-      clearUserKey: () => set({ userKey: null, formattedKey: null }),
+          if (error) throw error;
+
+          return { success: true, userId: data.userId };
+        } catch (error) {
+          console.error('Edge Function 호출 오류:', error);
+          return { success: false, error: error as Error };
+        }
+      },
     }),
     {
       name: getAuthStorageKey(), // 로컬 스토리지 키

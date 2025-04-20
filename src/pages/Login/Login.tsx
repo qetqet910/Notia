@@ -129,11 +129,13 @@ export const Login: React.FC = () => {
     isLoading,
     isLoginLoading,
     error,
-    generateAndStoreKey,
+    generateEmailKey,
     generateAnonymousKey,
     loginWithSocial,
     createGroup,
     joinGroup,
+    isGeneratingKey,
+    createAnonymousUserWithEdgeFunction,
   } = useAuthStore();
 
   const { toast } = useToast();
@@ -197,29 +199,39 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleCreateEmailKey = async (e: React.FormEvent) => {
-    e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isGeneratingKey || localLoading) return;
+    setEmail(e.target.value);
+  };
 
-    // 이미 처리 중이면 중복 요청 방지
-    if (isLoading) {
+  const handleCreateEmailKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // 이미 로딩 중이면 중복 요청 방지
+    if (isGeneratingKey || localLoading) {
       console.log('이미 처리 중입니다.');
       return;
     }
 
-    try {
-      // setIsLoading(true)
-      // 버튼 클릭 시 상태 초기화
-      setShowKey(false);
+    // 이메일 유효성 검사
+    if (!email || !email.includes('@')) {
+      toast({
+        title: '유효하지 않은 이메일',
+        description: '올바른 이메일 주소를 입력해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-      console.log('이메일 키 생성 시작:', email);
-      const result = await generateAndStoreKey(email);
-      console.log('이메일 키 생성 결과:', result);
+    try {
+      setShowKey(false);
+      setLocalLoading(true);
+
+      // 키 생성 요청
+      const result = await generateEmailKey(email);
 
       if (result) {
-        // setFormattedKey(result)
-        // 성공 시에만 키 표시
         setShowKey(true);
-
         toast({
           title: '키 생성 성공',
           description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
@@ -227,7 +239,7 @@ export const Login: React.FC = () => {
       } else {
         toast({
           title: '키 생성 실패',
-          description: '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+          description: '키 생성 중 오류가 발생했습니다.',
           variant: 'destructive',
         });
       }
@@ -238,11 +250,11 @@ export const Login: React.FC = () => {
         description:
           err instanceof Error
             ? err.message
-            : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+            : '키 생성 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     } finally {
-      // setIsLoading(false)
+      setLocalLoading(false);
     }
   };
 
@@ -318,7 +330,7 @@ export const Login: React.FC = () => {
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const result = await generateAndStoreKey(email);
+      const result = await generateEmailKey(email);
       if (result) {
         setShowKey(true);
         toast({
@@ -362,7 +374,6 @@ export const Login: React.FC = () => {
       // 버튼 클릭 시 상태 초기화
       setShowKey(false);
       setLocalLoading(true);
-      console.log('익명 키 생성 시작');
 
       // 키 즉시 생성 및 표시 (UI 업데이트)
       const key = generateRandomKey(16);
@@ -381,7 +392,7 @@ export const Login: React.FC = () => {
         description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
       });
 
-      generateAnonymousKey()
+      createAnonymousUserWithEdgeFunction(formattedKeyValue)
         .then((result) => {
           console.log('백그라운드 키 저장 결과:', result);
         })
@@ -487,9 +498,9 @@ export const Login: React.FC = () => {
                   <Button
                     type="submit"
                     className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                    disabled={isLoading || localLoading}
+                    disabled={isGeneratingKey || localLoading}
                   >
-                    {isLoading || localLoading ? (
+                    {isGeneratingKey || localLoading ? (
                       <div className="flex items-center justify-center">
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         <span>처리 중...</span>
