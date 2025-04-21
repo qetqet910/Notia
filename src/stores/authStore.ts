@@ -604,6 +604,10 @@ export const useAuthStore = create<AuthStore>()(
       // Edge 함수로 익명 사용자 생성 (옵션)
       createAnonymousUserWithEdgeFunction: async (key: string) => {
         try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
           const { data, error } = await supabase.functions.invoke(
             'create_anonymous_user',
             {
@@ -611,20 +615,9 @@ export const useAuthStore = create<AuthStore>()(
             },
           );
 
-          if (error) {
-            console.error('Error invoking function:', error);
-            return { success: false, error: error };
-          }
+          if (error) throw error;
 
-          if (data && data.userId) {
-            return { success: true, userId: data.userId };
-          } else {
-            console.error('No userId in response:', data);
-            return {
-              success: false,
-              error: 'User ID not returned from function',
-            };
-          }
+          return { success: true, userId: data.userId };
         } catch (error) {
           console.error('Edge Function 호출 오류:', error);
           return { success: false, error: error as Error };
