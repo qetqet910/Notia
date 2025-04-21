@@ -611,9 +611,20 @@ export const useAuthStore = create<AuthStore>()(
             },
           );
 
-          if (error) throw error;
+          if (error) {
+            console.error('Error invoking function:', error);
+            return { success: false, error: error };
+          }
 
-          return { success: true, userId: data.userId };
+          if (data && data.userId) {
+            return { success: true, userId: data.userId };
+          } else {
+            console.error('No userId in response:', data);
+            return {
+              success: false,
+              error: 'User ID not returned from function',
+            };
+          }
         } catch (error) {
           console.error('Edge Function 호출 오류:', error);
           return { success: false, error: error as Error };
