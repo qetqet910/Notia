@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { resetSupabaseClient, supabase } from '@/services/supabase';
+import { resetSupabaseClient, supabase } from '@/services/supabaseClient';
 import { generateRandomKey, formatKey, isValidKey } from '@/utils/keys';
 
 interface UserProfile {

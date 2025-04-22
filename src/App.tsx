@@ -18,7 +18,7 @@ import { ProtectedRoute } from '@/components/features/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
 
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/services/supabaseClient';
 
 function App() {
   // const { isInitializing } = useAuth()

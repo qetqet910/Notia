@@ -1,7 +1,7 @@
-import { supabase } from "./supabase";
-import { generateRandomKey } from "@/utils/keys";
+import { supabase } from './supabaseClient';
+import { generateRandomKey } from '@/utils/keys';
 
-type SocialProvider = "github" | "google";
+type SocialProvider = 'github' | 'google';
 
 class AuthService {
   // 현재 사용자 가져오기
@@ -36,81 +36,82 @@ class AuthService {
   // 로그인 시도 제한 확인 (IP 기반)
   async checkLoginRateLimit(): Promise<boolean> {
     // 실제 구현에서는 클라이언트 IP를 가져와야 함
-    const clientIp = "client-ip"
+    const clientIp = 'client-ip';
 
     // 현재 시간에서 15분 전
-    const fifteenMinutesAgo = new Date()
-    fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15)
+    const fifteenMinutesAgo = new Date();
+    fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15);
 
     // 로그인 시도 횟수 확인 (메모리 또는 로컬 스토리지 사용)
     // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
-    const loginAttempts = this.getLoginAttempts()
+    const loginAttempts = this.getLoginAttempts();
 
     // 15분 이내의 실패한 로그인 시도 필터링
     const recentFailedAttempts = loginAttempts.filter(
-      (attempt) => !attempt.success && new Date(attempt.timestamp) > fifteenMinutesAgo,
-    )
+      (attempt) =>
+        !attempt.success && new Date(attempt.timestamp) > fifteenMinutesAgo,
+    );
 
     // 5회 이상 실패 시 제한
-    return recentFailedAttempts.length >= 5
+    return recentFailedAttempts.length >= 5;
   }
 
   // 로그인 시도 기록 (메모리 사용)
   async recordLoginAttempt(success: boolean) {
     // 실제 구현에서는 데이터베이스나 Redis 등을 사용해야 함
-    const loginAttempts = this.getLoginAttempts()
+    const loginAttempts = this.getLoginAttempts();
 
     loginAttempts.push({
       timestamp: new Date().toISOString(),
       success: success,
-      ip: "client-ip", // 실제 구현에서는 클라이언트 IP 가져오기
-    })
+      ip: 'client-ip', // 실제 구현에서는 클라이언트 IP 가져오기
+    });
 
     // 최대 100개만 저장
     if (loginAttempts.length > 100) {
-      loginAttempts.shift()
+      loginAttempts.shift();
     }
 
     // 로컬 스토리지에 저장
-    localStorage.setItem("loginAttempts", JSON.stringify(loginAttempts))
+    localStorage.setItem('loginAttempts', JSON.stringify(loginAttempts));
   }
 
   // 로그인 시도 가져오기
   getLoginAttempts() {
-    const storedAttempts = localStorage.getItem("loginAttempts")
-    return storedAttempts ? JSON.parse(storedAttempts) : []
+    const storedAttempts = localStorage.getItem('loginAttempts');
+    return storedAttempts ? JSON.parse(storedAttempts) : [];
   }
 
   async hashKeyWithSalt(key: string, salt: string): Promise<string> {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(key + salt)
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+    const encoder = new TextEncoder();
+    const data = encoder.encode(key + salt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   async loginWithKey(key: string) {
     // 1. 키로 사용자 찾기
     const { data: keyData, error: keyError } = await supabase
-      .from("user_keys")
-      .select("user_id, key")
-      .eq("key", key)
-      .eq("is_active", true)
+      .from('user_keys')
+      .select('user_id, key')
+      .eq('key', key)
+      .eq('is_active', true)
       .single();
 
     if (keyError || !keyData) {
-      throw new Error("유효하지 않은 키입니다.");
+      throw new Error('유효하지 않은 키입니다.');
     }
 
     // 2. 해당 사용자의 이메일 찾기
     const { data: userData, error: userError } = await supabase
-      .from("user_profiles")
-      .select("id, user_id")
-      .eq("user_id", keyData.user_id)
+      .from('user_profiles')
+      .select('id, user_id')
+      .eq('user_id', keyData.user_id)
       .single();
 
     if (userError) {
-      throw new Error("사용자 정보를 찾을 수 없습니다.");
+      throw new Error('사용자 정보를 찾을 수 없습니다.');
     }
 
     // 3. 익명 로그인 (키 기반 인증)
@@ -121,7 +122,7 @@ class AuthService {
       });
 
     if (authError) {
-      throw new Error("인증에 실패했습니다.");
+      throw new Error('인증에 실패했습니다.');
     }
 
     return {
@@ -160,13 +161,13 @@ class AuthService {
     }
 
     const user = authResponse.data.user;
-    if (!user) throw new Error("사용자 생성에 실패했습니다.");
+    if (!user) throw new Error('사용자 생성에 실패했습니다.');
 
     // 2. 사용자 키 생성
     const key = generateRandomKey(16);
 
     // 3. 키 저장
-    const { error: keyError } = await supabase.from("user_keys").insert({
+    const { error: keyError } = await supabase.from('user_keys').insert({
       user_id: user.id,
       key,
       created_at: new Date().toISOString(),
@@ -179,15 +180,15 @@ class AuthService {
 
     // 4. 사용자 프로필 생성
     const { error: profileError } = await supabase
-      .from("user_profiles")
+      .from('user_profiles')
       .insert({
         user_id: user.id,
-        display_name: email ? email.split("@")[0] : "익명 사용자",
+        display_name: email ? email.split('@')[0] : '익명 사용자',
         updated_at: new Date().toISOString(),
       });
 
     if (profileError) {
-      console.error("프로필 생성 오류:", profileError);
+      console.error('프로필 생성 오류:', profileError);
     }
 
     return key;
@@ -203,8 +204,8 @@ class AuthService {
 
       // 2. 이미 로그인된 경우 로그아웃 처리
       if (sessionData.session) {
-        console.log("기존 세션 발견, 로그아웃 처리");
-        await supabase.auth.signOut({ scope: "global" });
+        console.log('기존 세션 발견, 로그아웃 처리');
+        await supabase.auth.signOut({ scope: 'global' });
 
         // 세션 정리를 위한 짧은 지연
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -229,12 +230,12 @@ class AuthService {
 
   async createGroup(name: string) {
     const user = await this.getCurrentUser();
-    if (!user) throw new Error("로그인이 필요합니다.");
+    if (!user) throw new Error('로그인이 필요합니다.');
 
     const key = generateRandomKey(16);
 
     const { data, error } = await supabase
-      .from("user_groups")
+      .from('user_groups')
       .insert({
         name,
         key,
@@ -247,7 +248,7 @@ class AuthService {
     if (error) throw error;
 
     // 그룹 멤버로 자신 추가
-    await supabase.from("group_members").insert({
+    await supabase.from('group_members').insert({
       group_id: data.id,
       user_id: user.id,
       joined_at: new Date().toISOString(),
@@ -259,33 +260,33 @@ class AuthService {
   // 그룹 참여
   async joinGroup(groupKey: string) {
     const user = await this.getCurrentUser();
-    if (!user) throw new Error("로그인이 필요합니다.");
+    if (!user) throw new Error('로그인이 필요합니다.');
 
     // 그룹 찾기
     const { data: group, error: groupError } = await supabase
-      .from("user_groups")
-      .select("id, name, owner_id")
-      .eq("key", groupKey)
+      .from('user_groups')
+      .select('id, name, owner_id')
+      .eq('key', groupKey)
       .single();
 
     if (groupError || !group) {
-      throw new Error("유효하지 않은 그룹 키입니다.");
+      throw new Error('유효하지 않은 그룹 키입니다.');
     }
 
     // 이미 멤버인지 확인
     const { data: existingMember } = await supabase
-      .from("group_members")
-      .select("id")
-      .eq("group_id", group.id)
-      .eq("user_id", user.id)
+      .from('group_members')
+      .select('id')
+      .eq('group_id', group.id)
+      .eq('user_id', user.id)
       .single();
 
     if (existingMember) {
-      return { message: "이미 그룹의 멤버입니다." };
+      return { message: '이미 그룹의 멤버입니다.' };
     }
 
     // 그룹에 멤버 추가
-    const { error: memberError } = await supabase.from("group_members").insert({
+    const { error: memberError } = await supabase.from('group_members').insert({
       group_id: group.id,
       user_id: user.id,
       joined_at: new Date().toISOString(),
@@ -301,20 +302,20 @@ class AuthService {
 
   // 로그아웃 (개선된 버전)
   async logout() {
-    console.log("로그아웃 시작");
+    console.log('로그아웃 시작');
 
     try {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
-        console.error("로그아웃 오류:", error);
+        console.error('로그아웃 오류:', error);
         throw error;
       }
 
-      console.log("로그아웃 성공");
+      console.log('로그아웃 성공');
       return { success: true };
     } catch (err) {
-      console.error("로그아웃 예외:", err);
+      console.error('로그아웃 예외:', err);
       throw err;
     }
   }

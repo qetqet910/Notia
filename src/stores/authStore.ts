@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/services/supabaseClient';
 import type { User, Session } from '@supabase/supabase-js';
 import { generateRandomKey, formatKey } from '@/utils/keys';
 import { Navigate } from 'react-router-dom';
@@ -494,7 +494,6 @@ export const useAuthStore = create<AuthStore>()(
             `세션 저장 확인 (${authKey}):`,
             !!localStorage.getItem(authKey),
           );
-          
         } catch (error) {
           console.error(`${provider} 로그인 오류:`, error);
           set({ error: error as Error });
