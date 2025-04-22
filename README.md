@@ -41,7 +41,29 @@ claude부터 보기
 더이상은 아까워서라도 끌고싶지 않다
 하루하루 더 열심히 살아보리라
 
-Edge Func부터 마무리하기
+인증 및 사용자 관리:
+
+auth.users (Supabase 기본 제공)
+user_profiles
+auth_providers
+keys
+anonymous_sessions
+user_registered_keys
+
+노트 관리:
+
+notes (부모-자식 관계 추가)
+note_shares
+
+그룹 관리:
+
+user_groups
+group_members
+group_notes
+
+Edge Func부터 마무리하기 OO
+
+현재 OAuth 세션이 리다이렉트시 없어지는 현상 발생 해결중 22일
 
 ## Tech Stack
 
