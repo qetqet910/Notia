@@ -473,14 +473,28 @@ export const useAuthStore = create<AuthStore>()(
         try {
           set({ isLoginLoading: true, error: null });
 
-          const { error } = await supabase.auth.signInWithOAuth({
+          const { data, error } = await supabase.auth.signInWithOAuth({
             provider,
             options: {
               redirectTo: `${window.location.origin}/auth/callback`,
             },
           });
 
-          if (error) throw error;
+          if (error) {
+            console.error(`${provider} 로그인 실패:`, error); // 로그 추가
+            throw error;
+          }
+
+          console.log(`${provider} 로그인 성공:`, data); // 성공 로그 추가
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const authKey = `sb-${supabaseUrl
+            .replace('https://', '')
+            .replace('.supabase.co', '')}-auth-token`;
+          console.log(
+            `세션 저장 확인 (${authKey}):`,
+            !!localStorage.getItem(authKey),
+          );
+          
         } catch (error) {
           console.error(`${provider} 로그인 오류:`, error);
           set({ error: error as Error });
@@ -604,10 +618,6 @@ export const useAuthStore = create<AuthStore>()(
       // Edge 함수로 익명 사용자 생성 (옵션)
       createAnonymousUserWithEdgeFunction: async (key: string) => {
         try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-
           const { data, error } = await supabase.functions.invoke(
             'create_anonymous_user',
             {

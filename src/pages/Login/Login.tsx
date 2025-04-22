@@ -310,22 +310,10 @@ export const Login: React.FC = () => {
 
   // 소셜 로그인 핸들러
   const handleSocialLogin = async (provider: 'github' | 'google') => {
-    try {
-      console.log(`${provider} 로그인 시도`);
-      // 불필요한 지연 제거
-      await loginWithSocial(provider);
-    } catch (error) {
-      console.error(`${provider} 로그인 오류:`, error);
-      toast({
-        title: `${provider} 로그인 실패`,
-        description:
-          error instanceof Error
-            ? error.message
-            : '알 수 없는 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
-    }
+    console.log(`${provider} 로그인 시도`);
+    await loginWithSocial(provider);
   };
+  
   // 새 키 생성 핸들러
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -564,7 +552,7 @@ export const Login: React.FC = () => {
           color="#24292e"
           label="GitHub로 로그인"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isLoginLoading}
           animate={!initialAnimationComplete}
           keyPrefix="login"
         />
@@ -574,7 +562,7 @@ export const Login: React.FC = () => {
           color="#DB4437"
           label="Google로 로그인"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isLoginLoading}
           animate={!initialAnimationComplete}
           keyPrefix="login"
         />

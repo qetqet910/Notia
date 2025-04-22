@@ -1,6 +1,3 @@
-// src/components/features/AuthCallback.tsx
-'use client';
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
@@ -77,17 +74,22 @@ export const AuthCallback = () => {
         useAuthStore.setState({
           user: user,
           session: data.session,
-          isAuthenticated: true
+          isAuthenticated: true,
         });
-        
+
         // 프로필 가져오기
         const profile = await useAuthStore.getState().fetchUserProfile(user.id);
         useAuthStore.setState({ userProfile: profile });
 
         // 세션 정보 로컬스토리지에 저장 확인
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const authKey = `sb-${supabaseUrl.replace('https://', '').replace('.supabase.co', '')}-auth-token`;
-        console.log(`세션 저장 확인 (${authKey}):`, !!localStorage.getItem(authKey));
+        const authKey = `sb-${supabaseUrl
+          .replace('https://', '')
+          .replace('.supabase.co', '')}-auth-token`;
+        console.log(
+          `세션 저장 확인 (${authKey}):`,
+          !!localStorage.getItem(authKey),
+        );
 
         // 대시보드로 리다이렉트 (window.location 사용)
         console.log('대시보드로 리다이렉트');
