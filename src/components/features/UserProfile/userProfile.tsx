@@ -1,5 +1,3 @@
-'use client';
-import { useState } from 'react';
 import { User, Settings, LogOut, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

@@ -154,51 +154,6 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // authStore.ts에 추가
-      setSessionFromLocalStorage: async () => {
-        try {
-          console.log('로컬스토리지에서 세션 설정 시도');
-
-          // 로컬스토리지에서 세션 데이터 가져오기
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const authKey =
-            'sb-' +
-            supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
-            '-auth-token';
-          const storedSession = localStorage.getItem(authKey);
-
-          if (!storedSession) {
-            console.log('로컬스토리지에 세션 데이터 없음');
-            return false;
-          }
-
-          // 세션 데이터 파싱
-          const parsedSession = JSON.parse(storedSession);
-
-          if (!parsedSession || !parsedSession.user) {
-            console.log('유효하지 않은 세션 데이터');
-            return false;
-          }
-
-          // 세션 설정
-          set({
-            user: parsedSession.user,
-            session: parsedSession,
-            isAuthenticated: true,
-          });
-
-          // 사용자 프로필 가져오기
-          const profile = await get().fetchUserProfile(parsedSession.user.id);
-          set({ userProfile: profile });
-
-          console.log('로컬스토리지에서 세션 설정 성공');
-          return true;
-        } catch (error) {
-          console.error('로컬스토리지에서 세션 설정 실패:', error);
-          return false;
-        }
-      },
-
       fetchUserProfile: async (userId: string) => {
         try {
           const { data: profile, error } = await supabase
@@ -481,19 +436,11 @@ export const useAuthStore = create<AuthStore>()(
           });
 
           if (error) {
-            console.error(`${provider} 로그인 실패:`, error); // 로그 추가
+            console.error(`${provider} 로그인 실패:`, error);
             throw error;
           }
 
-          console.log(`${provider} 로그인 성공:`, data); // 성공 로그 추가
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const authKey = `sb-${supabaseUrl
-            .replace('https://', '')
-            .replace('.supabase.co', '')}-auth-token`;
-          console.log(
-            `세션 저장 확인 (${authKey}):`,
-            !!localStorage.getItem(authKey),
-          );
+          console.log(`${provider} 로그인 성공:`, data);
         } catch (error) {
           console.error(`${provider} 로그인 오류:`, error);
           set({ error: error as Error });
@@ -633,8 +580,9 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
     }),
+
     {
-      name: getAuthStorageKey(), // 로컬 스토리지 키
+      name: 'tester-auth-store', // 로컬 스토리지 키
       version: 1, // 버전 관리
       partialize: (state) => ({
         userKey: state.userKey,

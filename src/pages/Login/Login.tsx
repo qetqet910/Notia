@@ -313,7 +313,7 @@ export const Login: React.FC = () => {
     console.log(`${provider} 로그인 시도`);
     await loginWithSocial(provider);
   };
-  
+
   // 새 키 생성 핸들러
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();

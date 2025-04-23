@@ -63,10 +63,10 @@ group_notes
 
 Edge Func부터 마무리하기 OO
 
-현재 OAuth 세션이 리다이렉트시 없어지는 현상 발생 해결중 22일
+현재 OAuth 세션이 리다이렉트시 없어지는 현상 발생 해결중 22일 23일 해결 완료 Persist 처음 쓰다보니 잘 몰라서 발생한 오류 같은 키 네임으로 전역변수 설정해버려서 날라간겨
+현재 Profileurl이 없어짐 아마 DB 바꾸면서 fetchUserProfile 에서 db fetch 함수를 좀 수정해야할듯. db 개편하면서 회원가입 OAuth회원가입 부분도 바뀌었을수도있고 그쪽 보면 금방 해결할듯
 
 ## Tech Stack
 
 **Frontend:** React, TS, TailwindCSS, Shadcn/ui
-
 **Backend:** Supabase, Node
