@@ -51,10 +51,28 @@ export function UserProfile() {
     return null;
   }
 
+  // UserProfile.tsx에서 사용자 메타데이터 접근 방식 수정
+  // 데이터 구조 로깅
+  console.log('user:', user);
+  console.log('userProfile:', userProfile);
+
+  // raw_user_meta_data가 어떤 구조인지 확인
+  // user_metadata에서 데이터를 확인하세요 (Supabase Auth 구조)
+  const rawUserMetaData =
+    userProfile?.raw_user_meta_data || user?.user_metadata;
+  console.log('사용자 메타데이터:', rawUserMetaData);
+
+  // 이미지 데이터에 보이는 구조대로 접근
   const displayName =
-    userProfile?.display_name || user?.email?.split('@')[0] || '사용자';
-  const avatarUrl = userProfile?.avatar_url;
-  const initials = displayName.substring(0, 2).toUpperCase();
+    rawUserMetaData?.full_name ||
+    rawUserMetaData?.name ||
+    user?.email?.split('@')[0] ||
+    '사용자';
+  const initials = displayName.substring(0, 1).toUpperCase();
+
+  const avatarUrl = rawUserMetaData?.avatar_url;
+  console.log('추출된 이름:', displayName);
+  console.log('추출된 아바타 URL:', avatarUrl);
 
   return (
     <DropdownMenu>

@@ -28,11 +28,14 @@ interface AuthState {
 }
 
 interface UserProfile {
-  user_id: string;
-  display_name?: string | null;
-  avatar_url?: string | null;
-  email?: string | null;
-  provider?: string;
+  id: string;
+  raw_user_meta_data?: {
+    avatar_url?: string;
+    full_name?: string;
+    email_verified?: boolean;
+    provider_id?: string;
+    [key: string]: any; // 확장 가능
+  };
 }
 
 interface AuthStore extends AuthState {
@@ -154,27 +157,50 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      fetchUserProfile: async (userId: string) => {
-        try {
-          const { data: profile, error } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
-
-          if (error) throw error;
-
-          if (profile) {
-            set({ userProfile: profile });
-            return profile;
-          }
-
-          return null;
-        } catch (error) {
-          console.error('프로필 조회 오류:', error);
-          return null;
-        }
-      },
+// authStore.js의 fetchUserProfile 함수 수정
+fetchUserProfile: async (userId: string) => {
+  try {
+    // 1. 현재 로그인한 사용자 정보 가져오기
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('인증 사용자 조회 오류:', userError);
+    } else if (authUser) {
+      console.log('인증된 사용자:', authUser);
+      // 메타데이터가 있다면 여기서 사용할 수 있음
+      const userData = {
+        ...authUser,
+        raw_user_meta_data: authUser.user_metadata // 이름 일치시키기
+      };
+      set({ userProfile: userData });
+      return userData;
+    }
+    
+    // 2. 커스텀 사용자 테이블 조회
+    const { data: profile, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('user_id', userId) // user_id 필드 사용
+      .single();
+    
+    if (error) {
+      console.error('프로필 조회 오류:', error);
+      return null;
+    }
+    
+    console.log('조회된 프로필 데이터:', profile);
+    
+    if (profile) {
+      set({ userProfile: profile });
+      return profile;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('프로필 조회 오류:', error);
+    return null;
+  }
+},
 
       // 세션 복원
       restoreSession: async () => {
@@ -580,73 +606,6 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
     }),
-
-    {
-      name: 'tester-auth-store', // 로컬 스토리지 키
-      version: 1, // 버전 관리
-      partialize: (state) => ({
-        userKey: state.userKey,
-        formattedKey: state.formattedKey,
-      }), // 저장할 상태만 선택
-    },
     // 로컬 스토리지에 저장할 상태 선택
   ),
 );
-
-// 이벤트 리스너에 가드 추가
-let isProcessingAuthChange = false;
-let lastAuthEvent = { event: null, time: 0 };
-
-supabase.auth.onAuthStateChange((event, session) => {
-  // 이벤트 디바운싱 - 같은 이벤트가 짧은 시간 내에 반복되는 경우 무시
-  const now = Date.now();
-  if (lastAuthEvent.event === event && now - lastAuthEvent.time < 1000) {
-    return;
-  }
-
-  // 이벤트 정보 업데이트
-  lastAuthEvent = {
-    event,
-    time: now,
-  };
-
-  // 이미 처리 중인 경우 중복 처리 방지
-  if (isProcessingAuthChange) {
-    return;
-  }
-
-  // 처리 시작
-  isProcessingAuthChange = true;
-
-  try {
-    if (session) {
-      // 세션이 있으면 인증 상태 업데이트
-      useAuthStore.setState({
-        user: session.user,
-        session: session,
-        isAuthenticated: true,
-      });
-
-      // 사용자 프로필 가져오기
-      useAuthStore
-        .getState()
-        .fetchUserProfile(session.user.id)
-        .then((profile) => {
-          useAuthStore.setState({ userProfile: profile });
-        });
-    } else if (event === 'SIGNED_OUT') {
-      // 로그아웃 이벤트인 경우 상태 초기화
-      useAuthStore.setState({
-        user: null,
-        session: null,
-        isAuthenticated: false,
-        userProfile: null,
-      });
-    }
-  } finally {
-    // 일정 시간 후에 처리 플래그 해제
-    setTimeout(() => {
-      isProcessingAuthChange = false;
-    }, 100);
-  }
-});

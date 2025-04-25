@@ -37,7 +37,7 @@ export const AuthCallback = () => {
         // 프로필 생성 시도
         try {
           const { data: existingProfile } = await supabase
-            .from('user_profiles')
+            .from('users')
             .select('*')
             .eq('user_id', user.id)
             .maybeSingle();
@@ -45,17 +45,15 @@ export const AuthCallback = () => {
           if (!existingProfile) {
             console.log('프로필 없음, 생성 시도');
 
-            const { error: insertError } = await supabase
-              .from('user_profiles')
-              .insert({
-                user_id: user.id,
-                display_name:
-                  user.user_metadata?.full_name ||
-                  user.user_metadata?.name ||
-                  user.email?.split('@')[0] ||
-                  '사용자',
-                updated_at: new Date().toISOString(),
-              });
+            const { error: insertError } = await supabase.from('users').insert({
+              user_id: user.id,
+              display_name:
+                user.user_metadata?.full_name ||
+                user.user_metadata?.name ||
+                user.email?.split('@')[0] ||
+                '사용자',
+              updated_at: new Date().toISOString(),
+            });
 
             if (insertError) {
               console.error('프로필 생성 오류:', insertError);
