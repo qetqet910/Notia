@@ -67,6 +67,9 @@ Edge Func부터 마무리하기 OO
 
 현재 Profileurl이 없어짐 아마 DB 바꾸면서 fetchUserProfile 에서 db fetch 함수를 좀 수정해야할듯. db 개편하면서 회원가입 OAuth회원가입 부분도 바뀌었을수도있고 그쪽 보면 금방 해결할듯
 
+금방은 아니고 여튼 저튼 쨋든 해결함
+내일 26일 토요일 연등시간에 복기하기 제발 내일의 내가 잘 접속하고 폰 내주길ㅜㅡㅜ
+
 ## Tech Stack
 
 **Frontend:** React, TS, TailwindCSS, Shadcn/ui
