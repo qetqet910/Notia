@@ -78,17 +78,15 @@ interface AuthStore extends AuthState {
     userId?: User;
     error?: Error;
   }>;
+  createEmailUserWithEdgeFunction: (
+    email: string,
+    key: string,
+  ) => Promise<{
+    success: boolean;
+    userId?: User;
+    error?: Error;
+  }>;
 }
-
-// 로컬스토리지 키 가져오기 함수
-const getAuthStorageKey = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  return (
-    'sb-' +
-    supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
-    '-auth-token'
-  );
-};
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -157,50 +155,53 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-// authStore.js의 fetchUserProfile 함수 수정
-fetchUserProfile: async (userId: string) => {
-  try {
-    // 1. 현재 로그인한 사용자 정보 가져오기
-    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError) {
-      console.error('인증 사용자 조회 오류:', userError);
-    } else if (authUser) {
-      console.log('인증된 사용자:', authUser);
-      // 메타데이터가 있다면 여기서 사용할 수 있음
-      const userData = {
-        ...authUser,
-        raw_user_meta_data: authUser.user_metadata // 이름 일치시키기
-      };
-      set({ userProfile: userData });
-      return userData;
-    }
-    
-    // 2. 커스텀 사용자 테이블 조회
-    const { data: profile, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('user_id', userId) // user_id 필드 사용
-      .single();
-    
-    if (error) {
-      console.error('프로필 조회 오류:', error);
-      return null;
-    }
-    
-    console.log('조회된 프로필 데이터:', profile);
-    
-    if (profile) {
-      set({ userProfile: profile });
-      return profile;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('프로필 조회 오류:', error);
-    return null;
-  }
-},
+      // authStore.js의 fetchUserProfile 함수 수정
+      fetchUserProfile: async (userId: string) => {
+        try {
+          // 1. 현재 로그인한 사용자 정보 가져오기
+          const {
+            data: { user: authUser },
+            error: userError,
+          } = await supabase.auth.getUser();
+
+          if (userError) {
+            console.error('인증 사용자 조회 오류:', userError);
+          } else if (authUser) {
+            console.log('인증된 사용자:', authUser);
+            // 메타데이터가 있다면 여기서 사용할 수 있음
+            const userData = {
+              ...authUser,
+              raw_user_meta_data: authUser.user_metadata, // 이름 일치시키기
+            };
+            set({ userProfile: userData });
+            return userData;
+          }
+
+          // 2. 커스텀 사용자 테이블 조회
+          const { data: profile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('user_id', userId) // user_id 필드 사용
+            .single();
+
+          if (error) {
+            console.error('프로필 조회 오류:', error);
+            return null;
+          }
+
+          console.log('조회된 프로필 데이터:', profile);
+
+          if (profile) {
+            set({ userProfile: profile });
+            return profile;
+          }
+
+          return null;
+        } catch (error) {
+          console.error('프로필 조회 오류:', error);
+          return null;
+        }
+      },
 
       // 세션 복원
       restoreSession: async () => {
@@ -587,13 +588,30 @@ fetchUserProfile: async (userId: string) => {
         }
       },
 
-      // Edge 함수로 익명 사용자 생성 (옵션)
       createAnonymousUserWithEdgeFunction: async (key: string) => {
         try {
           const { data, error } = await supabase.functions.invoke(
             'create_anonymous_user',
             {
               body: { key },
+            },
+          );
+
+          if (error) throw error;
+
+          return { success: true, userId: data.userId };
+        } catch (error) {
+          console.error('Edge Function 호출 오류:', error);
+          return { success: false, error: error as Error };
+        }
+      },
+
+      createEmailUserWithEdgeFunction: async (email: string, key: string) => {
+        try {
+          const { data, error } = await supabase.functions.invoke(
+            'create_email_user',
+            {
+              body: { email, key },
             },
           );
 

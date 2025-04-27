@@ -129,13 +129,12 @@ export const Login: React.FC = () => {
     isLoading,
     isLoginLoading,
     error,
-    generateEmailKey,
-    generateAnonymousKey,
     loginWithSocial,
     createGroup,
     joinGroup,
     isGeneratingKey,
     createAnonymousUserWithEdgeFunction,
+    createEmailUserWithEdgeFunction,
   } = useAuthStore();
 
   const { toast } = useToast();
@@ -199,21 +198,22 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isGeneratingKey || localLoading) return;
-    setEmail(e.target.value);
-  };
-
   const handleCreateEmailKey = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 이미 로딩 중이면 중복 요청 방지
     if (isGeneratingKey || localLoading) {
       console.log('이미 처리 중입니다.');
       return;
     }
 
-    // 이메일 유효성 검사
+    if (formattedKey && showKey) {
+      toast({
+        title: '이미 키가 생성되어 있습니다',
+        description: '생성된 키를 복사해서 사용하세요.',
+      });
+      return;
+    }
+
     if (!email || !email.includes('@')) {
       toast({
         title: '유효하지 않은 이메일',
@@ -224,25 +224,36 @@ export const Login: React.FC = () => {
     }
 
     try {
+      // 버튼 클릭 시 상태 초기화
       setShowKey(false);
       setLocalLoading(true);
 
-      // 키 생성 요청
-      const result = await generateEmailKey(email);
+      // 키 즉시 생성 및 표시 (UI 업데이트)
+      const key = generateRandomKey(16);
+      const formattedKeyValue = formatKey(key);
 
-      if (result) {
-        setShowKey(true);
-        toast({
-          title: '키 생성 성공',
-          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+      // 상태 업데이트
+      useAuthStore.setState({
+        userKey: key,
+        formattedKey: formattedKeyValue,
+        // userEmail: email,
+      });
+      setShowKey(true);
+
+      // 토스트 메시지 표시
+      toast({
+        title: '키 생성 성공',
+        description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+      });
+
+      // Edge Function으로 이메일 키 생성 요청 - 백그라운드에서 진행
+      createEmailUserWithEdgeFunction(email, formattedKeyValue)
+        .then((result) => {
+          console.log('백그라운드 이메일 키 저장 결과:', result);
+        })
+        .catch((err) => {
+          console.error('백그라운드 이메일 키 저장 오류:', err);
         });
-      } else {
-        toast({
-          title: '키 생성 실패',
-          description: '키 생성 중 오류가 발생했습니다.',
-          variant: 'destructive',
-        });
-      }
     } catch (err) {
       console.error('이메일 키 생성 오류:', err);
       toast({
@@ -250,7 +261,7 @@ export const Login: React.FC = () => {
         description:
           err instanceof Error
             ? err.message
-            : '키 생성 중 오류가 발생했습니다.',
+            : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
         variant: 'destructive',
       });
     } finally {
@@ -284,59 +295,9 @@ export const Login: React.FC = () => {
     }
   };
 
-  // 그룹 참여 핸들러
-  const handleGroupJoin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formattedKey) {
-      joinGroup(formattedKey.replace(/-/g, ''))
-        .then(() => {
-          toast({
-            title: '그룹 참여 성공',
-            description: '그룹에 성공적으로 참여했습니다.',
-          });
-        })
-        .catch((err) => {
-          toast({
-            title: '그룹 참여 실패',
-            description:
-              err instanceof Error
-                ? err.message
-                : '알 수 없는 오류가 발생했습니다.',
-            variant: 'destructive',
-          });
-        });
-    }
-  };
-
   // 소셜 로그인 핸들러
   const handleSocialLogin = async (provider: 'github' | 'google') => {
-    console.log(`${provider} 로그인 시도`);
     await loginWithSocial(provider);
-  };
-
-  // 새 키 생성 핸들러
-  const handleCreateKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const result = await generateEmailKey(email);
-      if (result) {
-        setShowKey(true);
-        toast({
-          title: '키 생성 성공',
-          description: '키가 성공적으로 생성되었습니다. 안전하게 보관하세요.',
-        });
-      }
-    } catch (err) {
-      console.error('키 생성 오류:', err);
-      toast({
-        title: '키 생성 실패',
-        description:
-          err instanceof Error
-            ? err.message
-            : '알 수 없는 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
-    }
   };
 
   // 익명 키 생성 핸들러
@@ -381,7 +342,7 @@ export const Login: React.FC = () => {
       });
 
       createAnonymousUserWithEdgeFunction(formattedKeyValue)
-        .then((result) => {
+        .then((result) => { 
           console.log('백그라운드 키 저장 결과:', result);
         })
         .catch((err) => {
@@ -437,7 +398,7 @@ export const Login: React.FC = () => {
     >
       <form
         className="space-y-4 mb-6"
-        onSubmit={activeAuthTab === 'key' ? handleKeyLogin : handleGroupJoin}
+        // onSubmit={activeAuthTab === 'key' ? handleKeyLogin : handleGroupJoin}
       >
         <Tabs
           defaultValue="key"

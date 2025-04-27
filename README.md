@@ -74,3 +74,6 @@ Edge Func부터 마무리하기 OO
 
 **Frontend:** React, TS, TailwindCSS, Shadcn/ui
 **Backend:** Supabase, Node
+
+28일 (월) 할 것
+Display name 추가하고, 이미 있는 사용자일 경우 에러처리 하기 지금은 다시 하려면 페이지 새로고침을 해야함, Edge Func 로그 코드 제거하기 
