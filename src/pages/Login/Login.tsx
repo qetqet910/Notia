@@ -224,44 +224,60 @@ export const Login: React.FC = () => {
     }
 
     try {
-      // 버튼 클릭 시 상태 초기화
-      setShowKey(false);
+      // 로딩 상태 활성화
       setLocalLoading(true);
 
-      // 키 즉시 생성 및 표시 (UI 업데이트)
+      // 키 미리 생성 (하지만 아직 표시하지 않음)
       const key = generateRandomKey(16);
       const formattedKeyValue = formatKey(key);
 
-      // 상태 업데이트
-      useAuthStore.setState({
-        userKey: key,
-        formattedKey: formattedKeyValue,
-        // userEmail: email,
-      });
-      setShowKey(true);
+      // Edge Function으로 이메일 키 생성 요청
+      const result = await createEmailUserWithEdgeFunction(
+        email,
+        formattedKeyValue,
+      );
 
-      // 토스트 메시지 표시
-      toast({
-        title: '키 생성 성공',
-        description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
-      });
-
-      // Edge Function으로 이메일 키 생성 요청 - 백그라운드에서 진행
-      createEmailUserWithEdgeFunction(email, formattedKeyValue)
-        .then((result) => {
-          console.log('백그라운드 이메일 키 저장 결과:', result);
-        })
-        .catch((err) => {
-          console.error('백그라운드 이메일 키 저장 오류:', err);
+      // 성공일 경우에만 키 저장 및 표시
+      if (result.success) {
+        // 상태 업데이트
+        useAuthStore.setState({
+          userKey: key,
+          formattedKey: formattedKeyValue,
+          // userEmail: email,
         });
+
+        setShowKey(true);
+
+        toast({
+          title: '키 생성 성공',
+          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+        });
+      } else {
+        // 에러 코드에 따른 처리
+        let errorMessage = result.error || '알 수 없는 오류가 발생했습니다.';
+        let toastVariant: 'default' | 'destructive' = 'destructive';
+
+        // 특정 에러 코드별 메시지 처리
+        if (result.code === 'EMAIL_EXISTS') {
+          errorMessage = '이미 등록된 이메일입니다. 다른 이메일을 사용하세요.';
+        } else if (result.code === 'INVALID_PASSWORD') {
+          errorMessage =
+            '생성된 키가 보안 요구사항을 충족하지 않습니다. 다시 시도해주세요.';
+        }
+
+        toast({
+          title: '키 생성 실패',
+          description: errorMessage,
+          variant: toastVariant,
+        });
+      }
     } catch (err) {
       console.error('이메일 키 생성 오류:', err);
+
       toast({
         title: '키 생성 오류',
         description:
-          err instanceof Error
-            ? err.message
-            : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+          '서버 연결 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
         variant: 'destructive',
       });
     } finally {
@@ -342,11 +358,11 @@ export const Login: React.FC = () => {
       });
 
       createAnonymousUserWithEdgeFunction(formattedKeyValue)
-        .then((result) => { 
-          console.log('백그라운드 키 저장 결과:', result);
+        .then((result) => {
+          console.log('익명 사용자 저장 결과:', result);
         })
         .catch((err) => {
-          console.error('백그라운드 키 저장 오류:', err);
+          console.error('익명 사용자 저장 오류:', err);
         });
     } catch (err) {
       console.error('익명 키 생성 오류:', err);
@@ -360,29 +376,6 @@ export const Login: React.FC = () => {
       });
     } finally {
       setLocalLoading(false);
-    }
-  };
-
-  // 그룹 생성 핸들러
-  const handleCreateGroup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const result = await createGroup('새 그룹');
-      console.log('그룹 생성 성공:', result);
-      toast({
-        title: '그룹 생성 성공',
-        description: '새 그룹이 성공적으로 생성되었습니다.',
-      });
-    } catch (err: any) {
-      console.error('그룹 생성 오류:', err);
-      toast({
-        title: '그룹 생성 실패',
-        description:
-          err instanceof Error
-            ? err.message
-            : '알 수 없는 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
     }
   };
 
