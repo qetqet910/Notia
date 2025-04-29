@@ -605,6 +605,9 @@ export const useAuthStore = create<AuthStore>()(
 
     createEmailUserWithEdgeFunction: async (email: string, key: string) => {
       try {
+        // 디버깅을 위한 로그 추가
+        console.log('Edge Function 호출 시작:', { email });
+        
         // Supabase Edge Function 호출
         const { data, error } = await supabase.functions.invoke(
           'create_email_user',
@@ -612,40 +615,55 @@ export const useAuthStore = create<AuthStore>()(
             body: { email, key },
           },
         );
-
+        
+        // 응답 디버깅
+        console.log('Edge Function 응답:', { data, error });
+    
         // 에러 처리
         if (error) {
           console.error('Edge Function 호출 오류:', error);
-
-          // 응답 데이터가 있으면 그대로 반환
-          if (error.context && error.context.response) {
-            try {
-              const responseData = JSON.parse(error.context.response);
-              return {
-                success: false,
-                error: responseData.error || error.message,
-                code: responseData.code,
-              };
-            } catch (parseError) {
-              // JSON 파싱 실패 시 원본 에러 반환
-              return {
-                success: false,
-                error: error.message,
-                code: 'PARSE_ERROR',
-              };
-            }
+    
+          // 오류 상태 코드 확인 (409는 이미 등록된 이메일)
+          if (error.status === 409 || 
+              (error.message && error.message.includes('409')) ||
+              (error.message && error.message.toLowerCase().includes('already'))) {
+            return {
+              success: false,
+              error: '이미 등록된 이메일입니다.',
+              code: 'EMAIL_EXISTS',
+            };
           }
-
+    
           return {
             success: false,
-            error: error.message,
+            error: error.message || '알 수 없는 오류가 발생했습니다.',
             code: 'EDGE_FUNCTION_ERROR',
           };
         }
-
+        
+        // data가 null이거나 success가 false인 경우 확인
+        if (!data || (data.success === false)) {
+          console.warn('Edge Function 응답이 성공이 아님:', data);
+          
+          // data가 있지만 success가 false인 경우
+          if (data && data.success === false) {
+            return {
+              success: false,
+              error: data.error || '서버에서 오류가 발생했습니다.',
+              code: data.code || 'SERVER_ERROR',
+            };
+          }
+          
+          return {
+            success: false,
+            error: '서버 응답이 올바르지 않습니다.',
+            code: 'INVALID_RESPONSE',
+          };
+        }
+    
         return { ...data, success: true };
       } catch (error) {
-        console.error('Edge Function 호출 오류:', error);
+        console.error('Edge Function 호출 예외:', error);
         return {
           success: false,
           error: error.message || '알 수 없는 오류가 발생했습니다.',
