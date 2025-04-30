@@ -155,7 +155,6 @@ export const useAuthStore = create<AuthStore>()(
       }
     },
 
-    // authStore.js의 fetchUserProfile 함수 수정
     fetchUserProfile: async (userId: string) => {
       try {
         // 1. 현재 로그인한 사용자 정보 가져오기
@@ -238,46 +237,53 @@ export const useAuthStore = create<AuthStore>()(
     loginWithKey: async (key: string) => {
       try {
         set({ isLoading: true, error: null });
-        const cleanKey = key.replace(/-/g, '');
+        const cleanKey = key.replace(/-/g, '').toUpperCase();
 
-        // 1. 키로 사용자 찾기
-        const { data: userData, error: userError } = await supabase.rpc(
-          'find_user_by_key',
-          { key_value: cleanKey },
+        // 1. 사용자 메타데이터의 키로 사용자 찾기 - JSON 필드 쿼리 최적화
+        const { data: keyCheckData } = await supabase.functions.invoke(
+          'login_with_key',
+          { body: { key: cleanKey } },
         );
 
-        if (userError || !userData || userData.length === 0) {
-          throw new Error('유효하지 않은 키입니다.');
-        }
-
-        // 2. 익명 로그인 (임시 세션 생성)
+        // 2. 익명 로그인 - Promise 최적화
         const { data: authData, error: authError } =
           await supabase.auth.signInAnonymously();
 
         if (authError) {
-          throw authError;
+          throw new Error('인증 세션 생성에 실패했습니다.');
         }
 
-        // 3. 사용자 메타데이터 업데이트
-        await supabase.auth.updateUser({
+        console.log(keyCheckData);
+
+        // 3. 사용자 메타데이터 업데이트 - 원자적 업데이트
+        const { error: updateError } = await supabase.auth.updateUser({
           data: {
-            original_user_id: userData[0].user_id,
-            key_type: userData[0].key_type,
+            key: keyCheckData.raw_user_meta_data.key,
             key_login: true,
             login_method: 'key',
           },
         });
 
-        // 4. 상태 업데이트
+        if (updateError) {
+          throw new Error('사용자 정보 업데이트에 실패했습니다.');
+        }
+
+        // 5. 상태 업데이트 - 불변성 보장
         set({
           userKey: cleanKey,
-          formattedKey: formatKey(cleanKey),
+          formattedKey: cleanKey,
           isAuthenticated: true,
           isLoading: false,
           user: authData.user,
         });
 
-        return { success: true, user: authData.user, message: '로그인 성공' };
+        // 6. 성공 결과 반환
+        return {
+          success: true,
+          user: authData.user,
+          userProfile: authData,
+          message: '로그인 성공',
+        };
       } catch (error) {
         console.error('키 로그인 실패:', error);
         set({ error: error as Error, isLoading: false });
@@ -314,7 +320,7 @@ export const useAuthStore = create<AuthStore>()(
         if (email) {
           // 이메일로 가입된 사용자가 있는지 확인
           const { data: existingUser } = await supabase
-            .from('auth.users')
+            .from('users')
             .select('id')
             .eq('email', email)
             .single();
@@ -586,6 +592,8 @@ export const useAuthStore = create<AuthStore>()(
     },
 
     createAnonymousUserWithEdgeFunction: async (key: string) => {
+      key = key.replace(/-/g, '').toUpperCase();
+
       try {
         const { data, error } = await supabase.functions.invoke(
           'create_anonymous_user',
@@ -605,9 +613,8 @@ export const useAuthStore = create<AuthStore>()(
 
     createEmailUserWithEdgeFunction: async (email: string, key: string) => {
       try {
-        // 디버깅을 위한 로그 추가
-        console.log('Edge Function 호출 시작:', { email });
-        
+        key = key.replace(/-/g, '').toUpperCase();
+
         // Supabase Edge Function 호출
         const { data, error } = await supabase.functions.invoke(
           'create_email_user',
@@ -615,36 +622,38 @@ export const useAuthStore = create<AuthStore>()(
             body: { email, key },
           },
         );
-        
+
         // 응답 디버깅
         console.log('Edge Function 응답:', { data, error });
-    
+
         // 에러 처리
         if (error) {
           console.error('Edge Function 호출 오류:', error);
-    
+
           // 오류 상태 코드 확인 (409는 이미 등록된 이메일)
-          if (error.status === 409 || 
-              (error.message && error.message.includes('409')) ||
-              (error.message && error.message.toLowerCase().includes('already'))) {
+          if (
+            error.status === 409 ||
+            (error.message && error.message.includes('409')) ||
+            (error.message && error.message.toLowerCase().includes('already'))
+          ) {
             return {
               success: false,
               error: '이미 등록된 이메일입니다.',
               code: 'EMAIL_EXISTS',
             };
           }
-    
+
           return {
             success: false,
             error: error.message || '알 수 없는 오류가 발생했습니다.',
             code: 'EDGE_FUNCTION_ERROR',
           };
         }
-        
+
         // data가 null이거나 success가 false인 경우 확인
-        if (!data || (data.success === false)) {
+        if (!data || data.success === false) {
           console.warn('Edge Function 응답이 성공이 아님:', data);
-          
+
           // data가 있지만 success가 false인 경우
           if (data && data.success === false) {
             return {
@@ -653,14 +662,14 @@ export const useAuthStore = create<AuthStore>()(
               code: data.code || 'SERVER_ERROR',
             };
           }
-          
+
           return {
             success: false,
             error: '서버 응답이 올바르지 않습니다.',
             code: 'INVALID_RESPONSE',
           };
         }
-    
+
         return { ...data, success: true };
       } catch (error) {
         console.error('Edge Function 호출 예외:', error);

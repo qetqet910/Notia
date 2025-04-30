@@ -122,19 +122,17 @@ const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
 export const Login: React.FC = () => {
   // Zustand 스토어 사용
   const {
-    loginWithKey,
     isAuthenticated,
-    userKey, // authStore 에서 조정하기 KeyDisplay 2개 뜨는 이유
     formattedKey,
     isLoading,
     isLoginLoading,
     error,
     loginWithSocial,
-    createGroup,
-    joinGroup,
     isGeneratingKey,
     createAnonymousUserWithEdgeFunction,
     createEmailUserWithEdgeFunction,
+    createGroup,
+    joinGroup
   } = useAuthStore();
 
   const { toast } = useToast();
@@ -391,7 +389,7 @@ export const Login: React.FC = () => {
     >
       <form
         className="space-y-4 mb-6"
-        // onSubmit={activeAuthTab === 'key' ? handleKeyLogin : handleGroupJoin}
+        // onSubmit={handleKeyLogin}
       >
         <Tabs
           defaultValue="key"

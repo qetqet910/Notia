@@ -1,7 +1,5 @@
-'use client';
-
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   InputOTP,
   InputOTPGroup,
@@ -10,96 +8,127 @@ import {
 } from '@/components/ui/input-otp';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
+// 메모이제이션을 위해 함수를 컴포넌트 외부로 이동
+const debounce = <F extends (...args: any[]) => Promise<any>>(
+  func: F,
+  waitFor: number,
+) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<F>): Promise<ReturnType<F>> => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+
+    return new Promise((resolve) => {
+      timeout = setTimeout(async () => {
+        const result = await func(...args);
+        resolve(result);
+        timeout = null;
+      }, waitFor);
+    }) as Promise<ReturnType<F>>;
+  };
+};
 
 export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = useState('');
   const { loginWithKey, isLoading } = useAuthStore();
-  const [localLoading, setLocalLoading] = useState(false);
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // 키 입력 처리
-  const handleValueChange = (newValue: string) => {
-    // 이미 로딩 중이면 입력 무시
-    if (isLoading || localLoading || isSubmitting) return;
+  // 사용자가 입력할 때 호출되는 함수
+  const handleValueChange = useCallback(
+    (newValue: string) => {
+      // 이미 처리 중이면 입력 무시
+      if (isLoading || isSubmitting) return;
 
-    setValue(newValue);
+      const sanitizedValue = newValue
+        .replace(/[^a-zA-Z0-9-]/g, '')
+        .toUpperCase();
+      setValue(sanitizedValue);
 
-    // 하이픈 제거 후 16자리 키가 모두 입력되면 자동 로그인 시도
-    const cleanValue = newValue.replace(/-/g, '');
-    if (cleanValue.length === 16) {
-      handleSubmit(cleanValue);
-    }
-  };
+      // 하이픈 제거 후 16자리 키가 모두 입력되면 자동 로그인 시도
+      const cleanValue = sanitizedValue.replace(/-/g, '');
+      if (cleanValue.length === 16) {
+        void handleSubmit(cleanValue);
+      }
+    },
+    [isLoading, isSubmitting],
+  );
 
-  // 로그인 처리
-  const handleSubmit = async (keyValue: string) => {
-    // 이미 로딩 중이면 중복 요청 방지
-    if (isLoading || localLoading || isSubmitting) return;
+  // 로그인 처리 함수 - 디바운스 적용
+  const handleSubmit = useCallback(
+    debounce(async (keyValue: string) => {
+      // 이미 처리 중이면 중복 요청 방지
+      if (isLoading || isSubmitting) return { success: false };
 
-    try {
-      setLocalLoading(true);
-      setIsSubmitting(true);
+      try {
+        setIsSubmitting(true);
 
-      const result = await loginWithKey(keyValue);
+        const result = await loginWithKey(keyValue);
 
-      if (!result.success) {
+        if (!result.success) {
+          toast({
+            title: '로그인 실패',
+            description: result.message || '로그인에 실패했습니다.',
+            variant: 'destructive',
+          });
+
+          // 실패 시 입력값 초기화하고 포커스 설정
+          setValue('');
+          setTimeout(() => inputRef.current?.focus(), 100);
+        } else {
+          toast({
+            title: '로그인 성공',
+            description: '환영합니다! 대시보드로 이동합니다.',
+          });
+        }
+
+        return result;
+      } catch (error) {
+        console.error('로그인 오류:', error);
+
         toast({
-          title: '로그인 실패',
-          description: result.message || '로그인에 실패했습니다.',
+          title: '로그인 오류',
+          description:
+            error instanceof Error
+              ? error.message
+              : '로그인 중 오류가 발생했습니다.',
           variant: 'destructive',
         });
 
-        // 실패 시 입력값 초기화
+        // 오류 발생 시 입력값 초기화
         setValue('');
-      } else {
-        toast({
-          title: '로그인 성공',
-          description: '로그인에 성공했습니다. 대시보드로 이동합니다.',
-        });
-      }
-    } catch (error) {
-      console.error('로그인 오류:', error);
-      toast({
-        title: '로그인 오류',
-        description:
-          error instanceof Error
-            ? error.message
-            : '로그인 중 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
-
-      // 오류 발생 시 입력값 초기화
-      setValue('');
-    } finally {
-      // 일정 시간 후 로컬 로딩 상태 해제 (UI 표시를 위해)
-      setTimeout(() => {
-        setLocalLoading(false);
+        return { success: false, error };
+      } finally {
         setIsSubmitting(false);
-      }, 1000);
-    }
-  };
+      }
+    }, 300), // 300ms 디바운스로 빠른 연속 요청 방지
+    [loginWithKey, isLoading, isSubmitting, toast],
+  );
 
   // 컴포넌트 마운트 시 포커스
   useEffect(() => {
-    const firstInput = document.querySelector('input[name="0"]');
-    if (firstInput instanceof HTMLInputElement) {
-      firstInput.focus();
-    }
+    inputRef.current?.focus();
   }, []);
 
-  // 전역 또는 로컬 로딩 상태 확인
-  const isProcessing = isLoading || localLoading || isSubmitting;
+  // 로딩 상태 메모이제이션
+  const isProcessing = isLoading || isSubmitting;
 
   return (
     <div className="space-y-4 w-full max-w-md mx-auto">
       <InputOTP
-        maxLength={16}
+        ref={inputRef}
         value={value}
-        onChange={(value) => setValue(value)}
-        onComplete={handleValueChange}
-        className="gap-0.5 sm:gap-1"
+        onChange={handleValueChange}
         disabled={isProcessing}
+        maxLength={16}
+        autoFocus
+        autoComplete="off"
+        spellCheck={false}
       >
         <div className="flex flex-col w-full justify-center gap-1 sm:gap-2">
           <div className="flex justify-center gap-0.5 sm:gap-1">
@@ -183,13 +212,16 @@ export const InputOTPControlled: React.FC = () => {
         </div>
       </InputOTP>
 
-      {/* 로딩 상태 표시 */}
+      {/* 로딩 상태 표시 - 조건식 수정 */}
       {isProcessing && (
-        <div className="flex justify-center mt-2">
-          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-[#61C9A8]"></div>
-          <span className="ml-2 text-sm text-gray-500">처리 중...</span>
+        <div className="flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       )}
+
+      <p className="text-sm text-center text-muted-foreground">
+        16자리 인증 키를 입력하세요
+      </p>
     </div>
   );
 };
