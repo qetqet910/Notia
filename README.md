@@ -1,11 +1,13 @@
 #### 오늘 할 거 (30일)
 
-Email Key Create & Anon Key Create, Edge Function Key Input ○
-Login Logic complete
-Delete Group Tab
-키 생성까지 인증 리듬 정상화 (Anon)
+Email Key Create & Anon Key Create, Edge Function Key Input ○ </br>
+Login Logic complete </br>
+Delete Group Tab </br>
+키 생성까지 인증 리듬 정상화 (Anon) </br>
 
 ====================================================================
+
+Personal Growth Diary 다마고치 키우미
 
 인증 및 사용자 관리:
 

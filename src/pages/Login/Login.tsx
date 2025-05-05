@@ -283,32 +283,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  // 키 로그인 핸들러
-  const handleKeyLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 이미 로딩 중이면 중복 요청 방지
-    if (isLoading || localLoading) return;
-
-    // 로컬 로딩 상태 설정
-    setLocalLoading(true);
-
-    try {
-      // 여기서는 실제 로그인 로직을 수행하지 않고,
-      // InputOTPControlled 컴포넌트에서 처리됨
-      console.log('로그인 폼 제출됨');
-
-      // 로그인 성공 시 대시보드로 리디렉션은 useEffect에서 처리
-    } catch (error) {
-      console.error('로그인 오류:', error);
-    } finally {
-      // 일정 시간 후 로컬 로딩 상태 해제
-      setTimeout(() => {
-        setLocalLoading(false);
-      }, 1000);
-    }
-  };
-
   // 소셜 로그인 핸들러
   const handleSocialLogin = async (provider: 'github' | 'google') => {
     await loginWithSocial(provider);

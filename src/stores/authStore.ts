@@ -239,13 +239,22 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         const cleanKey = key.replace(/-/g, '').toUpperCase();
 
-        // 1. 사용자 메타데이터의 키로 사용자 찾기 - JSON 필드 쿼리 최적화
-        const { data: keyCheckData } = await supabase.functions.invoke(
-          'login_with_key',
-          { body: { key: cleanKey } },
-        );
+        // 1. 먼저 키 유효성 검사 수행
+        const { data: keyCheckData, error: keyCheckError } =
+          await supabase.functions.invoke('login_with_key', {
+            body: { key: cleanKey },
+          });
 
-        // 2. 익명 로그인 - Promise 최적화
+        // 키 검증 실패 시 즉시 오류 반환
+        if (keyCheckError || !keyCheckData || !keyCheckData.success) {
+          const errorMessage =
+            keyCheckError?.message ||
+            keyCheckData?.error ||
+            '유효하지 않은 키입니다.';
+          throw new Error(errorMessage);
+        }
+
+        // 2. 키가 유효한 경우에만 익명 로그인 진행
         const { data: authData, error: authError } =
           await supabase.auth.signInAnonymously();
 
@@ -253,12 +262,10 @@ export const useAuthStore = create<AuthStore>()(
           throw new Error('인증 세션 생성에 실패했습니다.');
         }
 
-        console.log(keyCheckData);
-
-        // 3. 사용자 메타데이터 업데이트 - 원자적 업데이트
+        // 3. 사용자 메타데이터 업데이트
         const { error: updateError } = await supabase.auth.updateUser({
           data: {
-            key: keyCheckData.raw_user_meta_data.key,
+            key: keyCheckData.user.raw_user_meta_data.key,
             key_login: true,
             login_method: 'key',
           },
@@ -268,7 +275,7 @@ export const useAuthStore = create<AuthStore>()(
           throw new Error('사용자 정보 업데이트에 실패했습니다.');
         }
 
-        // 5. 상태 업데이트 - 불변성 보장
+        // 4. 상태 업데이트
         set({
           userKey: cleanKey,
           formattedKey: cleanKey,
@@ -277,7 +284,7 @@ export const useAuthStore = create<AuthStore>()(
           user: authData.user,
         });
 
-        // 6. 성공 결과 반환
+        // 5. 성공 결과 반환
         return {
           success: true,
           user: authData.user,
