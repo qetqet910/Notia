@@ -1,4 +1,4 @@
-#### 오늘 할 거 (30일)
+#### 오늘 할 거
 
 Email Key Create & Anon Key Create, Edge Function Key Input ○ </br>
 Login Logic complete </br>
@@ -7,7 +7,10 @@ Delete Group Tab </br>
 
 ====================================================================
 
-Personal Growth Diary 다마고치 키우미
+Personal Growth Diary 다마고치(썸원, 듀오링고 참새) 키우미
+Remote Obsidian note idea
+
+====================================================================
 
 인증 및 사용자 관리:
 
