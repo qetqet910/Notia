@@ -239,7 +239,6 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         const cleanKey = key.replace(/-/g, '').toUpperCase();
 
-        // 1. 먼저 키 유효성 검사 수행
         const { data: keyCheckData, error: keyCheckError } =
           await supabase.functions.invoke('login_with_key', {
             body: { key: cleanKey },
@@ -254,41 +253,55 @@ export const useAuthStore = create<AuthStore>()(
           throw new Error(errorMessage);
         }
 
-        // 2. 키가 유효한 경우에만 익명 로그인 진행
-        const { data: authData, error: authError } =
-          await supabase.auth.signInAnonymously();
+        if (keyCheckData.email) {
+          await supabase.auth.signOut();
+          console.log('로그인 시도 시작');
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: keyCheckData?.email,
+            password: cleanKey,
+          });
 
-        if (authError) {
-          throw new Error('인증 세션 생성에 실패했습니다.');
+          console.log('로그인 결과:', data);
+
+          if (error) {
+            console.log('로그인 실패:', error.message);
+            console.error('CLIENT: SignIn Error:', error);
+          }
+        } else {
+          console.log('Anonymous or email-less user detected.');
+          console.log(keyCheckData?.session);
+
+          const { data: authData, error: authError } =
+            await supabase.auth.setSession(keyCheckData?.session);
+
+          if (authError) {
+            console.error('CLIENT: Anonymous login failed:', authError);
+          }
+
+          console.log('Signed in anonymously:', authData);
+
+          if (authData?.session) {
+            // 익명 로그인 세션 설정
+            console.log('익명 사용자 세션 설정 완료:', authData.session);
+            await supabase.auth.setSession(authData.session);
+          }
+          return {
+            success: true,
+            user: authData.user,
+            message: '로그인 성공',
+          };
         }
 
-        // 3. 사용자 메타데이터 업데이트
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            key: keyCheckData.user.raw_user_meta_data.key,
-            key_login: true,
-            login_method: 'key',
-          },
-        });
-
-        if (updateError) {
-          throw new Error('사용자 정보 업데이트에 실패했습니다.');
-        }
-
-        // 4. 상태 업데이트
+        // 상태 업데이트
         set({
           userKey: cleanKey,
           formattedKey: cleanKey,
           isAuthenticated: true,
           isLoading: false,
-          user: authData.user,
         });
 
-        // 5. 성공 결과 반환
         return {
           success: true,
-          user: authData.user,
-          userProfile: authData,
           message: '로그인 성공',
         };
       } catch (error) {
@@ -302,6 +315,8 @@ export const useAuthStore = create<AuthStore>()(
               : '로그인 중 오류가 발생했습니다.',
           error: error as Error,
         };
+      } finally {
+        console.log('로그인 처리 완료');
       }
     },
 

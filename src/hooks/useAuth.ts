@@ -60,7 +60,6 @@ export const useAuth = () => {
         console.log('세션 확인 시도...');
         const sessionCheckPromise = checkSession();
 
-        // 타임아웃 설정 (5초)
         const timeoutPromise = new Promise<boolean>((resolve) => {
           setTimeout(() => {
             console.log('세션 확인 타임아웃');

@@ -9,6 +9,7 @@ Delete Group Tab </br>
 
 Personal Growth Diary 다마고치(썸원, 듀오링고 참새) 키우미
 Remote Obsidian note idea
+google form or naver form 같은 기능 확장으로 추가 
 
 ====================================================================
 

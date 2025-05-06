@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@services/supabaseClient';
 
 // 메모이제이션을 위해 함수를 컴포넌트 외부로 이동
 const debounce = <F extends (...args: any[]) => Promise<any>>(
