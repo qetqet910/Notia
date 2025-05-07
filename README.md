@@ -1,4 +1,4 @@
- #### 오늘 할 거
+#### 오늘 할 거
 
 Email Key Create & Anon Key Create, Edge Function Key Input ○ </br>
 Login Logic complete </br>
