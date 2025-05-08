@@ -1,14 +1,13 @@
 export default async function initWeb() {
   // 1. 서비스 워커 등록
   if ('serviceWorker' in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register(
-        './service-worker.js',
-      );
-      console.log('1️⃣ Ready To Service Worker :', !!registration);
-    } catch (error) {
-      console.error('Service worker registration failed:', error);
-    }
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js', {
+        type: 'module' // 또는 type 속성 제거
+      }).catch(error => {
+        console.error('서비스 워커 등록 실패:', error);
+      });
+    });
   }
 
   // 2. 웹 전용 이벤트 리스너 설정

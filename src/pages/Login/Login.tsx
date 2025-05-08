@@ -308,36 +308,34 @@ export const Login: React.FC = () => {
     }
 
     try {
-      // 버튼 클릭 시 상태 초기화
+      // 상태 초기화
       setShowKey(false);
       setLocalLoading(true);
 
-      // 키 즉시 생성 및 표시 (UI 업데이트)
+      // 키 즉시 생성
       const key = generateRandomKey(16);
       const formattedKeyValue = formatKey(key);
 
-      // 상태 업데이트
+      // Supabase Edge Function으로 저장 시도
+      const result = await createAnonymousUserWithEdgeFunction(
+        formattedKeyValue,
+      );
+
+      // 성공 시 상태 업데이트
+      console.log('익명 사용자 저장 결과:', result);
+
       useAuthStore.setState({
         userKey: key,
         formattedKey: formattedKeyValue,
       });
       setShowKey(true);
 
-      // 토스트 메시지 표시
       toast({
         title: '키 생성 성공',
         description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
       });
-
-      createAnonymousUserWithEdgeFunction(formattedKeyValue)
-        .then((result) => {
-          console.log('익명 사용자 저장 결과:', result);
-        })
-        .catch((err) => {
-          console.error('익명 사용자 저장 오류:', err);
-        });
     } catch (err) {
-      console.error('익명 키 생성 오류:', err);
+      console.error('익명 사용자 저장 오류:', err);
       toast({
         title: '키 생성 오류',
         description:
@@ -361,9 +359,7 @@ export const Login: React.FC = () => {
       variants={animations.tabContent}
       className="space-y-4"
     >
-      <form
-        className="space-y-4 mb-6"
-      >
+      <form className="space-y-4 mb-6">
         <Tabs
           defaultValue="key"
           className="space-y-4"
