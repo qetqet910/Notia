@@ -31,7 +31,7 @@ interface UserProfile {
   id: string;
   raw_user_meta_data?: {
     avatar_url?: string;
-    full_name?: string;
+    name?: string;
     email_verified?: boolean;
     provider_id?: string;
     [key: string]: any; // 확장 가능
@@ -239,10 +239,14 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         const cleanKey = key.replace(/-/g, '').toUpperCase();
 
+        // 서버 응답 자세히 로깅
+        console.log('서버 요청 시작 - 키:', cleanKey);
         const { data: keyCheckData, error: keyCheckError } =
           await supabase.functions.invoke('login_with_key', {
             body: { key: cleanKey },
           });
+
+        console.log('서버 응답 데이터:', JSON.stringify(keyCheckData, null, 2));
 
         // 키 검증 실패 시 즉시 오류 반환
         if (keyCheckError || !keyCheckData || !keyCheckData.success) {
@@ -253,11 +257,15 @@ export const useAuthStore = create<AuthStore>()(
           throw new Error(errorMessage);
         }
 
+        // 기존 세션 정리
+        await supabase.auth.signOut();
+        console.log('기존 세션 정리 완료');
+
         if (keyCheckData.email) {
-          await supabase.auth.signOut();
-          console.log('로그인 시도 시작');
+          // 이메일이 있는 경우 일반 로그인
+          console.log('이메일 계정 로그인 시도 시작');
           const { data, error } = await supabase.auth.signInWithPassword({
-            email: keyCheckData?.email,
+            email: keyCheckData.email,
             password: cleanKey,
           });
 
@@ -266,39 +274,58 @@ export const useAuthStore = create<AuthStore>()(
           if (error) {
             console.log('로그인 실패:', error.message);
             console.error('CLIENT: SignIn Error:', error);
+            throw error;
           }
+
+          // 상태 업데이트
+          set({
+            userKey: cleanKey,
+            formattedKey: cleanKey,
+            isAuthenticated: true,
+            isLoading: false,
+            userProfile: keyCheckData.user?.user_metadata, // UserProfile에 대한 상태 업데이트 최적화 꼭 하기 **
+          });
         } else {
-          console.log('Anonymous or email-less user detected.');
-          console.log(keyCheckData?.session);
+          // 이메일이 없는 익명 계정 로그인
+          console.log('익명 사용자 로그인 시도');
+          console.log('세션 데이터 확인:', keyCheckData.session);
 
-          const { data: authData, error: authError } =
-            await supabase.auth.setSession(keyCheckData?.session);
-
-          if (authError) {
-            console.error('CLIENT: Anonymous login failed:', authError);
+          // 세션 데이터가 문자열이면 파싱 시도
+          let sessionData = keyCheckData.session;
+          if (typeof sessionData === 'string') {
+            try {
+              sessionData = JSON.parse(sessionData);
+              console.log('문자열에서 파싱된 세션 데이터:', sessionData);
+            } catch (e) {
+              console.error('세션 문자열 파싱 실패:', e);
+            }
           }
 
-          console.log('Signed in anonymously:', authData);
-
-          if (authData?.session) {
-            // 익명 로그인 세션 설정
-            console.log('익명 사용자 세션 설정 완료:', authData.session);
-            await supabase.auth.setSession(authData.session);
+          if (!sessionData) {
+            console.error('세션 데이터 누락. 전체 응답:', keyCheckData);
+            throw new Error('서버에서 세션 정보를 받지 못했습니다.');
           }
-          return {
-            success: true,
-            user: authData.user,
-            message: '로그인 성공',
-          };
+
+          // 서버에서 받은 세션으로 로그인
+          console.log('세션 설정 시도:', sessionData);
+          const { data: authData, error: sessionError } =
+            await supabase.auth.setSession(sessionData);
+
+          if (sessionError) {
+            console.error('CLIENT: 익명 로그인 세션 설정 실패:', sessionError);
+            throw sessionError;
+          }
+
+          console.log('익명 사용자 세션 설정 완료:', authData);
+
+          // 상태 업데이트
+          set({
+            userKey: cleanKey,
+            formattedKey: cleanKey,
+            isAuthenticated: true,
+            isLoading: false,
+          });
         }
-
-        // 상태 업데이트
-        set({
-          userKey: cleanKey,
-          formattedKey: cleanKey,
-          isAuthenticated: true,
-          isLoading: false,
-        });
 
         return {
           success: true,
@@ -475,6 +502,7 @@ export const useAuthStore = create<AuthStore>()(
     },
 
     loginWithSocial: async (provider: 'github' | 'google') => {
+      // 이미 로딩 중이면 중복 실행 방지
       if (get().isLoginLoading) return;
 
       try {
@@ -484,6 +512,7 @@ export const useAuthStore = create<AuthStore>()(
           provider,
           options: {
             redirectTo: `${window.location.origin}/auth/callback`,
+            scopes: provider === 'github' ? 'google' : 'email profile',
           },
         });
 
@@ -492,12 +521,10 @@ export const useAuthStore = create<AuthStore>()(
           throw error;
         }
 
-        console.log(`${provider} 로그인 성공:`, data);
+        console.log(`${provider} 로그인 시작됨`);
       } catch (error) {
         console.error(`${provider} 로그인 오류:`, error);
         set({ error: error as Error });
-      } finally {
-        set({ isLoginLoading: false });
       }
     },
 
