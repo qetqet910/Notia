@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function UserProfile() {
   const { user, userProfile, isLogoutLoading, isAuthenticated, signOut } =
@@ -22,6 +22,23 @@ export function UserProfile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [theme, setTheme] = useState('dark');
+
+  // 사용자 정보 상태 - 의존성 배열에 따라 업데이트되도록 useEffect 사용
+  const [displayName, setDisplayName] = useState('사용자');
+  const [initials, setInitials] = useState('사');
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  // 사용자 정보 업데이트 효과
+  useEffect(() => {
+    if (userProfile?.raw_user_meta_data || user?.user_metadata) {
+      const metadata = userProfile?.raw_user_meta_data || user?.user_metadata;
+      const name = metadata?.name || '사용자';
+
+      setDisplayName(name);
+      setInitials(name.substring(0, 1).toUpperCase());
+      setAvatarUrl(metadata?.avatar_url || '');
+    }
+  }, [userProfile, user]); // 의존성 배열에 userProfile과 user 추가
 
   const handleSignOut = async () => {
     try {
@@ -32,7 +49,6 @@ export function UserProfile() {
           title: '로그아웃 성공',
           description: '성공적으로 로그아웃되었습니다.',
         });
-
         navigate('/login');
       } else {
         throw result.error || new Error('로그아웃 실패');
@@ -49,26 +65,24 @@ export function UserProfile() {
     }
   };
 
+  // 인증되지 않은 경우 렌더링하지 않음
   if (!isAuthenticated) {
     return null;
   }
 
-  const rawUserMetaData =
-    userProfile?.raw_user_meta_data || user?.user_metadata;
-  const displayName =
-    rawUserMetaData?.full_name ||
-    rawUserMetaData?.name ||
-    user?.email?.split('@')[0] ||
-    '사용자';
-  const initials = displayName.substring(0, 1).toUpperCase();
-  const avatarUrl = rawUserMetaData?.avatar_url;
+  // 이메일 표시 로직 최적화
+  const displayEmail = user?.email
+    ? user.email.startsWith('anon_')
+      ? '익명 사용자'
+      : user.email
+    : '';
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={avatarUrl || ''} alt={displayName} />
+            <AvatarImage src={avatarUrl} alt={displayName} />
             <AvatarFallback className="bg-neutral-800 text-white">
               {initials}
             </AvatarFallback>
@@ -80,7 +94,7 @@ export function UserProfile() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user?.email || '익명 사용자'}
+              {displayEmail}
             </p>
           </div>
         </DropdownMenuLabel>
