@@ -1,9 +1,12 @@
- #### 오늘 할 거
+#### 오늘/내일 할 것들
 
-Email Key Create & Anon Key Create, Edge Function Key Input ○ </br>
-Login Logic complete </br>
-Delete Group Tab </br>
-키 생성까지 인증 리듬 정상화 (Anon) </br>
+Login Logic Complete O
+OAuth 로그인 성능이슈 해결 
+AuthCallback Error / 성능이슈 해결
+이메일 없이 회원가입 로직 수정
+
+로딩 UI들 정상화 Toast Message 재정비, 최적화
+Darkmode, Light, System Mode, Classic Dark 개발
 
 ====================================================================
 
@@ -13,22 +16,14 @@ google form or naver form 같은 기능 확장으로 추가
 
 ====================================================================
 
-인증 및 사용자 관리:
+fix: - 버그 수정 시
+feat: - 새로운 기능 추가 시
+chore: - 유지보수 및 설정 변경 시
+docs: - 문서 변경 시
+style: - 코드 스타일 수정 시 (로직 변경 없음)
+refactor: - 리팩토링 (기능 변경 없이 코드 구조 개선)
+test: - 테스트 추가 또는 수정 시
 
-auth.users (Supabase 기본 제공)
-user_profiles
-auth_providers
-keys
-anonymous_sessions
-user_registered_keys
+====================================================================
 
-노트 관리:
-
-notes (부모-자식 관계 추가)
-note_shares
-
-그룹 관리:
-
-user_groups
-group_members
-group_notes
+![alt text](readmeimg.png)
