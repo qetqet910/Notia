@@ -1,9 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 import { generateRandomKey, formatKey } from '@/utils/keys';
-import { Navigate } from 'react-router-dom';
 
 interface AuthState {
   // 사용자 상태
@@ -65,14 +64,14 @@ interface AuthStore extends AuthState {
   loginWithSocial: (provider: 'github' | 'google') => Promise<void>;
   signOut: () => Promise<{ success: boolean; error?: any }>;
 
-  // 그룹 관련 메서드
-  createGroup: (name: string) => Promise<any>;
-  joinGroup: (key: string) => Promise<any>;
-
   // 세션 관리
   checkSession: () => Promise<boolean>;
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>;
   restoreSession: () => Promise<boolean>;
+  checkCreationLimit: (clientIP: string) => Promise<{
+    allowed: boolean;
+    error?: string;
+  }>;
   createAnonymousUserWithEdgeFunction: (key: string) => Promise<{
     success: boolean;
     userId?: User;
@@ -640,8 +639,58 @@ export const useAuthStore = create<AuthStore>()(
       }
     },
 
-    createAnonymousUserWithEdgeFunction: async (key: string) => {
+    checkCreationLimit: async (
+      clientIP: string,
+    ): Promise<{ allowed: boolean; error?: string }> => {
+      try {
+        const { data, error } = await supabase
+          .from('creation_attempts')
+          .select('created_at')
+          .eq('client_ip', clientIP)
+          .gte(
+            'created_at',
+            new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+          ) // 30분 이내
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // 30분 내 3회 이상 시도 확인
+        if (data && data.length >= 3) {
+          return {
+            allowed: false,
+            error:
+              '너무 많은 계정을 생성했습니다. 30분 후에 다시 시도해주세요.',
+          };
+        }
+
+        // 시도 기록 저장
+        await supabase
+          .from('creation_attempts')
+          .insert({ client_ip: clientIP });
+
+        return { allowed: true };
+      } catch (error) {
+        console.error('생성 제한 확인 오류:', error);
+        // 오류 발생해도 생성은 허용 (보안보다 사용성 우선)
+        return { allowed: true };
+      }
+    },
+
+    createAnonymousUserWithEdgeFunction: async (
+      key: string,
+      clientIP: string,
+    ) => {
       key = key.replace(/-/g, '').toUpperCase();
+
+      const limitCheck = await checkCreationLimit(clientIP);
+      if (!limitCheck.allowed) {
+        return {
+          success: false,
+          error: limitCheck.error,
+          code: 'RATE_LIMITED',
+        };
+      }
 
       try {
         const { data, error } = await supabase.functions.invoke(
@@ -660,9 +709,22 @@ export const useAuthStore = create<AuthStore>()(
       }
     },
 
-    createEmailUserWithEdgeFunction: async (email: string, key: string) => {
+    createEmailUserWithEdgeFunction: async (
+      email: string,
+      key: string,
+      clientIP: string,
+    ) => {
       try {
         key = key.replace(/-/g, '').toUpperCase();
+
+        const limitCheck = await checkCreationLimit(clientIP);
+        if (!limitCheck.allowed) {
+          return {
+            success: false,
+            error: limitCheck.error,
+            code: 'RATE_LIMITED',
+          };
+        }
 
         // Supabase Edge Function 호출
         const { data, error } = await supabase.functions.invoke(
@@ -681,9 +743,8 @@ export const useAuthStore = create<AuthStore>()(
 
           // 오류 상태 코드 확인 (409는 이미 등록된 이메일)
           if (
-            error.status === 409 ||
-            (error.message && error.message.includes('409')) ||
-            (error.message && error.message.toLowerCase().includes('already'))
+            error.message &&
+            error.message.toLowerCase().includes('already')
           ) {
             return {
               success: false,

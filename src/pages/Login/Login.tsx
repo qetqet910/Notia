@@ -131,8 +131,6 @@ export const Login: React.FC = () => {
     isGeneratingKey,
     createAnonymousUserWithEdgeFunction,
     createEmailUserWithEdgeFunction,
-    createGroup,
-    joinGroup,
   } = useAuthStore();
 
   const { toast } = useToast();
