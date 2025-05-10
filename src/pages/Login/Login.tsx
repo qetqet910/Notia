@@ -1,13 +1,13 @@
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users } from 'react-feather';
 import { Key, AlertCircle, Loader2 } from 'lucide-react';
 import Lottie from 'lottie-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Toaster } from '@/components/ui/toaster';
+import { isGenerator, motion } from 'framer-motion';
+import { supabase } from '@/services/supabaseClient';
 
+import { Toaster } from '@/components/ui/toaster';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -124,11 +124,10 @@ export const Login: React.FC = () => {
   const {
     isAuthenticated,
     formattedKey,
-    isLoading,
+    isRegisterLoading,
     isLoginLoading,
     error,
     loginWithSocial,
-    isGeneratingKey,
     createAnonymousUserWithEdgeFunction,
     createEmailUserWithEdgeFunction,
   } = useAuthStore();
@@ -197,11 +196,6 @@ export const Login: React.FC = () => {
   const handleCreateEmailKey = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isGeneratingKey || localLoading) {
-      console.log('이미 처리 중입니다.');
-      return;
-    }
-
     if (formattedKey && showKey) {
       toast({
         title: '이미 키가 생성되어 있습니다',
@@ -226,11 +220,13 @@ export const Login: React.FC = () => {
       // 키 미리 생성 (하지만 아직 표시하지 않음)
       const key = generateRandomKey(16);
       const formattedKeyValue = formatKey(key);
-
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const { ip } = await ipResponse.json();
       // Edge Function으로 이메일 키 생성 요청
       const result = await createEmailUserWithEdgeFunction(
         email,
         formattedKeyValue,
+        ip,
       );
 
       // 성공일 경우에만 키 저장 및 표시
@@ -248,6 +244,7 @@ export const Login: React.FC = () => {
           title: '키 생성 성공',
           description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
         });
+        await supabase.from('creation_attempts').insert({ client_ip: ip });
       } else {
         // 에러 코드에 따른 처리
         let errorMessage = result.error || '알 수 없는 오류가 발생했습니다.';
@@ -266,6 +263,8 @@ export const Login: React.FC = () => {
           description: errorMessage,
           variant: toastVariant,
         });
+
+        setEmail('');
       }
     } catch (err) {
       console.error('이메일 키 생성 오류:', err);
@@ -276,6 +275,7 @@ export const Login: React.FC = () => {
           '서버 연결 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
         variant: 'destructive',
       });
+      setEmail('');
     } finally {
       setLocalLoading(false);
     }
@@ -288,15 +288,11 @@ export const Login: React.FC = () => {
 
   // 익명 키 생성 핸들러
   const handleCreateAnonymousKey = async (e: React.FormEvent) => {
-    e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
+    e.preventDefault();
 
-    // 이미 로딩 중이면 중복 요청 방지
-    if (isLoading) {
-      console.log('이미 처리 중입니다.');
-      return;
-    }
+    // 이미 로딩 중이거나 키가 생성된 경우 중복 처리 방지
+    if (isRegisterLoading) return;
 
-    // 이미 키가 생성되어 있고 표시 중이면 중복 생성 방지
     if (formattedKey && showKey) {
       toast({
         title: '이미 키가 생성되어 있습니다',
@@ -306,32 +302,47 @@ export const Login: React.FC = () => {
     }
 
     try {
-      // 상태 초기화
       setShowKey(false);
       setLocalLoading(true);
 
-      // 키 즉시 생성
+      // 키 생성 및 IP 가져오기 병렬 처리
       const key = generateRandomKey(16);
       const formattedKeyValue = formatKey(key);
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const { ip } = await ipResponse.json();
 
-      // Supabase Edge Function으로 저장 시도
       const result = await createAnonymousUserWithEdgeFunction(
         formattedKeyValue,
+        ip,
       );
 
-      // 성공 시 상태 업데이트
+      if (!result.success) {
+        const errorMessage = result?.error || '알 수 없는 오류가 발생했습니다.';
+        toast({
+          title: '키 생성 실패',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // 성공 처리 로직
       console.log('익명 사용자 저장 결과:', result);
 
       useAuthStore.setState({
         userKey: key,
         formattedKey: formattedKeyValue,
       });
+
       setShowKey(true);
 
       toast({
         title: '키 생성 성공',
         description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
       });
+
+      // IP 기록 - 성공 후에만 수행
+      await supabase.from('creation_attempts').insert({ client_ip: ip });
     } catch (err) {
       console.error('익명 사용자 저장 오류:', err);
       toast({
@@ -383,9 +394,9 @@ export const Login: React.FC = () => {
                 <Button
                   type="submit"
                   className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isGeneratingKey || localLoading}
+                  disabled={isLoginLoading || localLoading}
                 >
-                  {isGeneratingKey || localLoading ? (
+                  {isLoginLoading || localLoading ? (
                     <div className="flex items-center justify-center">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>처리 중...</span>
@@ -469,15 +480,15 @@ export const Login: React.FC = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     className="h-11 border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
                     required
-                    disabled={isLoading}
+                    disabled={isRegisterLoading}
                   />
                 </div>
                 <Button
                   type="submit"
                   className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isLoading || !email.trim()}
+                  disabled={isRegisterLoading || !email.trim()}
                 >
-                  {isLoading ? (
+                  {isRegisterLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       처리 중...
@@ -500,10 +511,10 @@ export const Login: React.FC = () => {
                 type="button"
                 variant="outline"
                 className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-                disabled={isLoading}
+                disabled={isRegisterLoading}
                 onClick={handleCreateAnonymousKey}
               >
-                {isLoading ? (
+                {isRegisterLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     처리 중...
@@ -560,7 +571,7 @@ export const Login: React.FC = () => {
           color="#24292e"
           label="GitHub로 노트 만들기"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isRegisterLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
@@ -570,7 +581,7 @@ export const Login: React.FC = () => {
           color="#DB4437"
           label="Google로 노트 만들기"
           onClick={handleSocialLogin}
-          disabled={isLoading}
+          disabled={isRegisterLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />

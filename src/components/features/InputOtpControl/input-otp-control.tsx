@@ -9,7 +9,6 @@ import {
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '@services/supabaseClient';
 
 // 메모이제이션을 위해 함수를 컴포넌트 외부로 이동
 const debounce = <F extends (...args: any[]) => Promise<any>>(
@@ -35,16 +34,14 @@ const debounce = <F extends (...args: any[]) => Promise<any>>(
 
 export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = useState('');
-  const { loginWithKey, isLoading } = useAuthStore();
+  const { loginWithKey, isLoginLoading } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 사용자가 입력할 때 호출되는 함수
   const handleValueChange = useCallback(
     (newValue: string) => {
-      // 이미 처리 중이면 입력 무시
-      if (isLoading || isSubmitting) return;
+      if (isLoginLoading || isSubmitting) return;
 
       const sanitizedValue = newValue
         .replace(/[^a-zA-Z0-9-]/g, '')
@@ -52,19 +49,19 @@ export const InputOTPControlled: React.FC = () => {
       setValue(sanitizedValue);
 
       // 하이픈 제거 후 16자리 키가 모두 입력되면 자동 로그인 시도
-      const cleanValue = sanitizedValue.replace(/-/g, '');
+      const cleanValue = newValue.replace(/-/g, '');
       if (cleanValue.length === 16) {
         void handleSubmit(cleanValue);
       }
     },
-    [isLoading, isSubmitting],
+    [isLoginLoading, isSubmitting],
   );
 
   // 로그인 처리 함수 - 디바운스 적용
   const handleSubmit = useCallback(
     debounce(async (keyValue: string) => {
       // 이미 처리 중이면 중복 요청 방지
-      if (isLoading || isSubmitting) return { success: false };
+      if (isLoginLoading || isSubmitting) return { success: false };
 
       try {
         setIsSubmitting(true);
@@ -108,7 +105,7 @@ export const InputOTPControlled: React.FC = () => {
         setIsSubmitting(false);
       }
     }, 300), // 300ms 디바운스로 빠른 연속 요청 방지
-    [loginWithKey, isLoading, isSubmitting, toast],
+    [loginWithKey, isLoginLoading, isSubmitting, toast],
   );
 
   // 컴포넌트 마운트 시 포커스
@@ -117,7 +114,7 @@ export const InputOTPControlled: React.FC = () => {
   }, []);
 
   // 로딩 상태 메모이제이션
-  const isProcessing = isLoading || isSubmitting;
+  const isProcessing = isLoginLoading || isSubmitting;
 
   return (
     <div className="space-y-4 w-full max-w-md mx-auto">
