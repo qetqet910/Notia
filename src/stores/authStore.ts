@@ -240,17 +240,15 @@ export const useAuthStore = create<AuthStore>()(
 
     loginWithKey: async (key: string) => {
       try {
-        set({ isLoginLoading: true, error: null });
+        set({ isLoginLoading: true });
         const cleanKey = key.replace(/-/g, '').toUpperCase();
 
         // 서버 응답 자세히 로깅
-        console.log('서버 요청 시작 - 키:', cleanKey);
         const { data: keyCheckData, error: keyCheckError } =
           await supabase.functions.invoke('login_with_key', {
             body: { key: cleanKey },
           });
 
-        console.log('서버 응답 데이터:', JSON.stringify(keyCheckData, null, 2));
 
         // 키 검증 실패 시 즉시 오류 반환
         if (keyCheckError || !keyCheckData || !keyCheckData.success) {
@@ -289,54 +287,13 @@ export const useAuthStore = create<AuthStore>()(
             isLoginLoading: false,
             userProfile: keyCheckData.user?.user_metadata, // UserProfile에 대한 상태 업데이트 최적화 꼭 하기 **
           });
-        } else {
-          // 이메일이 없는 익명 계정 로그인
-          console.log('익명 사용자 로그인 시도');
-          console.log('세션 데이터 확인:', keyCheckData.session);
-
-          // 세션 데이터가 문자열이면 파싱 시도
-          let sessionData = keyCheckData.session;
-          if (typeof sessionData === 'string') {
-            try {
-              sessionData = JSON.parse(sessionData);
-              console.log('문자열에서 파싱된 세션 데이터:', sessionData);
-            } catch (e) {
-              console.error('세션 문자열 파싱 실패:', e);
-            }
-          }
-
-          if (!sessionData) {
-            console.error('세션 데이터 누락. 전체 응답:', keyCheckData);
-            throw new Error('서버에서 세션 정보를 받지 못했습니다.');
-          }
-
-          // 서버에서 받은 세션으로 로그인
-          console.log('세션 설정 시도:', sessionData);
-          const { data: authData, error: sessionError } =
-            await supabase.auth.setSession(sessionData);
-
-          if (sessionError) {
-            console.error('CLIENT: 익명 로그인 세션 설정 실패:', sessionError);
-            throw sessionError;
-          }
-
-          console.log('익명 사용자 세션 설정 완료:', authData);
-
-          // 상태 업데이트
-          set({
-            userKey: cleanKey,
-            formattedKey: cleanKey,
-            isAuthenticated: true,
-            isLoginLoading: false,
-          });
-        }
+        } 
 
         return {
           success: true,
           message: '로그인 성공',
         };
       } catch (error) {
-        console.error('키 로그인 실패:', error);
         set({ error: error as Error, isLoginLoading: false });
         return {
           success: false,
@@ -347,7 +304,6 @@ export const useAuthStore = create<AuthStore>()(
           error: error as Error,
         };
       } finally {
-        console.log('로그인 처리 완료');
       }
     },
 
@@ -506,7 +462,7 @@ export const useAuthStore = create<AuthStore>()(
       if (get().isLoginLoading) return;
 
       try {
-        set({ isLoginLoading: true, error: null });
+        set({ isLoginLoading: true });
 
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider,
@@ -524,7 +480,9 @@ export const useAuthStore = create<AuthStore>()(
         console.log(`${provider} 로그인 시작됨`);
       } catch (error) {
         console.error(`${provider} 로그인 오류:`, error);
-        set({ error: error as Error });
+        set({ isLoginLoading: false });
+      } finally {
+        set({ isLoginLoading: false });
       }
     },
 
@@ -596,9 +554,11 @@ export const useAuthStore = create<AuthStore>()(
     ) => {
       try {
         key = key.replace(/-/g, '').toUpperCase();
+        set({ isRegisterLoading: true });
 
         const limitCheck = await checkCreationLimit(clientIP);
         if (!limitCheck.allowed) {
+          set({ isRegisterLoading: false });
           return {
             success: false,
             error: limitCheck.error,
@@ -668,6 +628,8 @@ export const useAuthStore = create<AuthStore>()(
           error: error.message || '알 수 없는 오류가 발생했습니다.',
           code: 'UNEXPECTED_ERROR',
         };
+      } finally {
+        set({ isRegisterLoading: false });
       }
     },
   })),

@@ -34,13 +34,6 @@ export const useAuth = () => {
     generateAnonymousKey,
     fetchUserProfile,
     restoreSession,
-    userKey,
-    formattedKey,
-    createAnonymousUserWithEdgeFunction,
-    setUserKey,
-    setFormattedKey,
-    setUser,
-    setIsAuthenticated,
   } = store;
 
   // 초기 세션 확인
