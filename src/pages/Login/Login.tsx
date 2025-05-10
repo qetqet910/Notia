@@ -126,7 +126,6 @@ export const Login: React.FC = () => {
     formattedKey,
     isRegisterLoading,
     isLoginLoading,
-    error,
     loginWithSocial,
     createAnonymousUserWithEdgeFunction,
     createEmailUserWithEdgeFunction,
@@ -214,9 +213,6 @@ export const Login: React.FC = () => {
     }
 
     try {
-      // 로딩 상태 활성화
-      setLocalLoading(true);
-
       // 키 미리 생성 (하지만 아직 표시하지 않음)
       const key = generateRandomKey(16);
       const formattedKeyValue = formatKey(key);
@@ -276,8 +272,6 @@ export const Login: React.FC = () => {
         variant: 'destructive',
       });
       setEmail('');
-    } finally {
-      setLocalLoading(false);
     }
   };
 
@@ -303,7 +297,6 @@ export const Login: React.FC = () => {
 
     try {
       setShowKey(false);
-      setLocalLoading(true);
 
       // 키 생성 및 IP 가져오기 병렬 처리
       const key = generateRandomKey(16);
@@ -353,8 +346,6 @@ export const Login: React.FC = () => {
             : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
         variant: 'destructive',
       });
-    } finally {
-      setLocalLoading(false);
     }
   };
 
@@ -394,9 +385,9 @@ export const Login: React.FC = () => {
                 <Button
                   type="submit"
                   className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isLoginLoading || localLoading}
+                  disabled={isLoginLoading}
                 >
-                  {isLoginLoading || localLoading ? (
+                  {isLoginLoading ? (
                     <div className="flex items-center justify-center">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       <span>처리 중...</span>
@@ -703,15 +694,6 @@ export const Login: React.FC = () => {
                   {activeTab === 'login' ? renderLoginTab() : renderSignupTab()}
                 </div>
               </Tabs>
-
-              {/* 에러 메시지 */}
-              {error && (
-                <ErrorMessage
-                  message={
-                    error instanceof Error ? error.message : String(error)
-                  }
-                />
-              )}
             </CardContent>
           </Card>
         </motion.div>
