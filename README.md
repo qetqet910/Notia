@@ -5,9 +5,10 @@ OAuth 로그인 성능이슈 해결 O
 AuthCallback Error / 성능이슈 해결 O
 이메일 없이 회원가입 로직 수정 O
 
-IP 회원가입 제한 걸기
-로딩 UI들 정상화 Toast Message 재정비, 최적화
+IP 회원가입 제한 걸기 O
+로딩 UI들 정상화 Toast Message 재정비, 최적화 
 Darkmode, Light, System Mode, Classic Dark 개발
+플젝 파일구조 정리
 
 ====================================================================
 

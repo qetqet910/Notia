@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import { generateRandomKey, formatKey } from '@/utils/keys';
+import { checkCreationLimit } from '@/utils/check';
 
 interface AuthState {
   // 사용자 상태
@@ -16,11 +17,10 @@ interface AuthState {
   formattedKey: string | null;
 
   // 로딩 상태
-  isLoading: boolean;
+  isRegisterLoading: boolean;
   isLoginLoading: boolean;
   isLogoutLoading: boolean;
   isSessionCheckLoading: boolean;
-  isGeneratingKey: boolean;
 
   // 오류 상태
   error: Error | null;
@@ -72,14 +72,19 @@ interface AuthStore extends AuthState {
     allowed: boolean;
     error?: string;
   }>;
-  createAnonymousUserWithEdgeFunction: (key: string) => Promise<{
+  createAnonymousUserWithEdgeFunction: (
+    key: string,
+    clientIP: string,
+  ) => Promise<{
     success: boolean;
     userId?: User;
-    error?: Error;
+    error?: string;
+    code?: string;
   }>;
   createEmailUserWithEdgeFunction: (
     email: string,
     key: string,
+    clientIP: string,
   ) => Promise<{
     success: boolean;
     userId?: User;
@@ -94,7 +99,7 @@ export const useAuthStore = create<AuthStore>()(
     session: null,
     userProfile: null,
     isAuthenticated: false,
-    isLoading: false,
+    isRegisterLoading: false,
     isLoginLoading: false,
     isLogoutLoading: false,
     isSessionCheckLoading: false,
@@ -235,7 +240,7 @@ export const useAuthStore = create<AuthStore>()(
 
     loginWithKey: async (key: string) => {
       try {
-        set({ isLoading: true, error: null });
+        set({ isLoginLoading: true, error: null });
         const cleanKey = key.replace(/-/g, '').toUpperCase();
 
         // 서버 응답 자세히 로깅
@@ -281,7 +286,7 @@ export const useAuthStore = create<AuthStore>()(
             userKey: cleanKey,
             formattedKey: cleanKey,
             isAuthenticated: true,
-            isLoading: false,
+            isLoginLoading: false,
             userProfile: keyCheckData.user?.user_metadata, // UserProfile에 대한 상태 업데이트 최적화 꼭 하기 **
           });
         } else {
@@ -322,7 +327,7 @@ export const useAuthStore = create<AuthStore>()(
             userKey: cleanKey,
             formattedKey: cleanKey,
             isAuthenticated: true,
-            isLoading: false,
+            isLoginLoading: false,
           });
         }
 
@@ -332,7 +337,7 @@ export const useAuthStore = create<AuthStore>()(
         };
       } catch (error) {
         console.error('키 로그인 실패:', error);
-        set({ error: error as Error, isLoading: false });
+        set({ error: error as Error, isLoginLoading: false });
         return {
           success: false,
           message:
@@ -348,7 +353,7 @@ export const useAuthStore = create<AuthStore>()(
 
     generateEmailKey: async (email?: string) => {
       try {
-        set({ isLoading: true, isGeneratingKey: true, error: null });
+        set({ isRegisterLoading: true, error: null });
 
         // 1. 이메일 유효성 검사 (선택 사항)
         if (email) {
@@ -414,8 +419,7 @@ export const useAuthStore = create<AuthStore>()(
           formattedKey: formattedKeyValue,
           user: userData.user,
           isAuthenticated: true,
-          isLoading: false,
-          isGeneratingKey: false,
+          isRegisterLoading: false,
         });
 
         return true;
@@ -423,8 +427,7 @@ export const useAuthStore = create<AuthStore>()(
         console.error('키 생성 및 저장 오류:', error);
         set({
           error: error as Error,
-          isLoading: false,
-          isGeneratingKey: false,
+          isRegisterLoading: false,
         });
         return false;
       }
@@ -432,7 +435,7 @@ export const useAuthStore = create<AuthStore>()(
 
     generateAnonymousKey: async () => {
       try {
-        set({ isLoading: true, isGeneratingKey: true, error: null });
+        set({ isRegisterLoading: true, error: null });
 
         // 1. 랜덤 키 생성
         const key = generateRandomKey(16);
@@ -465,8 +468,7 @@ export const useAuthStore = create<AuthStore>()(
           formattedKey: formattedKeyValue,
           user: authData.user,
           isAuthenticated: true,
-          isLoading: false,
-          isGeneratingKey: false,
+          isRegisterLoading: false,
         });
 
         // 5. 성공 반환
@@ -486,8 +488,7 @@ export const useAuthStore = create<AuthStore>()(
           userKey: key,
           formattedKey: formattedKeyValue,
           error: error as Error,
-          isLoading: false,
-          isGeneratingKey: false,
+          isRegisterLoading: false,
         });
 
         return {
@@ -527,93 +528,6 @@ export const useAuthStore = create<AuthStore>()(
       }
     },
 
-    createGroup: async (name: string) => {
-      try {
-        const userId = get().user?.id;
-        if (!userId) {
-          throw new Error('로그인이 필요합니다.');
-        }
-
-        // 그룹 키 생성
-        const groupKey = generateRandomKey(8);
-
-        // 그룹 생성
-        const { data: group, error } = await supabase
-          .from('user_groups')
-          .insert({
-            name,
-            owner_id: userId,
-            key: groupKey,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // 그룹 멤버 추가 (소유자)
-        await supabase.from('group_members').insert({
-          group_id: group.id,
-          user_id: userId,
-        });
-
-        return { success: true, group, key: groupKey };
-      } catch (error) {
-        console.error('그룹 생성 오류:', error);
-        return { success: false, error };
-      }
-    },
-
-    joinGroup: async (groupKey: string) => {
-      try {
-        const userId = get().user?.id;
-        if (!userId) {
-          throw new Error('로그인이 필요합니다.');
-        }
-
-        // 그룹 찾기
-        const { data: group, error: groupError } = await supabase
-          .from('user_groups')
-          .select('id')
-          .eq('key', groupKey)
-          .single();
-
-        if (groupError || !group) {
-          throw new Error('유효하지 않은 그룹 키입니다.');
-        }
-
-        // 이미 멤버인지 확인
-        const { data: existingMember } = await supabase
-          .from('group_members')
-          .select('id')
-          .eq('group_id', group.id)
-          .eq('user_id', userId)
-          .single();
-
-        if (existingMember) {
-          return { success: true, message: '이미 그룹 멤버입니다.', group };
-        }
-
-        // 그룹 멤버 추가
-        const { error: joinError } = await supabase
-          .from('group_members')
-          .insert({
-            group_id: group.id,
-            user_id: userId,
-          });
-
-        if (joinError) throw joinError;
-
-        return { success: true, message: '그룹에 참여했습니다.', group };
-      } catch (error) {
-        console.error('그룹 참여 오류:', error);
-        return {
-          success: false,
-          error,
-          message: error instanceof Error ? error.message : '알 수 없는 오류',
-        };
-      }
-    },
-
     // 로그아웃
     signOut: async () => {
       try {
@@ -639,52 +553,16 @@ export const useAuthStore = create<AuthStore>()(
       }
     },
 
-    checkCreationLimit: async (
-      clientIP: string,
-    ): Promise<{ allowed: boolean; error?: string }> => {
-      try {
-        const { data, error } = await supabase
-          .from('creation_attempts')
-          .select('created_at')
-          .eq('client_ip', clientIP)
-          .gte(
-            'created_at',
-            new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          ) // 30분 이내
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        // 30분 내 3회 이상 시도 확인
-        if (data && data.length >= 3) {
-          return {
-            allowed: false,
-            error:
-              '너무 많은 계정을 생성했습니다. 30분 후에 다시 시도해주세요.',
-          };
-        }
-
-        // 시도 기록 저장
-        await supabase
-          .from('creation_attempts')
-          .insert({ client_ip: clientIP });
-
-        return { allowed: true };
-      } catch (error) {
-        console.error('생성 제한 확인 오류:', error);
-        // 오류 발생해도 생성은 허용 (보안보다 사용성 우선)
-        return { allowed: true };
-      }
-    },
-
     createAnonymousUserWithEdgeFunction: async (
       key: string,
       clientIP: string,
     ) => {
       key = key.replace(/-/g, '').toUpperCase();
+      set({ isRegisterLoading: true });
 
       const limitCheck = await checkCreationLimit(clientIP);
       if (!limitCheck.allowed) {
+        set({ isRegisterLoading: false });
         return {
           success: false,
           error: limitCheck.error,
@@ -706,6 +584,8 @@ export const useAuthStore = create<AuthStore>()(
       } catch (error) {
         console.error('Edge Function 호출 오류:', error);
         return { success: false, error: error as Error };
+      } finally {
+        set({ isRegisterLoading: false });
       }
     },
 
