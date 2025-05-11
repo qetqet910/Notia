@@ -1,14 +1,5 @@
 import { useState, useEffect } from 'react';
-
-// Note 타입 정의
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Note } from '@/types';
 
 export const useNotes = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -34,7 +25,9 @@ export const useNotes = () => {
         }
       } catch (err) {
         console.error('노트 로드 중 오류 발생:', err);
-        setError(err instanceof Error ? err : new Error('노트 로드 중 오류 발생'));
+        setError(
+          err instanceof Error ? err : new Error('노트 로드 중 오류 발생'),
+        );
       } finally {
         setLoading(false);
       }
@@ -52,45 +45,47 @@ export const useNotes = () => {
 
   // 노트 추가
   const addNote = (newNote: Note) => {
-    setNotes(prevNotes => [...prevNotes, newNote]);
+    setNotes((prevNotes) => [...prevNotes, newNote]);
   };
 
   // 노트 업데이트
   const updateNote = (updatedNote: Note) => {
-    setNotes(prevNotes => 
-      prevNotes.map(note => 
-        note.id === updatedNote.id 
+    setNotes((prevNotes) =>
+      prevNotes.map((note) =>
+        note.id === updatedNote.id
           ? { ...updatedNote, updatedAt: new Date() }
-          : note
-      )
+          : note,
+      ),
     );
   };
 
   // 노트 삭제
   const deleteNote = (noteId: string) => {
-    setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
+    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
   };
 
   // 태그로 노트 필터링
   const getNotesByTag = (tag: string) => {
-    return notes.filter(note => note.tags.includes(tag));
+    return notes.filter((note) => note.tags.includes(tag));
   };
 
   // 날짜로 노트 필터링
   const getNotesByDate = (date: Date) => {
-    return notes.filter(note => {
+    return notes.filter((note) => {
       const noteDate = new Date(note.createdAt);
-      return noteDate.getFullYear() === date.getFullYear() 
-        && noteDate.getMonth() === date.getMonth() 
-        && noteDate.getDate() === date.getDate();
+      return (
+        noteDate.getFullYear() === date.getFullYear() &&
+        noteDate.getMonth() === date.getMonth() &&
+        noteDate.getDate() === date.getDate()
+      );
     });
   };
 
   // 모든 태그 가져오기
   const getAllTags = () => {
     const tagSet = new Set<string>();
-    notes.forEach(note => {
-      note.tags.forEach(tag => tagSet.add(tag));
+    notes.forEach((note) => {
+      note.tags.forEach((tag) => tagSet.add(tag));
     });
     return Array.from(tagSet);
   };
@@ -104,6 +99,6 @@ export const useNotes = () => {
     deleteNote,
     getNotesByTag,
     getNotesByDate,
-    getAllTags
+    getAllTags,
   };
 };

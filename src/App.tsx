@@ -11,6 +11,7 @@ import { DownloadPage } from '@/pages/Download';
 import { NotFound } from '@/pages/404';
 import { AuthCallback } from '@/components/features/AuthCallback';
 import { ProtectedRoute } from '@/components/features/ProtectedRoute';
+import './styles/dashboard-dark-mode.css';
 
 function App() {
   return (

@@ -1,16 +1,5 @@
 import { useState, useEffect } from 'react';
-
-// Plan 타입 정의
-export interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  tags: string[];
-}
+import { Plan } from '@/types';
 
 export const usePlans = () => {
   const [plans, setPlans] = useState<Plan[]>([]);

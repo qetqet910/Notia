@@ -1,0 +1,122 @@
+/* 대시보드 전용 다크모드 스타일 */
+#dashboard-container.dark {
+  --bg-primary: #0f172a; /* slate-950 */
+  --bg-secondary: #1e293b; /* slate-800 */
+  --bg-tertiary: #334155; /* slate-700 */
+  
+  --text-primary: #f1f5f9; /* slate-100 */
+  --text-secondary: #cbd5e1; /* slate-300 */
+  --text-muted: #94a3b8; /* slate-400 */
+  
+  --border-color: #334155; /* slate-700 */
+  
+  --brand-color: #4DB896; /* 브랜드 색상의 다크모드 버전 */
+  --brand-light: #61C9A8; /* 밝은 버전 */
+}
+
+/* 다크모드 기본 스타일 */
+#dashboard-container.dark {
+  color-scheme: dark;
+}
+
+/* 스크롤바 스타일링 */
+#dashboard-container.dark ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+#dashboard-container.dark ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+#dashboard-container.dark ::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 5px;
+}
+
+#dashboard-container.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* 다크모드에서 특정 컴포넌트 스타일 오버라이드가 필요할 경우 추가 */
+#dashboard-container.dark .ProseMirror,
+#dashboard-container.dark .tiptap {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+#dashboard-container.dark input,
+#dashboard-container.dark textarea {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+#dashboard-container.dark input::placeholder,
+#dashboard-container.dark textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* 버튼 스타일 */
+#dashboard-container.dark .btn-primary {
+  background-color: var(--brand-color);
+  color: var(--bg-primary);
+}
+
+#dashboard-container.dark .btn-outline {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+#dashboard-container.dark .btn-outline:hover {
+  background-color: var(--bg-tertiary);
+}
+
+/* 태그나 칩 스타일 */
+#dashboard-container.dark .tag {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* 카드 스타일 */
+#dashboard-container.dark .card {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+/* 노트 리스트 아이템 스타일 */
+#dashboard-container.dark .note-item {
+  border-bottom-color: var(--border-color);
+}
+
+#dashboard-container.dark .note-item:hover,
+#dashboard-container.dark .note-item.active {
+  background-color: var(--bg-tertiary);
+}
+
+/* 일정 관련 스타일 */
+#dashboard-container.dark .plan-priority-high {
+  color: #f87171; /* red-400 */
+}
+
+#dashboard-container.dark .plan-priority-medium {
+  color: #facc15; /* yellow-400 */
+}
+
+#dashboard-container.dark .plan-priority-low {
+  color: #4ade80; /* green-400 */
+}
+
+/* 캘린더 관련 스타일 */
+#dashboard-container.dark .calendar-day {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+#dashboard-container.dark .calendar-day.today {
+  background-color: var(--bg-tertiary);
+}
+
+#dashboard-container.dark .calendar-day.selected {
+  border-color: var(--brand-color);
+}
