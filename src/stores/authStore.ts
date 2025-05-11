@@ -249,7 +249,6 @@ export const useAuthStore = create<AuthStore>()(
             body: { key: cleanKey },
           });
 
-
         // 키 검증 실패 시 즉시 오류 반환
         if (keyCheckError || !keyCheckData || !keyCheckData.success) {
           const errorMessage =
@@ -287,7 +286,7 @@ export const useAuthStore = create<AuthStore>()(
             isLoginLoading: false,
             userProfile: keyCheckData.user?.user_metadata, // UserProfile에 대한 상태 업데이트 최적화 꼭 하기 **
           });
-        } 
+        }
 
         return {
           success: true,
@@ -462,7 +461,7 @@ export const useAuthStore = create<AuthStore>()(
       if (get().isLoginLoading) return;
 
       try {
-        set({ isLoginLoading: true });
+        set({ isLoginLoading: true, isRegisterLoading: true });
 
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider,
@@ -480,9 +479,7 @@ export const useAuthStore = create<AuthStore>()(
         console.log(`${provider} 로그인 시작됨`);
       } catch (error) {
         console.error(`${provider} 로그인 오류:`, error);
-        set({ isLoginLoading: false });
-      } finally {
-        set({ isLoginLoading: false });
+        set({ isLoginLoading: false, isRegisterLoading: false });
       }
     },
 

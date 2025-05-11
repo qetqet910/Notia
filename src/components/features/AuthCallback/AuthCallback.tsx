@@ -61,6 +61,7 @@ export const AuthCallback = () => {
           isAuthenticated: true,
           userProfile: userProfile,
           isLoginLoading: false,
+          isRegisterLoading: false
         });
 
         // 리다이렉트 대상 결정 (저장된 경로 또는 대시보드)
@@ -72,7 +73,7 @@ export const AuthCallback = () => {
         navigate(redirectTo, { replace: true });
       } catch (err) {
         console.error('Auth callback 처리 오류:', err);
-        useAuthStore.setState({ isLoginLoading: false });
+        useAuthStore.setState({ isLoginLoading: false, isRegisterLoading: false });
         navigate('/login');
       }
     };

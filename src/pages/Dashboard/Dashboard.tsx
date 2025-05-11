@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/services/supabaseClient';
+// src/pages/Dashboard.tsx
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/toaster';
@@ -18,7 +16,6 @@ import { Search } from '@/components/features/Search/Search';
 import { UserProfile } from '@/components/features/UserProfile/userProfile';
 
 import { useAuthStore } from '@/stores/authStore';
-import { useAuth } from '@/hooks/useAuth';
 import { useNotes } from '@/hooks/useNotes';
 import { usePlans } from '@/hooks/usePlans';
 import { useSearch } from '@/hooks/useSearch';
@@ -30,12 +27,13 @@ import {
   List,
   Search as SearchIcon,
   Menu,
-  LogOut,
-  User,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import logoImage from '@/stores/images/Logo.png';
-import { useNavigate } from 'react-router-dom';
+import logoDarkImage from '@/stores/images/LogoDark.png'; // 다크모드용 로고 추가
 
+// 타입 정의
 interface Note {
   id: string;
   title: string;
@@ -56,24 +54,65 @@ interface Plan {
   tags: string[];
 }
 
+const NAV_ITEMS = [
+  { id: 'notes', label: '노트', icon: List },
+  { id: 'plans', label: '일정', icon: Clock },
+  { id: 'calendar', label: '캘린더', icon: CalendarIcon },
+  { id: 'timeline', label: '타임라인', icon: List },
+];
+
 export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('notes');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [darkMode, setDarkMode] = useState(() => {
+    // 로컬스토리지에서 대시보드 전용 다크모드 설정을 가져옴
+    const saved = localStorage.getItem('dashboard-theme');
+    return saved === 'dark';
+  });
 
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
-  const { signOut } = useAuth();
 
-  const { isAuthenticated, isLoading, userProfile, user, checkSession } =
-    useAuthStore();
+  const { isAuthenticated, isLoginLoading, checkSession } = useAuthStore();
   const navigate = useNavigate();
   const [isClient, setIsClient] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
-  const sessionChecked = useRef(false);
 
+  // 다크모드 토글 함수
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    localStorage.setItem('dashboard-theme', !darkMode ? 'dark' : 'light');
+  };
+
+  // 다크모드 적용
+  useEffect(() => {
+    // body에 직접 클래스를 추가하는 대신 컨테이너에 클래스를 적용
+    const mainElement = document.getElementById('dashboard-container');
+    if (mainElement) {
+      if (darkMode) {
+        mainElement.classList.add('dark');
+      } else {
+        mainElement.classList.remove('dark');
+      }
+    }
+  }, [darkMode]);
+
+  // 반응형 처리
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // 인증 체크
   useEffect(() => {
     setIsClient(true);
     const checkAuthStatus = async () => {
@@ -91,26 +130,17 @@ export const Dashboard: React.FC = () => {
     checkAuthStatus();
   }, [navigate, checkSession]);
 
-  // 서버 사이드 렌더링 시 아무것도 표시하지 않음
+  // 로딩 상태 처리
   if (!isClient) return null;
-
-  // 로딩 중이면 로딩 표시
-  if (isLoading || localLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#61C9A8]"></div>
-      </div>
-    );
+  if (isLoginLoading || localLoading) {
+    return <LoadingSpinner />;
   }
-
-  // 인증되지 않았으면 로그인 페이지로 리다이렉트 (추가 안전장치)
   if (!isAuthenticated) {
-    console.log('Dashboard - 인증 안됨, 로그인 페이지로 리다이렉트');
     navigate('/login');
     return null;
   }
 
-  // Create a new note
+  // 새 노트 생성
   const handleCreateNote = () => {
     const newNote: Note = {
       id: Date.now().toString(),
@@ -126,14 +156,14 @@ export const Dashboard: React.FC = () => {
     setActiveTab('notes');
   };
 
-  // Create a new plan
+  // 새 일정 생성
   const handleCreatePlan = () => {
     const newPlan: Plan = {
       id: Date.now().toString(),
       title: '새로운 일정',
       description: '',
       startDate: new Date(),
-      endDate: new Date(Date.now() + 3600000), // 1 hour later
+      endDate: new Date(Date.now() + 3600000), // 1시간 후
       completed: false,
       priority: 'medium',
       tags: [],
@@ -144,212 +174,277 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <Toaster />
-      {/* Header */}
-      <header className="flex justify-between items-center px-4 py-3 border-b">
-        <div className="flex items-center">
-          <h1 className="text-xl font-bold text-[#61C9A8]">
-            <img src={logoImage} className="max-w-40 cursor-pointer" alt="" />
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setActiveTab('search')}
-          >
-            <SearchIcon className="h-5 w-5" />
-          </Button>
-
-          {isMobile ? (
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-64">
-                <div className="flex flex-col gap-4 py-4">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handleCreateNote}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />새 노트
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={handleCreatePlan}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />새 일정
-                  </Button>
-                  <Separator />
-                  <Button
-                    variant={activeTab === 'notes' ? 'default' : 'ghost'}
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('notes')}
-                  >
-                    <List className="mr-2 h-4 w-4" />
-                    노트
-                  </Button>
-                  <Button
-                    variant={activeTab === 'plans' ? 'default' : 'ghost'}
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('plans')}
-                  >
-                    <Clock className="mr-2 h-4 w-4" />
-                    일정
-                  </Button>
-                  <Button
-                    variant={activeTab === 'calendar' ? 'default' : 'ghost'}
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('calendar')}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    캘린더
-                  </Button>
-                  <Button
-                    variant={activeTab === 'timeline' ? 'default' : 'ghost'}
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab('timeline')}
-                  >
-                    <List className="mr-2 h-4 w-4" />
-                    타임라인
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleCreateNote}>
-                <PlusCircle className="mr-2 h-4 w-4" />새 노트
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleCreatePlan}>
-                <PlusCircle className="mr-2 h-4 w-4" />새 일정
-              </Button>
-              {/* 유저 프로필 */}
-              <UserProfile />
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Desktop only */}
-        {!isMobile && (
-          <div className="w-56 border-r bg-muted/10 p-4 hidden md:block">
-            <div className="flex flex-col gap-2">
-              <Button
-                variant={activeTab === 'notes' ? 'default' : 'ghost'}
-                className="w-full justify-start"
-                onClick={() => setActiveTab('notes')}
-              >
-                <List className="mr-2 h-4 w-4" />
-                노트
-              </Button>
-              <Button
-                variant={activeTab === 'plans' ? 'default' : 'ghost'}
-                className="w-full justify-start"
-                onClick={() => setActiveTab('plans')}
-              >
-                <Clock className="mr-2 h-4 w-4" />
-                일정
-              </Button>
-              <Button
-                variant={activeTab === 'calendar' ? 'default' : 'ghost'}
-                className="w-full justify-start"
-                onClick={() => setActiveTab('calendar')}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                캘린더
-              </Button>
-              <Button
-                variant={activeTab === 'timeline' ? 'default' : 'ghost'}
-                className="w-full justify-start"
-                onClick={() => setActiveTab('timeline')}
-              >
-                <List className="mr-2 h-4 w-4" />
-                타임라인
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-hidden">
-          {activeTab === 'notes' && (
-            <div className="flex h-full">
-              <div className="w-1/3 border-r h-full">
-                <NoteList
-                  notes={notes}
-                  onSelectNote={setSelectedNote}
-                  selectedNote={selectedNote}
+    <div
+      id="dashboard-container"
+      className={`flex flex-col h-screen ${darkMode ? 'dark' : ''}`}
+    >
+      <div className="flex flex-col h-full bg-white dark:bg-slate-950 text-gray-800 dark:text-gray-100">
+        <Toaster />
+        {/* 헤더 */}
+        <header className="flex justify-between items-center px-4 py-3 border-b dark:border-slate-800">
+          <div className="flex items-center">
+            <h1 className="text-xl font-bold text-[#61C9A8] dark:text-[#4DB896]">
+              {!darkMode ? (
+                <img
+                  src={logoImage}
+                  className="max-w-40 cursor-pointer"
+                  alt="로고"
                 />
-              </div>
-              <div className="w-2/3 h-full">
-                {selectedNote ? (
-                  <Editor
-                    note={selectedNote}
-                    onSave={updateNote}
-                    onDelete={() => {
-                      deleteNote(selectedNote.id);
-                      setSelectedNote(null);
-                    }}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
-                    <Button
-                      variant="outline"
-                      className="mt-4"
-                      onClick={handleCreateNote}
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />새 노트
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+              ) : (
+                <img
+                  src={logoDarkImage}
+                  className="max-w-40 cursor-pointer"
+                  alt="로고"
+                />
+              )}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveTab('search')}
+            >
+              <SearchIcon className="h-5 w-5" />
+            </Button>
+
+            {/* 다크모드 토글 버튼 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleDarkMode}
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
+
+            {isMobile ? (
+              <MobileNavigation
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                handleCreateNote={handleCreateNote}
+                handleCreatePlan={handleCreatePlan}
+                darkMode={darkMode}
+              />
+            ) : (
+              <DesktopActions
+                handleCreateNote={handleCreateNote}
+                handleCreatePlan={handleCreatePlan}
+              />
+            )}
+          </div>
+        </header>
+
+        {/* 메인 컨텐츠 */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* 사이드바 - 데스크톱만 */}
+          {!isMobile && (
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
           )}
 
-          {activeTab === 'plans' && (
-            <PlanManager
-              plans={plans}
-              onAddPlan={addPlan}
-              onUpdatePlan={updatePlan}
-              onDeletePlan={deletePlan}
-            />
-          )}
-
-          {activeTab === 'calendar' && (
-            <Calendar
-              plans={plans}
-              onSelectDate={setSelectedDate}
-              selectedDate={selectedDate}
-            />
-          )}
-
-          {activeTab === 'timeline' && (
-            <TimelineView plans={plans} notes={notes} />
-          )}
-
-          {activeTab === 'search' && (
-            <Search
-              onSearch={setSearchQuery}
-              results={searchResults}
-              onSelectNote={(note) => {
-                setSelectedNote(note);
-                setActiveTab('notes');
-              }}
-            />
-          )}
+          {/* 메인 컨텐츠 영역 */}
+          <div className="flex-1 overflow-hidden">{renderMainContent()}</div>
         </div>
       </div>
     </div>
   );
+
+  // 메인 컨텐츠 렌더링 함수
+  function renderMainContent() {
+    switch (activeTab) {
+      case 'notes':
+        return (
+          <div className="flex h-full">
+            <div className="w-1/3 border-r dark:border-slate-800 h-full">
+              <NoteList
+                notes={notes}
+                onSelectNote={setSelectedNote}
+                selectedNote={selectedNote}
+              />
+            </div>
+            <div className="w-2/3 h-full">
+              {selectedNote ? (
+                <Editor
+                  note={selectedNote}
+                  onSave={updateNote}
+                  onDelete={() => {
+                    deleteNote(selectedNote.id);
+                    setSelectedNote(null);
+                  }}
+                />
+              ) : (
+                <EmptyNoteState handleCreateNote={handleCreateNote} />
+              )}
+            </div>
+          </div>
+        );
+      case 'plans':
+        return (
+          <PlanManager
+            plans={plans}
+            onAddPlan={addPlan}
+            onUpdatePlan={updatePlan}
+            onDeletePlan={deletePlan}
+          />
+        );
+      case 'calendar':
+        return (
+          <Calendar
+            plans={plans}
+            onSelectDate={setSelectedDate}
+            selectedDate={selectedDate}
+          />
+        );
+      case 'timeline':
+        return <TimelineView plans={plans} notes={notes} />;
+      case 'search':
+        return (
+          <Search
+            onSearch={setSearchQuery}
+            results={searchResults}
+            onSelectNote={(note) => {
+              setSelectedNote(note);
+              setActiveTab('notes');
+            }}
+          />
+        );
+      default:
+        return null;
+    }
+  }
 };
+
+// 컴포넌트 분리
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#61C9A8] dark:border-[#4DB896]"></div>
+  </div>
+);
+
+const EmptyNoteState = ({
+  handleCreateNote,
+}: {
+  handleCreateNote: () => void;
+}) => (
+  <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+    <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
+    <Button variant="outline" className="mt-4" onClick={handleCreateNote}>
+      <PlusCircle className="mr-2 h-4 w-4" />새 노트
+    </Button>
+  </div>
+);
+
+const Sidebar = ({
+  activeTab,
+  setActiveTab,
+}: {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}) => (
+  <div className="w-56 border-r dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-4 hidden md:block">
+    <div className="flex flex-col gap-2">
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Button
+            key={item.id}
+            variant={activeTab === item.id ? 'default' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveTab(item.id)}
+          >
+            <Icon className="mr-2 h-4 w-4" />
+            {item.label}
+          </Button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const MobileNavigation = ({
+  activeTab,
+  setActiveTab,
+  handleCreateNote,
+  handleCreatePlan,
+  darkMode,
+}: {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  handleCreateNote: () => void;
+  handleCreatePlan: () => void;
+  darkMode: boolean;
+}) => (
+  <Sheet>
+    <SheetTrigger asChild>
+      <Button variant="ghost" size="icon">
+        <Menu className="h-5 w-5" />
+      </Button>
+    </SheetTrigger>
+    <SheetContent
+      side="right"
+      className={`w-64 ${
+        darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white'
+      }`}
+    >
+      <div className="flex flex-col gap-4 py-4">
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          onClick={handleCreateNote}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />새 노트
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full justify-start"
+          onClick={handleCreatePlan}
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />새 일정
+        </Button>
+        <Separator className={darkMode ? 'bg-slate-700' : ''} />
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Button
+              key={item.id}
+              variant={activeTab === item.id ? 'default' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => setActiveTab(item.id)}
+            >
+              <Icon className="mr-2 h-4 w-4" />
+              {item.label}
+            </Button>
+          );
+        })}
+        <div className="mt-auto">
+          <UserProfile />
+        </div>
+      </div>
+    </SheetContent>
+  </Sheet>
+);
+
+const DesktopActions = ({
+  handleCreateNote,
+  handleCreatePlan,
+}: {
+  handleCreateNote: () => void;
+  handleCreatePlan: () => void;
+}) => (
+  <div className="flex items-center gap-2">
+    <Button variant="outline" size="sm" onClick={handleCreateNote}>
+      <PlusCircle className="mr-2 h-4 w-4" />새 노트
+    </Button>
+    <Button variant="outline" size="sm" onClick={handleCreatePlan}>
+      <PlusCircle className="mr-2 h-4 w-4" />새 일정
+    </Button>
+    {/* 유저 프로필 */}
+    <UserProfile />
+  </div>
+);
 
 export default Dashboard;
