@@ -27,9 +27,8 @@ import {
   List,
   Search as SearchIcon,
   Menu,
-  Moon,
-  Sun,
 } from 'lucide-react';
+import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/stores/images/Logo.png';
 import logoDarkImage from '@/stores/images/LogoDark.png'; // 다크모드용 로고 추가
 
@@ -66,11 +65,7 @@ export const Dashboard: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [darkMode, setDarkMode] = useState(() => {
-    // 로컬스토리지에서 대시보드 전용 다크모드 설정을 가져옴
-    const saved = localStorage.getItem('dashboard-theme');
-    return saved === 'dark';
-  });
+  const { isDarkMode, isDeepDarkMode } = useThemeStore();
 
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
@@ -80,25 +75,6 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isClient, setIsClient] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
-
-  // 다크모드 토글 함수
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    localStorage.setItem('dashboard-theme', !darkMode ? 'dark' : 'light');
-  };
-
-  // 다크모드 적용
-  useEffect(() => {
-    // body에 직접 클래스를 추가하는 대신 컨테이너에 클래스를 적용
-    const mainElement = document.getElementById('dashboard-container');
-    if (mainElement) {
-      if (darkMode) {
-        mainElement.classList.add('dark');
-      } else {
-        mainElement.classList.remove('dark');
-      }
-    }
-  }, [darkMode]);
 
   // 반응형 처리
   useEffect(() => {
@@ -176,7 +152,9 @@ export const Dashboard: React.FC = () => {
   return (
     <div
       id="dashboard-container"
-      className={`flex flex-col h-screen ${darkMode ? 'dark' : ''}`}
+      className={`flex flex-col h-screen ${isDarkMode ? 'dark' : ''} ${
+        isDeepDarkMode ? 'deepdark' : ''
+      }`}
     >
       <div className="flex flex-col h-full bg-white dark:bg-slate-950 text-gray-800 dark:text-gray-100">
         <Toaster />
@@ -184,7 +162,7 @@ export const Dashboard: React.FC = () => {
         <header className="flex justify-between items-center px-4 py-3 border-b dark:border-slate-800">
           <div className="flex items-center">
             <h1 className="text-xl font-bold text-[#61C9A8] dark:text-[#4DB896]">
-              {!darkMode ? (
+              {!isDarkMode ? (
                 <img
                   src={logoImage}
                   className="max-w-40 cursor-pointer"
@@ -208,19 +186,7 @@ export const Dashboard: React.FC = () => {
               <SearchIcon className="h-5 w-5" />
             </Button>
 
-            {/* 다크모드 토글 버튼 */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleDarkMode}
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </Button>
+            {/* 모바일 네비게이션 */}
 
             {isMobile ? (
               <MobileNavigation
@@ -228,7 +194,7 @@ export const Dashboard: React.FC = () => {
                 setActiveTab={setActiveTab}
                 handleCreateNote={handleCreateNote}
                 handleCreatePlan={handleCreatePlan}
-                darkMode={darkMode}
+                darkMode={isDarkMode}
               />
             ) : (
               <DesktopActions
