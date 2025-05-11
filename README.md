@@ -8,7 +8,8 @@ AuthCallback Error / 성능이슈 해결 O
 IP 회원가입 제한 걸기 O
 로딩 UI들 정상화 Toast Message 재정비, 최적화 O
 Social Login할 때 로딩 설정하기 O
-Darkmode, Light, System Mode, Classic Dark 개발 O
+
+Darkmode, Light, System Mode, Classic Dark 개발 
 플젝 파일구조 정리
 
 ====================================================================
