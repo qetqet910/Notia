@@ -1,6 +1,6 @@
 import ReactDOM from 'react-dom/client';
 import App from '@/App';
-import '@/styles/theme.css';
+import '@/styles/global.css';
 
 /**
  * 플랫폼별 초기화 모듈을 로드하고 실행합니다.

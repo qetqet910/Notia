@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import { ThemeToggle } from '@/components/ui/themeToggle';
 
 export function UserProfile() {
   const { user, userProfile, isLogoutLoading, isAuthenticated, signOut } =
@@ -101,33 +102,20 @@ export function UserProfile() {
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <User className="mr-2 h-4 w-4" />
-          <span>Account preferences</span>
+          <span>마이페이지</span>
         </DropdownMenuItem>
         <DropdownMenuItem>
           <Settings className="mr-2 h-4 w-4" />
-          <span>Feature previews</span>
+          <span>설정</span>
         </DropdownMenuItem>
         <DropdownMenuItem>
           <Monitor className="mr-2 h-4 w-4" />
-          <span>Command menu</span>
+          <span>도움말</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <div className="px-2 py-1.5">
-          <p className="text-xs font-medium mb-1">Theme</p>
-          <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-            <DropdownMenuRadioItem value="dark" className="text-sm">
-              Dark
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="light" className="text-sm">
-              Light
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="classic-dark" className="text-sm">
-              Classic Dark
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="system" className="text-sm">
-              System
-            </DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
+          <p className="text-xs font-medium mb-1">테마</p>
+          <ThemeToggle />
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} disabled={isLogoutLoading}>
@@ -136,7 +124,7 @@ export function UserProfile() {
           ) : (
             <LogOut className="mr-2 h-4 w-4" />
           )}
-          <span>Log out</span>
+          <span>로그아웃</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
