@@ -12,10 +12,10 @@ import {
 } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Header } from '@/components/ui/_Header';
+import { Header } from '@/layout/header';
 
-import logoImage from '@/stores/images/Logo.png';
-import PlaceHolder from '@/stores/images/Placeholder.png';
+import logoImage from '@/assets/images/Logo.png';
+import PlaceHolder from '@/assets/images/Placeholder.png';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();

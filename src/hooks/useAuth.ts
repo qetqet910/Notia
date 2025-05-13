@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { resetSupabaseClient, supabase } from '@/services/supabaseClient';
-import { generateRandomKey, formatKey, isValidKey } from '@/utils/keys';
+import { resetSupabaseClient } from '@/services/supabaseClient';
 
 interface UserProfile {
   user_id: string;
@@ -22,7 +21,6 @@ export const useAuth = () => {
     isAuthenticated,
     userProfile,
     error,
-    isLoading,
     isLoginLoading,
     isLogoutLoading,
     isSessionCheckLoading,
@@ -100,9 +98,8 @@ export const useAuth = () => {
     user,
     session,
     isAuthenticated,
-    userProfile: userProfile as UserProfile | null,
+    userProfile,
     error,
-    isLoading,
     isLoginLoading,
     isLogoutLoading,
     isSessionCheckLoading,

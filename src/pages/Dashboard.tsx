@@ -1,25 +1,21 @@
 // src/pages/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/toaster';
-
-import { NoteList } from '@/components/features/NoteList';
-import { Editor } from '@/components/features/Editor';
-import { Calendar } from '@/components/features/Calendar';
-import { PlanManager } from '@/components/features/PlanManager';
-import { TimelineView } from '@/components/features/Timeline/TimelineView';
-import { Search } from '@/components/features/Search/Search';
-import { UserProfile } from '@/components/features/UserProfile/userProfile';
-
+import { NoteList } from '@/components/features/noteList';
+import { Editor } from '@/components/features/editor';
+import { Calendar } from '@/components/features/calendar';
+import { PlanManager } from '@/components/features/planManager';
+import { TimelineView } from '@/components/features/timelineView';
+import { Search } from '@/components/features/search';
+import { UserProfile } from '@/components/features/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
 import { usePlans } from '@/hooks/usePlans';
 import { useSearch } from '@/hooks/useSearch';
-
 import {
   PlusCircle,
   Calendar as CalendarIcon,
@@ -29,8 +25,8 @@ import {
   Menu,
 } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
-import logoImage from '@/stores/images/Logo.png';
-import logoDarkImage from '@/stores/images/LogoDark.png'; // 다크모드용 로고 추가
+import logoImage from '@/assets/images/Logo.png';
+import logoDarkImage from '@/assets/images/LogoDark.png';
 
 // 타입 정의
 interface Note {
@@ -66,11 +62,9 @@ export const Dashboard: React.FC = () => {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { isDarkMode, isDeepDarkMode } = useThemeStore();
-
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
-
   const { isAuthenticated, isLoginLoading, checkSession } = useAuthStore();
   const navigate = useNavigate();
   const [isClient, setIsClient] = useState(false);
@@ -152,31 +146,24 @@ export const Dashboard: React.FC = () => {
   return (
     <div
       id="dashboard-container"
-      className={`flex flex-col h-screen ${isDarkMode ? 'dark' : ''} ${
-        isDeepDarkMode ? 'deepdark' : ''
+      className={`flex flex-col h-screen theme-${
+        isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
       }`}
     >
-      <div className="flex flex-col h-full bg-white dark:bg-slate-950 text-gray-800 dark:text-gray-100">
+      <div className="flex flex-col h-full bg-background text-foreground">
         <Toaster />
         {/* 헤더 */}
-        <header className="flex justify-between items-center px-4 py-3 border-b dark:border-slate-800">
+        <header className="flex justify-between items-center px-4 py-3 border-b border-border">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-[#61C9A8] dark:text-[#4DB896]">
-              {!isDarkMode ? (
-                <img
-                  src={logoImage}
-                  className="max-w-40 cursor-pointer"
-                  alt="로고"
-                />
-              ) : (
-                <img
-                  src={logoDarkImage}
-                  className="max-w-40 cursor-pointer"
-                  alt="로고"
-                />
-              )}
+            <h1 className="text-xl font-bold text-primary">
+              <img
+                src={isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage}
+                className="max-w-40 cursor-pointer"
+                alt="로고"
+              />
             </h1>
           </div>
+
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -187,14 +174,12 @@ export const Dashboard: React.FC = () => {
             </Button>
 
             {/* 모바일 네비게이션 */}
-
             {isMobile ? (
               <MobileNavigation
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 handleCreateNote={handleCreateNote}
                 handleCreatePlan={handleCreatePlan}
-                darkMode={isDarkMode}
               />
             ) : (
               <DesktopActions
@@ -225,7 +210,7 @@ export const Dashboard: React.FC = () => {
       case 'notes':
         return (
           <div className="flex h-full">
-            <div className="w-1/3 border-r dark:border-slate-800 h-full">
+            <div className="w-1/3 border-r border-border h-full">
               <NoteList
                 notes={notes}
                 onSelectNote={setSelectedNote}
@@ -284,10 +269,9 @@ export const Dashboard: React.FC = () => {
   }
 };
 
-// 컴포넌트 분리
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#61C9A8] dark:border-[#4DB896]"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
   </div>
 );
 
@@ -296,7 +280,7 @@ const EmptyNoteState = ({
 }: {
   handleCreateNote: () => void;
 }) => (
-  <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
     <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
     <Button variant="outline" className="mt-4" onClick={handleCreateNote}>
       <PlusCircle className="mr-2 h-4 w-4" />새 노트
@@ -311,7 +295,7 @@ const Sidebar = ({
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }) => (
-  <div className="w-56 border-r dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-4 hidden md:block">
+  <div className="w-56 border-r border-border bg-muted p-4 hidden md:block">
     <div className="flex flex-col gap-2">
       {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
@@ -336,13 +320,11 @@ const MobileNavigation = ({
   setActiveTab,
   handleCreateNote,
   handleCreatePlan,
-  darkMode,
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   handleCreateNote: () => void;
   handleCreatePlan: () => void;
-  darkMode: boolean;
 }) => (
   <Sheet>
     <SheetTrigger asChild>
@@ -350,12 +332,7 @@ const MobileNavigation = ({
         <Menu className="h-5 w-5" />
       </Button>
     </SheetTrigger>
-    <SheetContent
-      side="right"
-      className={`w-64 ${
-        darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white'
-      }`}
-    >
+    <SheetContent side="right" className="w-64 bg-background">
       <div className="flex flex-col gap-4 py-4">
         <Button
           variant="outline"
@@ -371,7 +348,7 @@ const MobileNavigation = ({
         >
           <PlusCircle className="mr-2 h-4 w-4" />새 일정
         </Button>
-        <Separator className={darkMode ? 'bg-slate-700' : ''} />
+        <Separator />
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           return (

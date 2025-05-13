@@ -7,9 +7,11 @@ type ThemeState = {
   theme: Theme;
   isDarkMode: boolean;
   isDeepDarkMode: boolean;
+  isDashboardActive: boolean; // 대시보드 활성화 상태 추가
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   updateThemeFromSystem: () => void;
+  setDashboardActive: (active: boolean) => void; // 대시보드 활성화 설정 함수
 };
 
 export const useThemeStore = create<ThemeState>()(
@@ -18,15 +20,16 @@ export const useThemeStore = create<ThemeState>()(
       theme: 'system',
       isDarkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       isDeepDarkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+      isDashboardActive: false, // 초기값은 false
 
       toggleTheme: () => {
         const currentState = get();
         if (currentState.theme === 'dark') {
-          set({ theme: 'light', isDarkMode: false });
-        } else if (currentState.theme === 'deepdark') {
-          set({ theme: 'deepdark', isDeepDarkMode: true });
+          set({ theme: 'light', isDarkMode: false, isDeepDarkMode: false });
+        } else if (currentState.theme === 'light') {
+          set({ theme: 'dark', isDarkMode: true, isDeepDarkMode: false });
         } else {
-          set({ theme: 'dark', isDarkMode: true });
+          set({ theme: 'deepdark', isDarkMode: true, isDeepDarkMode: true });
         }
       },
 
@@ -34,8 +37,8 @@ export const useThemeStore = create<ThemeState>()(
         const isDark =
           theme === 'system'
             ? window.matchMedia('(prefers-color-scheme: dark)').matches
-            : theme === 'dark';
-        const isDeepDark = theme === 'dark' ? false : theme === 'deepdark';
+            : theme === 'dark' || theme === 'deepdark';
+        const isDeepDark = theme === 'deepdark';
 
         set({ theme, isDarkMode: isDark, isDeepDarkMode: isDeepDark });
       },
@@ -46,8 +49,12 @@ export const useThemeStore = create<ThemeState>()(
           const isDark = window.matchMedia(
             '(prefers-color-scheme: dark)',
           ).matches;
-          set({ isDarkMode: isDark, isDeepDarkMode: isDark });
+          set({ isDarkMode: isDark, isDeepDarkMode: false });
         }
+      },
+
+      setDashboardActive: (active: boolean) => {
+        set({ isDashboardActive: active });
       },
     }),
     {

@@ -21,8 +21,9 @@
       "@types/*": ["src/types/*"],
       "@styles/*": ["src/styles/*"],
       "@stores/*": ["src/stores/*"],
-      "@platforms/*": ["src/platforms/*"]
+      "@platforms/*": ["src/platforms/*"],
+      "@assets/*": ["src/assets/*"]
     }
   },
-  "include": ["src", "src/stores/data/login-animation.json"]
+  "include": ["src", "src/assets/data/loginAnimation.json"]
 }

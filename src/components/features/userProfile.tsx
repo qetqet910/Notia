@@ -13,16 +13,17 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/components/ui/themeToggle';
+import { useThemeStore } from '@/stores/themeStore';
 
 export function UserProfile() {
   const { user, userProfile, isLogoutLoading, isAuthenticated, signOut } =
     useAuthStore();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [theme, setTheme] = useState('dark');
+  const { setTheme } = useThemeStore();
 
   // 사용자 정보 상태 - 의존성 배열에 따라 업데이트되도록 useEffect 사용
   const [displayName, setDisplayName] = useState('사용자');
@@ -50,6 +51,7 @@ export function UserProfile() {
           title: '로그아웃 성공',
           description: '성공적으로 로그아웃되었습니다.',
         });
+        setTheme('system');
         navigate('/login');
       } else {
         throw result.error || new Error('로그아웃 실패');

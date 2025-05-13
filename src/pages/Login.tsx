@@ -13,14 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
-import { InputOTPControlled } from '@/components/features/InputOtpControl/input-otp-control';
+import { InputOTPControlled } from '@/components/features/inputOtpControl';
 import { useAuthStore } from '@/stores/authStore';
-import { KeyDisplay } from '@/components/features/KeyDisplay';
-import { useToast } from '@/hooks/use-toast';
+import { KeyDisplay } from '@/components/features/keyDisplay';
+import { useToast } from '@/hooks/useToast';
 import { generateRandomKey, formatKey } from '@/utils/keys';
 
-import logoImage from '@/stores/images/Logo.png';
-import animationData from '@/stores/data/login-animation.json';
+import logoImage from '@/assets/images/Logo.png';
+import animationData from '@/assets/data/loginAnimation.json';
 
 // 애니메이션 변수들
 const animations = {
