@@ -7,7 +7,7 @@ import {
   InputOTPSeparator,
 } from '@/components/ui/input-otp';
 import { useAuthStore } from '@/stores/authStore';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { Loader2 } from 'lucide-react';
 
 // 메모이제이션을 위해 함수를 컴포넌트 외부로 이동

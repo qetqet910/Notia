@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import logoImage from "@/stores/images/Logo.png";
+import logoImage from "@/assets/images/Logo.png";
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();

@@ -11,14 +11,14 @@ import { Dashboard } from '@/pages/Dashboard';
 import { DownloadPage } from '@/pages/Download';
 import { NotFound } from '@/pages/404';
 
-import { AuthCallback } from '@/components/features/AuthCallback';
-import { ProtectedRoute } from '@/components/features/ProtectedRoute';
-import { ThemeProvider } from '@/components/features/ThemeProvider';
+import { AuthCallback } from '@/components/features/authCallback';
+import { ProtectedRoute } from '@/components/features/protectedRoute';
+import { ThemeProvider } from '@/components/features/themeProvider';
 
 function App() {
   return (
-    <ThemeProvider>
-      <Router>
+    <Router>
+      <ThemeProvider>
         <Routes>
           {/* 공개 라우트 */}
           <Route path="/" element={<Home />} />
@@ -40,8 +40,8 @@ function App() {
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
-      </Router>
-    </ThemeProvider>
+      </ThemeProvider>
+    </Router>
   );
 }
 
