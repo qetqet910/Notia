@@ -111,9 +111,8 @@ export const Dashboard: React.FC = () => {
   }
 
   // 새 노트 생성
-  const handleCreateNote = () => {
-    const newNote: Note = {
-      id: Date.now().toString(),
+  const handleCreateNote = async () => {
+    const newNoteData = {
       title: '새로운 노트',
       content: '',
       tags: [],
@@ -121,9 +120,11 @@ export const Dashboard: React.FC = () => {
       updatedAt: new Date(),
     };
 
-    addNote(newNote);
-    setSelectedNote(newNote);
-    setActiveTab('notes');
+    const newNote = await addNote(newNoteData);
+    if (newNote) {
+      setSelectedNote(newNote);
+      setActiveTab('notes');
+    }
   };
 
   // 새 일정 생성

@@ -11,7 +11,10 @@ IP 회원가입 제한 걸기 O
 Social Login할 때 로딩 설정하기 O
 
 Darkmode, Light, System Mode, Classic Dark 개발 O
-플젝 파일구조 정리 O - types부터 이어서 하기
+플젝 파일구조 정리 O - types부터 이어서 하기 O
+
+Supabase 수정 및 개선 O
+사용자별 개인 대시보드 연결 O 및 생성 및 저장 
 ```
 
 ====================================================================<br/>
@@ -86,4 +89,4 @@ public: 정적 파일
 이러한 구조는 확장성이 좋고, 새로운 개발자가 프로젝트에 쉽게 적응할 수 있으며, 기능별로 분리되어 있어 코드의 응집도를 높이고 결합도를 낮추는 데 도움이 됩니다.
 ```
 
-![alt text](readmeimg.png)
+![alt text](src/assets/readmeimg.png)

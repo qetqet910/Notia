@@ -633,7 +633,6 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'stateStorage',
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     },
   ),
 );
