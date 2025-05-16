@@ -13,6 +13,7 @@ Social Login할 때 로딩 설정하기 O
 Darkmode, Light, System Mode, Classic Dark 개발 O
 플젝 파일구조 정리 O - types부터 이어서 하기 O
 
+package.json 버전 문제 해결, bot 삭제
 Supabase 수정 및 개선 O
 사용자별 개인 대시보드 연결 O 및 생성 및 저장 
 ```
