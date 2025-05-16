@@ -1,67 +1,165 @@
 import { useState, useEffect } from 'react';
 import { Note } from '@/types';
+import { supabase } from '@/services/supabaseClient';
+import { useAuthStore } from '@/stores/authStore';
 
 export const useNotes = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { user } = useAuthStore();
 
-  // 초기 노트 데이터 로드
-  useEffect(() => {
-    const loadNotes = () => {
-      setLoading(true);
-      try {
-        // 로컬 스토리지에서 노트 데이터 가져오기
-        const savedNotes = localStorage.getItem('notes');
-        if (savedNotes) {
-          // JSON으로 저장된 날짜를 Date 객체로 변환
-          const parsedNotes = JSON.parse(savedNotes, (key, value) => {
-            if (key === 'createdAt' || key === 'updatedAt') {
-              return new Date(value);
-            }
-            return value;
-          });
-          setNotes(parsedNotes);
-        }
-      } catch (err) {
-        console.error('노트 로드 중 오류 발생:', err);
-        setError(
-          err instanceof Error ? err : new Error('노트 로드 중 오류 발생'),
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadNotes();
-  }, []);
-
-  // 노트 데이터가 변경될 때마다 로컬 스토리지에 저장
-  useEffect(() => {
-    if (notes.length > 0) {
-      localStorage.setItem('notes', JSON.stringify(notes));
+  // 노트 데이터 로드
+  const fetchNotes = async () => {
+    if (!user) {
+      setNotes([]);
+      setLoading(false);
+      return;
     }
-  }, [notes]);
+
+    setLoading(true);
+    try {
+      // Supabase에서 현재 사용자의 노트 가져오기
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('owner_id', user.id) // user_id 대신 owner_id 사용
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      // 날짜 문자열을 Date 객체로 변환
+      const formattedNotes = data.map((note) => ({
+        ...note,
+        createdAt: new Date(note.created_at),
+        updatedAt: new Date(note.updated_at),
+        // Supabase의 컬럼명과 클라이언트 타입 맞추기
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        tags: note.tags || [],
+      }));
+
+      setNotes(formattedNotes);
+    } catch (err) {
+      console.error('노트 로드 중 오류 발생:', err);
+      setError(
+        err instanceof Error ? err : new Error('노트 로드 중 오류 발생'),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 사용자가 변경되면 노트 다시 로드
+  useEffect(() => {
+    fetchNotes();
+  }, [user]);
 
   // 노트 추가
-  const addNote = (newNote: Note) => {
-    setNotes((prevNotes) => [...prevNotes, newNote]);
+  const addNote = async (newNote: Omit<Note, 'id'>) => {
+    if (!user) return;
+
+    try {
+      // Supabase에 노트 추가
+      const { data, error } = await supabase
+        .from('notes')
+        .insert([
+          {
+            owner_id: user.id, // user_id 대신 owner_id 사용
+            title: newNote.title,
+            content: newNote.content,
+            tags: newNote.tags,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select();
+
+      if (error) throw error;
+
+      // 새 노트를 상태에 추가
+      const addedNote = {
+        ...data[0],
+        id: data[0].id,
+        createdAt: new Date(data[0].created_at),
+        updatedAt: new Date(data[0].updated_at),
+        tags: data[0].tags || [],
+      };
+
+      setNotes((prevNotes) => [addedNote, ...prevNotes]);
+      return addedNote;
+    } catch (err) {
+      console.error('노트 추가 중 오류 발생:', err);
+      setError(
+        err instanceof Error ? err : new Error('노트 추가 중 오류 발생'),
+      );
+      return null;
+    }
   };
 
   // 노트 업데이트
-  const updateNote = (updatedNote: Note) => {
-    setNotes((prevNotes) =>
-      prevNotes.map((note) =>
-        note.id === updatedNote.id
-          ? { ...updatedNote, updatedAt: new Date() }
-          : note,
-      ),
-    );
+  const updateNote = async (updatedNote: Note) => {
+    if (!user) return;
+
+    try {
+      // Supabase에서 노트 업데이트
+      const { error } = await supabase
+        .from('notes')
+        .update({
+          title: updatedNote.title,
+          content: updatedNote.content,
+          tags: updatedNote.tags,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', updatedNote.id)
+        .eq('owner_id', user.id);
+
+      if (error) throw error;
+
+      // 상태 업데이트
+      setNotes((prevNotes) =>
+        prevNotes.map((note) =>
+          note.id === updatedNote.id
+            ? { ...updatedNote, updatedAt: new Date() }
+            : note,
+        ),
+      );
+
+      return true;
+    } catch (err) {
+      console.error('노트 업데이트 중 오류 발생:', err);
+      setError(
+        err instanceof Error ? err : new Error('노트 업데이트 중 오류 발생'),
+      );
+      return false;
+    }
   };
 
   // 노트 삭제
-  const deleteNote = (noteId: string) => {
-    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
+  const deleteNote = async (noteId: string) => {
+    if (!user) return;
+
+    try {
+      // Supabase에서 노트 삭제
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', noteId)
+        .eq('owner_id', user.id);
+
+      if (error) throw error;
+
+      // 상태 업데이트
+      setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
+      return true;
+    } catch (err) {
+      console.error('노트 삭제 중 오류 발생:', err);
+      setError(
+        err instanceof Error ? err : new Error('노트 삭제 중 오류 발생'),
+      );
+      return false;
+    }
   };
 
   // 태그로 노트 필터링
@@ -94,6 +192,7 @@ export const useNotes = () => {
     notes,
     loading,
     error,
+    fetchNotes,
     addNote,
     updateNote,
     deleteNote,

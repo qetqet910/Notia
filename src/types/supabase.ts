@@ -102,23 +102,6 @@ export interface Database {
     Views: {
       [_ in never]: never;
     };
-    Functions: {
-      create_group_with_member: {
-        Args: {
-          group_name: string;
-          group_key: string;
-          user_id: string;
-        };
-        Returns: Json;
-      };
-      join_group_by_key: {
-        Args: {
-          group_key: string;
-          user_id: string;
-        };
-        Returns: Json;
-      };
-    };
     Enums: {
       [_ in never]: never;
     };
