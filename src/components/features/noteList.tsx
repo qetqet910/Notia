@@ -1,20 +1,11 @@
 import React, { useState } from 'react';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Note } from '@/types';
 
 interface NoteListProps {
   notes: Note[];
@@ -22,20 +13,29 @@ interface NoteListProps {
   onSelectNote: (note: Note) => void;
 }
 
-export const NoteList: React.FC<NoteListProps> = ({ notes, selectedNote, onSelectNote }) => {
+export const NoteList: React.FC<NoteListProps> = ({
+  notes,
+  selectedNote,
+  onSelectNote,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const filteredNotes = notes.filter(note => 
-    note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+
+  const filteredNotes = notes.filter(
+    (note) =>
+      note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      note.tags.some((tag) =>
+        tag.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
   );
 
   // Get a preview of the content (first 60 characters)
   const getContentPreview = (content: string) => {
     if (!content) return '';
     const plainText = content.replace(/<[^>]*>/g, '');
-    return plainText.length > 60 ? plainText.substring(0, 60) + '...' : plainText;
+    return plainText.length > 60
+      ? plainText.substring(0, 60) + '...'
+      : plainText;
   };
 
   return (
@@ -52,7 +52,7 @@ export const NoteList: React.FC<NoteListProps> = ({ notes, selectedNote, onSelec
           />
         </div>
       </div>
-      
+
       <ScrollArea className="flex-1">
         {filteredNotes.length > 0 ? (
           <div className="divide-y">
@@ -68,7 +68,7 @@ export const NoteList: React.FC<NoteListProps> = ({ notes, selectedNote, onSelec
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                   {getContentPreview(note.content)}
                 </p>
-                
+
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex flex-wrap gap-1">
                     {note.tags.slice(0, 2).map((tag) => (
@@ -82,9 +82,12 @@ export const NoteList: React.FC<NoteListProps> = ({ notes, selectedNote, onSelec
                       </Badge>
                     )}
                   </div>
-                  
+
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(note.updatedAt, { addSuffix: true, locale: ko })}
+                    {formatDistanceToNow(note.updatedAt, {
+                      addSuffix: true,
+                      locale: ko,
+                    })}
                   </span>
                 </div>
               </div>

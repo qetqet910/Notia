@@ -1,6 +1,6 @@
 #### 오늘/내일 할 것들
 
-```ruby
+```shell
 Login Logic Complete O
 OAuth 로그인 성능이슈 해결 O
 AuthCallback Error / 성능이슈 해결 O
@@ -13,14 +13,19 @@ Social Login할 때 로딩 설정하기 O
 Darkmode, Light, System Mode, Classic Dark 개발 O
 플젝 파일구조 정리 O - types부터 이어서 하기 O
 
-package.json 버전 문제 해결, bot 삭제
+package.json 버전 문제 해결 X, bot 삭제 O
 Supabase 수정 및 개선 O
-사용자별 개인 대시보드 연결 O 및 생성 및 저장 
+사용자별 개인 노트 연결 및 생성, 삭제, 저장 O
+
+사용자별 개인 일정 연결 및 생성, 삭제, 저장
+팀스페이스 생성, 접근 레벨 설정
+인기태그 디스플레이
+미친 구현량이다 점진적으로 기능 확장하기 / 노트와 일정 통합, 본래의 의미 강화
 ```
 
 ====================================================================<br/>
 
-Personal Growth Diary 다마고치(썸원, 듀오링고 참새) 키우미<br/>
+Personal Growth Diary 다마고치(썸원, 듀오링고 새) 키우미<br/>
 Remote Obsidian note idea<br/>
 google form or naver form 같은 기능 확장으로 추가 <br/>
 

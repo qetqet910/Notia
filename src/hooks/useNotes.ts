@@ -162,6 +162,135 @@ export const useNotes = () => {
     }
   };
 
+const fetchTeamNotes = async (teamId: string) => {
+    if (!teamId) return [];
+    
+    try {
+      // 1. 팀이 접근 가능한 노트 ID 가져오기
+      const { data: groupNotesData, error: groupNotesError } = await supabase
+        .from('group_notes')
+        .select('note_id, access_level')
+        .eq('group_id', teamId);
+        
+      if (groupNotesError) throw groupNotesError;
+      
+      if (!groupNotesData.length) return [];
+      
+      // 2. 노트 ID로 실제 노트 데이터 가져오기
+      const noteIds = groupNotesData.map(item => item.note_id);
+      
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('*')
+        .in('id', noteIds)
+        .order('updated_at', { ascending: false });
+        
+      if (notesError) throw notesError;
+      
+      // 3. 노트 데이터 형식 변환
+      const formattedNotes = notesData.map(note => ({
+        ...note,
+        createdAt: new Date(note.created_at),
+        updatedAt: new Date(note.updated_at),
+        tags: note.tags || [],
+        // 접근 레벨 추가
+        accessLevel: groupNotesData.find(gn => gn.note_id === note.id)?.access_level || 'read'
+      }));
+      
+      return formattedNotes;
+    } catch (err) {
+      console.error('팀 노트 로드 중 오류 발생:', err);
+      return [];
+    }
+  };
+  
+  // 노트를 팀과 공유
+  const shareNoteWithTeam = async (noteId: string, teamId: string, accessLevel: 'read' | 'write' | 'admin' = 'read') => {
+    try {
+      // 이미 공유되어 있는지 확인
+      const { data: existingShare } = await supabase
+        .from('group_notes')
+        .select('*')
+        .eq('note_id', noteId)
+        .eq('group_id', teamId)
+        .single();
+      
+      if (existingShare) {
+        // 이미 공유되어 있으면 접근 레벨만 업데이트
+        const { error } = await supabase
+          .from('group_notes')
+          .update({ access_level: accessLevel })
+          .eq('note_id', noteId)
+          .eq('group_id', teamId);
+          
+        if (error) throw error;
+      } else {
+        // 새로 공유
+        const { error } = await supabase
+          .from('group_notes')
+          .insert([
+            {
+              note_id: noteId,
+              group_id: teamId,
+              access_level: accessLevel
+            }
+          ]);
+          
+        if (error) throw error;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('노트 공유 중 오류 발생:', err);
+      return false;
+    }
+  };
+  
+  // 팀과 노트 공유 취소
+  const unshareNoteWithTeam = async (noteId: string, teamId: string) => {
+    try {
+      const { error } = await supabase
+        .from('group_notes')
+        .delete()
+        .eq('note_id', noteId)
+        .eq('group_id', teamId);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (err) {
+      console.error('노트 공유 취소 중 오류 발생:', err);
+      return false;
+    }
+  };
+  
+  // 노트가 공유된 팀 목록 가져오기
+  const getTeamsWithAccess = async (noteId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('group_notes')
+        .select(`
+          group_id,
+          access_level,
+          user_groups:group_id(id, name)
+        `)
+        .eq('note_id', noteId);
+        
+      if (error) throw error;
+      
+      return data.map(item => ({
+        teamId: item.group_id,
+        teamName: item.user_groups.name,
+        accessLevel: item.access_level
+      }));
+    } catch (err) {
+      console.error('노트 공유 정보 로드 중 오류 발생:', err);
+      return [];
+    }
+  };
+
+//**********************************************************************************************// */
+
   // 태그로 노트 필터링
   const getNotesByTag = (tag: string) => {
     return notes.filter((note) => note.tags.includes(tag));
@@ -199,5 +328,10 @@ export const useNotes = () => {
     getNotesByTag,
     getNotesByDate,
     getAllTags,
+
+    fetchTeamNotes,
+    shareNoteWithTeam,
+    unshareNoteWithTeam,
+    getTeamsWithAccess
   };
 };

@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
 import { usePlans } from '@/hooks/usePlans';
 import { useSearch } from '@/hooks/useSearch';
+import { TeamSpaceList } from '@/components/features/dashboard/teamSpaceList';
 import {
   PlusCircle,
   Calendar as CalendarIcon,
@@ -295,26 +296,91 @@ const Sidebar = ({
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-}) => (
-  <div className="w-56 border-r border-border bg-muted p-4 hidden md:block">
-    <div className="flex flex-col gap-2">
-      {NAV_ITEMS.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Button
-            key={item.id}
-            variant={activeTab === item.id ? 'default' : 'ghost'}
-            className="w-full justify-start"
-            onClick={() => setActiveTab(item.id)}
-          >
-            <Icon className="mr-2 h-4 w-4" />
-            {item.label}
-          </Button>
-        );
-      })}
+}) => {
+  const { notes } = useNotes();
+  const [popularTags, setPopularTags] = useState<
+    { tag: string; count: number }[]
+  >([]);
+
+  // 인기 태그 계산
+  useEffect(() => {
+    const tagCount: Record<string, number> = {};
+
+    // 모든 노트의 태그를 순회하며 카운트
+    notes.forEach((note) => {
+      note.tags.forEach((tag) => {
+        tagCount[tag] = (tagCount[tag] || 0) + 1;
+      });
+    });
+
+    // 태그를 사용 빈도 순으로 정렬
+    const sortedTags = Object.entries(tagCount)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5); // 상위 5개만 표시
+
+    setPopularTags(sortedTags);
+  }, [notes]);
+
+  return (
+    <div className="w-56 border-r border-border bg-muted p-4 hidden md:block">
+      <div className="flex flex-col gap-2">
+        {/* 기본 네비게이션 아이템 */}
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Button
+              key={item.id}
+              variant={activeTab === item.id ? 'default' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => setActiveTab(item.id)}
+            >
+              <Icon className="mr-2 h-4 w-4" />
+              {item.label}
+            </Button>
+          );
+        })}
+
+        {/* 팀 스페이스 섹션 - 나중에 구현 */}
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            팀 스페이스
+          </h3>
+          <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
+
+        {/* 인기 태그 섹션 */}
+        {popularTags.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              인기 태그
+            </h3>
+            <div className="flex flex-col gap-1">
+              {popularTags.map(({ tag, count }) => (
+                <Button
+                  key={tag}
+                  variant="ghost"
+                  size="sm"
+                  className="justify-between text-xs"
+                  onClick={() => {
+                    // 태그 필터링 기능 구현
+                    setActiveTab('notes');
+                    // 태그로 필터링하는 상태 설정 (별도 구현 필요)
+                  }}
+                >
+                  <span>#{tag}</span>
+                  <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
+                    {count}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const MobileNavigation = ({
   activeTab,

@@ -1,10 +1,7 @@
-휴먼과 이진법의 토론 대화 요약본
-
 [연합동아리](https://claremont.tistory.com/entry/%EB%B0%B1%EC%97%94%EB%93%9C-%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%B6%94%EC%B2%9C-IT-%EC%97%B0%ED%95%A9-%EB%8F%99%EC%95%84%EB%A6%AC-%EB%A6%AC%EC%8A%A4%ED%8A%B8-9%EA%B0%80%EC%A7%80)
 
 회고 - 다음엔 REMIX + pnpm 써보기 Tailwind 안 익숙하면 쓰지말기 ㅈㄴ불편
-
-# 리마인더 프로젝트 요구사항 및 설계 문서
+사실 디자인 AI가 다 해줘서 나한테 편한 CSS 라이브러리가 소용이 있나 생각이 잠깐 들기도 했음
 
 ## 1. 프로젝트 배경 및 요구사항
 
@@ -19,15 +16,15 @@
 
 - 높은 접근성
 - 간단한 UI/UX
-- 개인 프라이버시 보장
 - 빠른 실행 속도
 - 크로스 플랫폼 지원 (웹, PWA, 크롬 익스텐션)
 
 ## 2. 기술 스택
 
-- Frontend: Vite + TypeScript + React
-- 스타일링: Tailwind CSS + shadcn/ui
-- 배포: PWA, 크롬 익스텐션, 웹 버전
+- Frontend: Vite + TypeScript + React O
+- 스타일링: Tailwind CSS + shadcn/ui O
+- Backend: Supabase O
+- 배포: PWA, 크롬 익스텐션, 웹 버전 O
 
 ## 3. 인증 시스템 설계
 
@@ -35,48 +32,28 @@
 
 1. 키 기반 시스템
 
-   - 16자리 랜덤 키 생성
-   - 로컬 스토리지에 저장
+   - 16자리 랜덤 키 생성 O
    - 이메일 백업 옵션
-   - 한 번 인증 후 자동 로그인
+   - 한 번 인증 후 자동 로그인 O
 
 2. OAuth 통합
-   - GitHub 로그인
-   - Google 로그인
+   - GitHub 로그인 O
+   - Google 로그인 O
    - 소셜 계정과 키 바인딩 가능
 
 ### 3.2 보안 고려사항
 
 - 키 암호화 저장
 - 서버 측 해시값만 보관
-- 무차별 대입 공격 방지
+- 무차별 대입 공격 방지 O
 - 키 분실 시 복구 방안
-
-## 4. 그룹 협업 기능
 
 ### 4.1 그룹 시스템
 
 - 초대 코드 기반 참여
 - 실시간 동기화 지원
-- 동등한 수정 권한
+- 접근 레벨별 권한
 - WebSocket 기반 실시간 업데이트
-
-### 4.2 데이터 구조
-
-```typescript
-interface Group {
-  id: string;
-  name: string;
-  members: {
-    keyId: string;
-    role: "admin" | "member";
-    joinedAt: Date;
-  }[];
-  createdAt: Date;
-}
-```
-
-## 5. 데이터 동기화
 
 ### 5.1 동기화 메커니즘
 
@@ -98,19 +75,6 @@ interface Group {
 2. QR코드 키 공유 기능
 3. 읽기 전용 멤버 권한 추가
 4. 동시 수정 충돌 해결 로직 개선
-
-## 7. 보안 고려사항
-
-1. 소셜 로그인 사용자
-
-   - ID-키 바인딩 허용
-   - 강화된 보안
-   - 계정 복구 용이
-
-2. 키 전용 사용자
-   - 순수 키 기반 유지
-   - 최소한의 개인정보
-   - 즉시 사용 가능
 
 # 결론
 
