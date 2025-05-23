@@ -5,18 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/toaster';
-import { NoteList } from '@/components/features/noteList';
-import { Editor } from '@/components/features/editor';
-import { Calendar } from '@/components/features/calendar';
-import { PlanManager } from '@/components/features/planManager';
-import { TimelineView } from '@/components/features/timelineView';
-import { Search } from '@/components/features/search';
-import { UserProfile } from '@/components/features/userProfile';
+import { NoteList } from '@/components/features/dashboard/noteList';
+import { Editor } from '@/components/features/dashboard/editor';
+import { Calendar } from '@/components/features/dashboard/calendar';
+import { PlanManager } from '@/components/features/dashboard/planManager';
+import { TimelineView } from '@/components/features/dashboard/timelineView';
+import { Search } from '@/components/features/dashboard/search';
+import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
 import { usePlans } from '@/hooks/usePlans';
 import { useSearch } from '@/hooks/useSearch';
-import { TeamSpaceList } from '@/components/features/dashboard/teamSpaceList';
+import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
 import {
   PlusCircle,
   Calendar as CalendarIcon,
@@ -28,31 +28,11 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-
-// 타입 정의
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  tags: string[];
-}
+import { Note, Plan } from '@/types/index';
 
 const NAV_ITEMS = [
   { id: 'notes', label: '노트', icon: List },
-  { id: 'plans', label: '일정', icon: Clock },
+  { id: 'plans', label: '리마인더', icon: Clock },
   { id: 'calendar', label: '캘린더', icon: CalendarIcon },
   { id: 'timeline', label: '타임라인', icon: List },
 ];

@@ -9,8 +9,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/useToast';

@@ -8,11 +8,14 @@ export interface Note {
   is_public: boolean;
   parent_id?: string;
   note_type?: string;
-  tags: string; // 문자열로 저장된 태그 (쉼표로 구분)
-  // 클라이언트 측 변환 속성
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
-  parsedTags: string[]; // 파싱된 태그 배열
+  reminders?: Array<{
+    text: string;
+    date: Date;
+    completed: boolean;
+  }>;
 }
 
 export interface Team {

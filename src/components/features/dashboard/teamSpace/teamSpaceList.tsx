@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { PlusCircle } from 'lucide-react';
 import { supabase } from '@/services/supabaseClient';
-import { CreateTeamDialog } from '@/components/features/dashboard/teamDialog';
+import { CreateTeamDialog } from '@/components/features/dashboard/teamSpace/teamDialog';
 
 export const TeamSpaceList = ({
   activeTab,
