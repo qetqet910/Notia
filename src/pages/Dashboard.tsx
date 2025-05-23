@@ -1,4 +1,3 @@
-// src/pages/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { NoteList } from '@/components/features/dashboard/noteList';
 import { Editor } from '@/components/features/dashboard/editor';
 import { Calendar } from '@/components/features/dashboard/calendar';
-import { PlanManager } from '@/components/features/dashboard/planManager';
+import { ReminderView } from '@/components/features/dashboard/reminder';
 import { TimelineView } from '@/components/features/dashboard/timelineView';
 import { Search } from '@/components/features/dashboard/search';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
@@ -28,7 +27,7 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note, Plan } from '@/types/index';
+import { Note } from '@/types/index';
 
 const NAV_ITEMS = [
   { id: 'notes', label: '노트', icon: List },
@@ -217,11 +216,25 @@ export const Dashboard: React.FC = () => {
         );
       case 'plans':
         return (
-          <PlanManager
-            plans={plans}
-            onAddPlan={addPlan}
-            onUpdatePlan={updatePlan}
-            onDeletePlan={deletePlan}
+          <ReminderView
+            notes={notes}
+            onToggleReminder={(reminderId, enabled) => {
+              // 리마인더 알림 상태 토글 처리
+              console.log(
+                `리마인더 ${reminderId} 알림 ${enabled ? '켜짐' : '꺼짐'}`,
+              );
+            }}
+            onMarkCompleted={(reminderId, completed) => {
+              // 리마인더 완료 상태 처리
+              console.log(
+                `리마인더 ${reminderId} ${completed ? '완료' : '미완료'}`,
+              );
+            }}
+            onOpenNote={(noteId) => {
+              // 노트 열기
+              setSelectedNote(notes.find((note) => note.id === noteId) || null);
+              setActiveTab('notes');
+            }}
           />
         );
       case 'calendar':
@@ -429,9 +442,9 @@ const DesktopActions = ({
     <Button variant="outline" size="sm" onClick={handleCreateNote}>
       <PlusCircle className="mr-2 h-4 w-4" />새 노트
     </Button>
-    <Button variant="outline" size="sm" onClick={handleCreatePlan}>
+    {/* <Button variant="outline" size="sm" onClick={handleCreatePlan}>
       <PlusCircle className="mr-2 h-4 w-4" />새 일정
-    </Button>
+    </Button> */}
     {/* 유저 프로필 */}
     <UserProfile />
   </div>

@@ -18,6 +18,17 @@ export interface Note {
   }>;
 }
 
+export interface Reminder {
+  id: string;
+  noteId: string;
+  noteTitle: string;
+  noteContent: string;
+  reminderText: string; // @내일, @3시 등의 원본 텍스트
+  reminderTime: Date; // 파싱된 시간
+  completed: boolean;
+  enabled: boolean; // 알림 활성화 여부
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -37,15 +48,4 @@ export interface TeamMember {
   created_at: string;
   joined_at: string;
   group_name?: string;
-}
-
-export interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  tags: string[];
 }
