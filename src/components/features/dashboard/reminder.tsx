@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,9 +12,9 @@ import {
   Calendar,
   Clock,
   AlertCircle,
-  ChevronRight,
   CheckCircle2,
   CalendarClock,
+  FileText,
 } from 'lucide-react';
 import { Note, Reminder } from '@/types';
 
@@ -81,14 +82,73 @@ const formatDate = (date: Date): string => {
   return new Intl.DateTimeFormat('ko-KR', options).format(date);
 };
 
+// 리마인더 시간 파싱 함수
+const parseReminderTime = (reminderValue: string): Date | null => {
+  const now = new Date();
+
+  if (reminderValue === '오늘') {
+    const today = new Date();
+    today.setHours(9, 0, 0, 0);
+    return today;
+  } else if (reminderValue === '내일') {
+    const tomorrow = addDays(new Date(), 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    return tomorrow;
+  } else if (reminderValue === '모레') {
+    const dayAfterTomorrow = addDays(new Date(), 2);
+    dayAfterTomorrow.setHours(9, 0, 0, 0);
+    return dayAfterTomorrow;
+  }
+
+  const dateTimeMatch = reminderValue.match(/(\d{4}-\d{2}-\d{2})\s+(\d+)시/);
+  if (dateTimeMatch) {
+    try {
+      const [, dateStr, hourStr] = dateTimeMatch;
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const hour = parseInt(hourStr);
+      if (hour >= 0 && hour <= 23) {
+        return new Date(year, month - 1, day, hour, 0, 0, 0);
+      }
+    } catch (e) {
+      console.error('날짜+시간 파싱 오류:', e);
+    }
+  }
+
+  const hourMatch = reminderValue.match(/(\d+)시/);
+  if (hourMatch) {
+    const hour = parseInt(hourMatch[1]);
+    if (hour >= 0 && hour <= 23) {
+      const reminderTime = new Date();
+      reminderTime.setHours(hour, 0, 0, 0);
+
+      if (reminderTime < now) {
+        return addDays(reminderTime, 1);
+      }
+      return reminderTime;
+    }
+  }
+
+  if (reminderValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    try {
+      const [year, month, day] = reminderValue.split('-').map(Number);
+      return new Date(year, month - 1, day, 9, 0, 0, 0);
+    } catch (e) {
+      console.error('날짜 파싱 오류:', e);
+    }
+  }
+
+  return null;
+};
+
 export const ReminderView: React.FC<ReminderViewProps> = ({
   notes,
   onToggleReminder,
   onMarkCompleted,
   onOpenNote,
 }) => {
+  const { isDarkMode, isDeepDarkMode } = useThemeStore();
   const [activeFilter, setActiveFilter] = useState<
-    'today' | 'tomorrow' | 'upcoming' | 'all'
+    'today' | 'tomorrow' | 'upcoming' | 'completed'
   >('today');
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [reminderStates, setReminderStates] = useState<
@@ -99,56 +159,22 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
   // 노트에서 리마인더 추출
   useEffect(() => {
     const extractedReminders: Reminder[] = [];
-    const now = new Date();
 
     notes.forEach((note) => {
       const reminderRegex = /@([^@#\n]+?)\./g;
       const content = note.content || '';
       let match;
-      let matchIndex = 0; // 각 노트 내에서 매치된 순서를 추적
+      let matchIndex = 0;
+
       while ((match = reminderRegex.exec(content)) !== null) {
-        const reminderText = match[0];
-        const reminderValue = match[1];
-        let reminderTime: Date | null = null;
-
-        // 시간 파싱 로직
-        if (reminderValue === '오늘') {
-          reminderTime = new Date();
-          reminderTime.setHours(9, 0, 0, 0); // 기본 시간 설정
-        } else if (reminderValue === '내일') {
-          reminderTime = addDays(new Date(), 1);
-          reminderTime.setHours(9, 0, 0, 0);
-        } else if (reminderValue === '모레') {
-          reminderTime = addDays(new Date(), 2);
-          reminderTime.setHours(9, 0, 0, 0);
-        } else if (reminderValue.includes('시')) {
-          const hourMatch = reminderValue.match(/(\d+)시/);
-          if (hourMatch) {
-            const hour = parseInt(hourMatch[1]);
-            if (hour >= 0 && hour <= 23) {
-              reminderTime = new Date();
-              reminderTime.setHours(hour, 0, 0, 0);
-
-              if (reminderTime < now) {
-                reminderTime = addDays(reminderTime, 1);
-              }
-            }
-          }
-        } else if (reminderValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          try {
-            const [year, month, day] = reminderValue.split('-').map(Number);
-            reminderTime = new Date(year, month - 1, day, 9, 0, 0, 0);
-          } catch (e) {
-            console.error('날짜 파싱 오류:', e);
-          }
-        }
+        const reminderText = match[1].trim();
+        const reminderTime = parseReminderTime(reminderText);
 
         if (reminderTime) {
-          // 고유한 ID 생성: 노트ID + 리마인더텍스트 + 시간 + 매치 인덱스
           const reminderId = `${
             note.id
           }-${reminderText}-${reminderTime.getTime()}-${matchIndex}`;
-          matchIndex++; // 매치 인덱스 증가
+          matchIndex++;
 
           extractedReminders.push({
             id: reminderId,
@@ -177,25 +203,29 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     const tomorrow = startOfDay(addDays(now, 1));
 
     return reminders.filter((reminder) => {
-      if (reminder.completed) return false;
-      // 완료처리 시 코드 부분
-
       const reminderDate = startOfDay(reminder.reminderTime);
 
       switch (activeFilter) {
         case 'today':
-          return isWithinInterval(reminderDate, {
-            start: today,
-            end: endOfDay(today),
-          });
+          return (
+            !reminder.completed &&
+            isWithinInterval(reminderDate, {
+              start: today,
+              end: endOfDay(today),
+            })
+          );
         case 'tomorrow':
-          return isWithinInterval(reminderDate, {
-            start: tomorrow,
-            end: endOfDay(tomorrow),
-          });
+          return (
+            !reminder.completed &&
+            isWithinInterval(reminderDate, {
+              start: tomorrow,
+              end: endOfDay(tomorrow),
+            })
+          );
         case 'upcoming':
-          return reminderDate > tomorrow;
-        case 'all':
+          return !reminder.completed && reminderDate > tomorrow;
+        case 'completed':
+          return reminder.completed;
         default:
           return true;
       }
@@ -212,17 +242,20 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     const todayReminders: Reminder[] = [];
     const tomorrowReminders: Reminder[] = [];
     const upcomingReminders: Reminder[] = [];
+    const completedReminders: Reminder[] = [];
 
     filteredReminders.forEach((reminder) => {
       const reminderDate = startOfDay(reminder.reminderTime);
 
-      if (reminder.reminderTime < now && !isToday(reminder.reminderTime)) {
+      if (reminder.completed) {
+        completedReminders.push(reminder);
+      } else if (
+        reminder.reminderTime < now &&
+        !isToday(reminder.reminderTime)
+      ) {
         overdue.push(reminder);
       } else if (
-        isWithinInterval(reminderDate, {
-          start: today,
-          end: endOfDay(today),
-        })
+        isWithinInterval(reminderDate, { start: today, end: endOfDay(today) })
       ) {
         todayReminders.push(reminder);
       } else if (
@@ -242,6 +275,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
       today: todayReminders,
       tomorrow: tomorrowReminders,
       upcoming: upcomingReminders,
+      completed: completedReminders,
     };
   }, [filteredReminders]);
 
@@ -281,14 +315,14 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
 
     return (
       <div className="mb-6">
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-4 px-1">
           {icon}
-          <h3 className="text-sm font-medium ml-2">{title}</h3>
-          <Badge variant="secondary" className="ml-2">
+          <h3 className="text-sm font-semibold ml-2 text-gray-700">{title}</h3>
+          <Badge variant="secondary" className="ml-2 text-xs">
             {reminders.length}
           </Badge>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {reminders.map((reminder) => renderReminderCard(reminder))}
         </div>
       </div>
@@ -297,75 +331,113 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
 
   // 리마인더 카드 렌더링
   const renderReminderCard = (reminder: Reminder) => {
+    const isOverdue =
+      reminder.reminderTime < new Date() &&
+      !isToday(reminder.reminderTime) &&
+      !reminder.completed;
+
     return (
-      <Card key={reminder.id} className="overflow-hidden">
+      <Card
+        key={reminder.id}
+        className={`transition-all duration-200 hover:shadow-md border-l-4 ${
+          isOverdue
+            ? 'border-l-red-400 bg-red-50'
+            : reminder.completed
+            ? 'border-l-green-400 bg-green-50'
+            : 'border-l-blue-400 bg-white'
+        }`}
+      >
         <CardContent className="p-4">
-          <div className="flex items-start">
+          <div className="flex items-start gap-3">
+            {/* 완료 체크박스 */}
             <Button
               variant="ghost"
               size="sm"
-              className="rounded-full p-0 h-6 w-6 mr-3 mt-1"
+              className="p-0 h-6 w-6 rounded-full flex-shrink-0 mt-1"
               onClick={() =>
                 handleMarkCompleted(reminder.id, !reminder.completed)
               }
             >
               <div
-                className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
                   reminder.completed
                     ? 'bg-green-500 border-green-500 text-white'
-                    : 'border-gray-300 hover:border-gray-400'
+                    : 'border-gray-300 hover:border-green-400'
                 }`}
               >
                 {reminder.completed && <CheckCircle2 className="h-3 w-3" />}
               </div>
             </Button>
 
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
+            {/* 메인 콘텐츠 */}
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-start justify-between gap-2">
                 <h3
-                  className={`font-medium ${
-                    reminder.completed ? 'line-through text-gray-500' : ''
+                  className={`font-medium text-lg leading-tight ${
+                    reminder.completed
+                      ? 'line-through text-gray-500'
+                      : isOverdue
+                      ? 'text-red-700'
+                      : 'text-gray-900'
                   }`}
                 >
-                  {reminder.noteTitle}
+                  {reminder.reminderText}
                 </h3>
 
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="bg-blue-50 text-blue-700 border-blue-200"
-                  >
-                    {reminder.reminderText}
-                  </Badge>
-
-                  <Switch
-                    checked={reminder.enabled && globalNotifications}
-                    onCheckedChange={(checked) =>
-                      handleToggleReminder(reminder.id, checked)
-                    }
-                    disabled={!globalNotifications}
-                  />
+                {/* 알림/노트 버튼 */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {!reminder.completed && (
+                    <Switch
+                      checked={reminder.enabled && globalNotifications}
+                      onCheckedChange={(checked) =>
+                        handleToggleReminder(reminder.id, checked)
+                      }
+                      disabled={!globalNotifications}
+                      className="size-sm"
+                    />
+                  )}
 
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
                     onClick={() => onOpenNote(reminder.noteId)}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <FileText className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
-              {reminder.noteContent && (
-                <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                  {reminder.noteContent}
-                </p>
-              )}
-
-              <div className="flex items-center text-xs text-gray-500 mt-2">
-                <Clock className="h-3 w-3 mr-1" />
+              {/* 시간 정보 */}
+              <div
+                className={`flex items-center text-sm ${
+                  isOverdue ? 'text-red-600' : 'text-gray-600'
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5 mr-1.5" />
                 <span>{formatDate(reminder.reminderTime)}</span>
+                {isOverdue && (
+                  <Badge
+                    variant="destructive"
+                    className="ml-2 text-xs px-1.5 py-0.5"
+                  >
+                    지연됨
+                  </Badge>
+                )}
+              </div>
+
+              {/* 노트 정보 */}
+              <div className="text-sm text-gray-500">
+                <div className="flex items-start gap-1.5">
+                  <span className="font-medium text-gray-600 text-xs">
+                    📝 {reminder.noteTitle}
+                  </span>
+                </div>
+                {reminder.noteContent && (
+                  <p className="line-clamp-2 mt-1 text-xs opacity-75">
+                    {reminder.noteContent}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -378,7 +450,6 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
   const handleGlobalNotificationsToggle = (enabled: boolean) => {
     setGlobalNotifications(enabled);
 
-    // 모든 리마인더의 알림 상태 업데이트
     const newStates: Record<string, { completed: boolean; enabled: boolean }> =
       {};
     reminders.forEach((reminder) => {
@@ -392,12 +463,26 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center p-4 border-b">
+    <div
+      className={`flex flex-col h-full theme-${
+        isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
+      }`}
+    >
+      {/* 헤더 */}
+      <div className="bg-white border-b p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <CalendarClock className="h-6 w-6 mr-3 text-blue-600" />
+            <h1 className="text-xl font-bold text-gray-900">리마인더</h1>
+          </div>
+        </div>
+
         <Tabs
           value={activeFilter}
           onValueChange={(v) =>
-            setActiveFilter(v as 'today' | 'tomorrow' | 'upcoming' | 'all')
+            setActiveFilter(
+              v as 'today' | 'tomorrow' | 'upcoming' | 'completed',
+            )
           }
           className="w-full"
         >
@@ -405,59 +490,88 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
             <TabsTrigger value="today">오늘</TabsTrigger>
             <TabsTrigger value="tomorrow">내일</TabsTrigger>
             <TabsTrigger value="upcoming">예정</TabsTrigger>
-            <TabsTrigger value="all">전체</TabsTrigger>
+            <TabsTrigger value="completed">완료</TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* 알림 설정 */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="notifications" className="text-sm font-medium">
+              전체 알림
+            </Label>
+            <Switch
+              id="notifications"
+              checked={globalNotifications}
+              onCheckedChange={handleGlobalNotificationsToggle}
+            />
+          </div>
+          <Badge
+            variant={globalNotifications ? 'default' : 'secondary'}
+            className="text-xs"
+          >
+            {globalNotifications ? '켜짐' : '꺼짐'}
+          </Badge>
+        </div>
       </div>
 
-      <div className="p-4 border-b flex items-center justify-between">
-        <div className="flex items-center">
-          <CalendarClock className="h-5 w-5 mr-2 text-blue-600" />
-          <h2 className="font-medium">리마인더</h2>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="notifications" className="text-sm">
-            알림 {globalNotifications ? '켜짐' : '꺼짐'}
-          </Label>
-          <Switch
-            id="notifications"
-            checked={globalNotifications}
-            onCheckedChange={handleGlobalNotificationsToggle}
-          />
-        </div>
-      </div>
-
+      {/* 메인 콘텐츠 */}
       <ScrollArea className="flex-1 p-4">
         {filteredReminders.length > 0 ? (
           <div>
-            {renderReminderGroup(
-              '지연된 항목',
-              groupedReminders.overdue,
-              <AlertCircle className="h-4 w-4 text-red-500" />,
-            )}
-            {renderReminderGroup(
-              '오늘',
-              groupedReminders.today,
-              <Clock className="h-4 w-4 text-blue-600" />,
-            )}
-            {renderReminderGroup(
-              '내일',
-              groupedReminders.tomorrow,
-              <Calendar className="h-4 w-4 text-green-600" />,
-            )}
-            {renderReminderGroup(
-              '예정된 항목',
-              groupedReminders.upcoming,
-              <Calendar className="h-4 w-4 text-gray-600" />,
+            {activeFilter === 'completed' ? (
+              renderReminderGroup(
+                '완료된 항목',
+                groupedReminders.completed,
+                <CheckCircle2 className="h-4 w-4 text-green-600" />,
+              )
+            ) : (
+              <>
+                {renderReminderGroup(
+                  '지연된 항목',
+                  groupedReminders.overdue,
+                  <AlertCircle className="h-4 w-4 text-red-500" />,
+                )}
+                {renderReminderGroup(
+                  '오늘',
+                  groupedReminders.today,
+                  <Clock className="h-4 w-4 text-blue-600" />,
+                )}
+                {renderReminderGroup(
+                  '내일',
+                  groupedReminders.tomorrow,
+                  <Calendar className="h-4 w-4 text-green-600" />,
+                )}
+                {renderReminderGroup(
+                  '예정된 항목',
+                  groupedReminders.upcoming,
+                  <Calendar className="h-4 w-4 text-gray-600" />,
+                )}
+              </>
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-            <Bell className="h-12 w-12 mb-4 text-gray-300" />
-            <p>리마인더가 없습니다</p>
-            <p className="text-sm mt-2">
-              노트에 @오늘, @내일, @3시와 같은 형식으로 리마인더를 추가해보세요
+          <div className="flex flex-col items-center justify-center h-full text-center py-16">
+            <Bell className="h-16 w-16 mb-6 text-gray-300" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {activeFilter === 'completed'
+                ? '완료된 리마인더가 없습니다'
+                : '리마인더가 없습니다'}
+            </h3>
+            <p className="text-sm text-gray-500 max-w-md">
+              노트에{' '}
+              <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">
+                @오늘
+              </code>
+              ,{' '}
+              <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">
+                @내일
+              </code>
+              ,{' '}
+              <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">
+                @3시
+              </code>
+              와 같은 형식으로 리마인더를 추가해보세요
             </p>
           </div>
         )}
