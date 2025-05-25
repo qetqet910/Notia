@@ -8,6 +8,11 @@
   npm install zustand
   ```
 
+## 웹 PC앱 변환
+
+- **Ionic**
+- **Electron**
+
 ## 데이터 저장 및 동기화
 
 - **Supabase**

@@ -22,12 +22,16 @@ Supabase 수정 및 개선 O
 Editor, NoteList 한 페이지로 통합 O
 @내일 3시 띄어쓰기 하면 안 됌 해결하기 O
 
-index.ts 파일 타입으로 통합 - 제일 선순위 (editor regex 바꾸고 reminder crawling 실패중)
-usePlan 관한 것 삭제    
+index.ts 파일 타입으로 통합, 일단 Editor 호환성을 위해 EditorReminder Interface 생성 O
+editor regex 바꾸고 reminder crawling 실패중 해결 O
+usePlan 관한 것 삭제 O
+오늘/내일탭 통합 지난 탭 추가 O
+@2025-12-25 1시 시간 없으면 제대로 안 들어감 O
+리마인더 UX 추가 1시는 PM 1시 O
+
 팀스페이스 생성, 접근 레벨 설정
 태그 클릭시 행동 설정하기
 편집기에서 리마인더 시간순 정렬 - 후순위
-오늘/내일탭 통합 지난 탭 추가
 ```
 
 ====================================================================<br/>
@@ -96,10 +100,12 @@ utils: 유틸리티 함수
 public: 정적 파일
 서비스 워커, 매니페스트, 파비콘, 아이콘 등
 <br/><br/>
+
 ```js
 전체적인 구조 패턴
 이 구조는 주로 **기능 중심 아키텍처(Feature-oriented Architecture)**로 구성되어 있으며, 이는 대규모 프로젝트에서 기능별로 코드를 분리하여 유지보수성을 높이는 데 효과적입니다. 또한 아토믹 디자인 시스템(Atomic Design System) 원칙을 UI 컴포넌트에 적용하고 있는 것으로 보입니다.
 이러한 구조는 확장성이 좋고, 새로운 개발자가 프로젝트에 쉽게 적응할 수 있으며, 기능별로 분리되어 있어 코드의 응집도를 높이고 결합도를 낮추는 데 도움이 됩니다.
 ```
+
 <br/><br/>
 ![alt text](src/assets/readmeimg.png)
