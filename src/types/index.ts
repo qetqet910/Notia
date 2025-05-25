@@ -11,22 +11,27 @@ export interface Note {
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
-  reminders?: Array<{
-    text: string;
-    date: Date;
-    completed: boolean;
-  }>;
+  reminders?: EditorReminder[]; // Editor 호환성을 위해
+}
+
+export interface EditorReminder {
+  id: string;
+  text: string; // reminderText (파싱된 할일 내용)
+  date: Date; // parsedDate (파싱된 시간)
+  completed: boolean;
+  originalText: string;
 }
 
 export interface Reminder {
   id: string;
-  noteId: string;
-  noteTitle: string;
-  noteContent: string;
-  reminderText: string; // @내일, @3시 등의 원본 텍스트
-  reminderTime: Date; // 파싱된 시간
+  note_id: string;
+  owner_id: string;
+  reminder_text: string;
+  reminder_time: string; // ISO string
   completed: boolean;
-  enabled: boolean; // 알림 활성화 여부
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Team {

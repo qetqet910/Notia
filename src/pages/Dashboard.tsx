@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -13,8 +13,8 @@ import { Search } from '@/components/features/dashboard/search';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
-import { usePlans } from '@/hooks/usePlans';
 import { useSearch } from '@/hooks/useSearch';
+import { supabase } from '@/services/supabaseClient';
 import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
 import {
   PlusCircle,
@@ -27,14 +27,36 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note } from '@/types/index';
+import { Note, Reminder } from '@/types';
 
+// 상수 분리
 const NAV_ITEMS = [
   { id: 'notes', label: '노트', icon: List },
-  { id: 'plans', label: '리마인더', icon: Clock },
+  { id: 'reminder', label: '리마인더', icon: Clock },
   { id: 'calendar', label: '캘린더', icon: CalendarIcon },
   { id: 'timeline', label: '타임라인', icon: List },
 ];
+
+// 로딩 스피너 컴포넌트
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  </div>
+);
+
+// 빈 노트 상태 컴포넌트
+const EmptyNoteState = ({
+  handleCreateNote,
+}: {
+  handleCreateNote: () => void;
+}) => (
+  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+    <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
+    <Button variant="outline" className="mt-4" onClick={handleCreateNote}>
+      <PlusCircle className="mr-2 h-4 w-4" />새 노트
+    </Button>
+  </div>
+);
 
 export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('notes');
@@ -43,29 +65,25 @@ export const Dashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { isDarkMode, isDeepDarkMode } = useThemeStore();
   const { notes, addNote, updateNote, deleteNote } = useNotes();
-  const { plans, addPlan, updatePlan, deletePlan } = usePlans();
   const { searchResults, setSearchQuery } = useSearch();
-  const { isAuthenticated, isLoginLoading, checkSession } = useAuthStore();
+  const { session, isAuthenticated, isLoginLoading, checkSession } =
+    useAuthStore();
   const navigate = useNavigate();
-  const [isClient, setIsClient] = useState(false);
-  const [localLoading, setLocalLoading] = useState(true);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
 
   // 반응형 처리
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 인증 체크
+  // 인증 및 데이터 로딩 처리
   useEffect(() => {
-    setIsClient(true);
-    const checkAuthStatus = async () => {
+    const initialize = async () => {
+      setIsLoading(true);
       try {
         const isAuth = await checkSession();
         if (!isAuth) {
@@ -74,138 +92,120 @@ export const Dashboard: React.FC = () => {
       } catch (err) {
         navigate('/login');
       } finally {
-        setLocalLoading(false);
+        setIsLoading(false);
       }
     };
-    checkAuthStatus();
+    initialize();
   }, [navigate, checkSession]);
 
-  // 로딩 상태 처리
-  if (!isClient) return null;
-  if (isLoginLoading || localLoading) {
-    return <LoadingSpinner />;
-  }
-  if (!isAuthenticated) {
-    navigate('/login');
-    return null;
-  }
+  // 로그인된 사용자의 리마인더 데이터 가져오기
+  useEffect(() => {
+    // 세션과 사용자 ID가 있을 때만 fetchReminders 호출
+    if (session?.user?.id) {
+      fetchReminders(session.user.id);
+    }
+  }, [session]); // session이 변경될 때마다 실행
+
+  // Supabase에서 리마인더 가져오기
+  const fetchReminders = useCallback(async (userId: string) => {
+    const { data, error } = await supabase
+      .from('reminders')
+      .select('*')
+      .eq('owner_id', userId)
+      .order('reminder_time', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching reminders:', error);
+    } else if (data) {
+      setReminders(data);
+    }
+  }, []); // useCallback으로 감싸 불필요한 재선언 방지
+
+  // 리마인더 완료 상태 업데이트
+  const handleMarkCompleted = useCallback(
+    async (reminderId: string, completed: boolean) => {
+      const { error } = await supabase
+        .from('reminders')
+        .update({ completed, updated_at: new Date().toISOString() })
+        .eq('id', reminderId);
+
+      if (error) {
+        console.error('Error updating reminder:', error);
+      } else {
+        setReminders((prev) =>
+          prev.map((r) => (r.id === reminderId ? { ...r, completed } : r)),
+        );
+      }
+    },
+    [],
+  );
+
+  // 리마인더 활성화 상태 업데이트
+  const handleToggleReminder = useCallback(
+    async (reminderId: string, enabled: boolean) => {
+      const { error } = await supabase
+        .from('reminders')
+        .update({ enabled, updated_at: new Date().toISOString() })
+        .eq('id', reminderId);
+
+      if (error) {
+        console.error('Error toggling reminder:', error);
+      } else {
+        setReminders((prev) =>
+          prev.map((r) => (r.id === reminderId ? { ...r, enabled } : r)),
+        );
+      }
+    },
+    [],
+  );
 
   // 새 노트 생성
-  const handleCreateNote = async () => {
+  const handleCreateNote = useCallback(async () => {
     const newNoteData = {
       title: '새로운 노트',
       content: '',
       tags: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
-
     const newNote = await addNote(newNoteData);
     if (newNote) {
       setSelectedNote(newNote);
       setActiveTab('notes');
     }
-  };
+  }, [addNote]);
 
-  // 새 일정 생성
-  const handleCreatePlan = () => {
-    const newPlan: Plan = {
-      id: Date.now().toString(),
-      title: '새로운 일정',
-      description: '',
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 3600000), // 1시간 후
-      completed: false,
-      priority: 'medium',
-      tags: [],
-    };
-
-    addPlan(newPlan);
-    setActiveTab('plans');
-  };
-
-  return (
-    <div
-      id="dashboard-container"
-      className={`flex flex-col h-screen theme-${
-        isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
-      }`}
-    >
-      <div className="flex flex-col h-full bg-background text-foreground">
-        <Toaster />
-        {/* 헤더 */}
-        <header className="flex justify-between items-center px-4 py-3 border-b border-border">
-          <div className="flex items-center">
-            <h1 className="text-xl font-bold text-primary">
-              <img
-                src={isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage}
-                className="max-w-40 cursor-pointer"
-                alt="로고"
-              />
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setActiveTab('search')}
-            >
-              <SearchIcon className="h-5 w-5" />
-            </Button>
-
-            {/* 모바일 네비게이션 */}
-            {isMobile ? (
-              <MobileNavigation
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                handleCreateNote={handleCreateNote}
-                handleCreatePlan={handleCreatePlan}
-              />
-            ) : (
-              <DesktopActions
-                handleCreateNote={handleCreateNote}
-                handleCreatePlan={handleCreatePlan}
-              />
-            )}
-          </div>
-        </header>
-
-        {/* 메인 컨텐츠 */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* 사이드바 - 데스크톱만 */}
-          {!isMobile && (
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-          )}
-
-          {/* 메인 컨텐츠 영역 */}
-          <div className="flex-1 overflow-hidden">{renderMainContent()}</div>
-        </div>
-      </div>
-    </div>
+  const logoSrc = useMemo(
+    () => (isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage),
+    [isDarkMode, isDeepDarkMode],
   );
 
+  if (isLoginLoading || isLoading) {
+    return <LoadingSpinner />;
+  }
+
   // 메인 컨텐츠 렌더링 함수
-  function renderMainContent() {
+  const renderMainContent = () => {
     switch (activeTab) {
       case 'notes':
         return (
           <div className="flex h-full">
-            <div className="w-1/3 border-r border-border h-full">
+            <div className="w-full md:w-1/3 border-r border-border h-full overflow-y-auto">
               <NoteList
                 notes={notes}
                 onSelectNote={setSelectedNote}
                 selectedNote={selectedNote}
               />
             </div>
-            <div className="w-2/3 h-full">
+            <div className="hidden md:block w-2/3 h-full">
               {selectedNote ? (
                 <Editor
+                  key={selectedNote.id} // 선택된 노트가 바뀔 때마다 Editor를 새로 마운트
                   note={selectedNote}
                   onSave={updateNote}
                   onDelete={() => {
-                    deleteNote(selectedNote.id);
-                    setSelectedNote(null);
+                    if (selectedNote) {
+                      deleteNote(selectedNote.id);
+                      setSelectedNote(null);
+                    }
                   }}
                 />
               ) : (
@@ -214,39 +214,31 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         );
-      case 'plans':
+      case 'reminder':
         return (
           <ReminderView
             notes={notes}
-            onToggleReminder={(reminderId, enabled) => {
-              // 리마인더 알림 상태 토글 처리
-              console.log(
-                `리마인더 ${reminderId} 알림 ${enabled ? '켜짐' : '꺼짐'}`,
-              );
-            }}
-            onMarkCompleted={(reminderId, completed) => {
-              // 리마인더 완료 상태 처리
-              console.log(
-                `리마인더 ${reminderId} ${completed ? '완료' : '미완료'}`,
-              );
-            }}
+            reminders={reminders}
+            onToggleReminder={handleToggleReminder}
+            onMarkCompleted={handleMarkCompleted}
             onOpenNote={(noteId) => {
-              // 노트 열기
-              setSelectedNote(notes.find((note) => note.id === noteId) || null);
+              const noteToOpen =
+                notes.find((note) => note.id === noteId) || null;
+              setSelectedNote(noteToOpen);
               setActiveTab('notes');
             }}
           />
         );
-      case 'calendar':
-        return (
-          <Calendar
-            plans={plans}
-            onSelectDate={setSelectedDate}
-            selectedDate={selectedDate}
-          />
-        );
-      case 'timeline':
-        return <TimelineView plans={plans} notes={notes} />;
+      // case 'calendar':
+      //   return (
+      //     <Calendar
+      //       plans={[]} // `plans` 상태 정의 필요
+      //       onSelectDate={setSelectedDate}
+      //       selectedDate={selectedDate}
+      //     />
+      //   );
+      // case 'timeline':
+      //   return <TimelineView plans={[]} notes={notes} />; // `plans` 상태 정의 필요
       case 'search':
         return (
           <Search
@@ -261,27 +253,58 @@ export const Dashboard: React.FC = () => {
       default:
         return null;
     }
-  }
+  };
+
+  return (
+    <div
+      id="dashboard-container"
+      className={`flex flex-col h-screen theme-${
+        isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
+      }`}
+    >
+      <div className="flex flex-col h-full bg-background text-foreground">
+        <Toaster />
+        <header className="flex justify-between items-center px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center">
+            <h1 className="text-xl font-bold text-primary">
+              <img
+                src={logoSrc}
+                className="max-w-40 cursor-pointer"
+                alt="로고"
+              />
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setActiveTab('search')}
+            >
+              <SearchIcon className="h-5 w-5" />
+            </Button>
+            {isMobile ? (
+              <MobileNavigation
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                handleCreateNote={handleCreateNote}
+              />
+            ) : (
+              <DesktopActions handleCreateNote={handleCreateNote} />
+            )}
+          </div>
+        </header>
+        <div className="flex flex-1 overflow-hidden">
+          {!isMobile && (
+            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          )}
+          <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-  </div>
-);
-
-const EmptyNoteState = ({
-  handleCreateNote,
-}: {
-  handleCreateNote: () => void;
-}) => (
-  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-    <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
-    <Button variant="outline" className="mt-4" onClick={handleCreateNote}>
-      <PlusCircle className="mr-2 h-4 w-4" />새 노트
-    </Button>
-  </div>
-);
+// --- 하위 컴포넌트들 (변경 없음, 가독성을 위해 분리) ---
 
 const Sidebar = ({
   activeTab,
@@ -291,34 +314,22 @@ const Sidebar = ({
   setActiveTab: (tab: string) => void;
 }) => {
   const { notes } = useNotes();
-  const [popularTags, setPopularTags] = useState<
-    { tag: string; count: number }[]
-  >([]);
-
-  // 인기 태그 계산
-  useEffect(() => {
+  const popularTags = useMemo(() => {
     const tagCount: Record<string, number> = {};
-
-    // 모든 노트의 태그를 순회하며 카운트
     notes.forEach((note) => {
       note.tags.forEach((tag) => {
         tagCount[tag] = (tagCount[tag] || 0) + 1;
       });
     });
-
-    // 태그를 사용 빈도 순으로 정렬
-    const sortedTags = Object.entries(tagCount)
+    return Object.entries(tagCount)
       .map(([tag, count]) => ({ tag, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5); // 상위 5개만 표시
-
-    setPopularTags(sortedTags);
+      .slice(0, 5);
   }, [notes]);
 
   return (
-    <div className="w-56 border-r border-border bg-muted p-4 hidden md:block">
-      <div className="flex flex-col gap-2">
-        {/* 기본 네비게이션 아이템 */}
+    <aside className="w-56 border-r border-border bg-muted p-4 hidden md:block overflow-y-auto">
+      <nav className="flex flex-col gap-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           return (
@@ -333,45 +344,40 @@ const Sidebar = ({
             </Button>
           );
         })}
-
-        {/* 팀 스페이스 섹션 - 나중에 구현 */}
+      </nav>
+      <div className="mt-6">
+        <h3 className="text-sm font-medium text-muted-foreground mb-2">
+          팀 스페이스
+        </h3>
+        <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
+      {popularTags.length > 0 && (
         <div className="mt-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
-            팀 스페이스
+            인기 태그
           </h3>
-          <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
-
-        {/* 인기 태그 섹션 */}
-        {popularTags.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              인기 태그
-            </h3>
-            <div className="flex flex-col gap-1">
-              {popularTags.map(({ tag, count }) => (
-                <Button
-                  key={tag}
-                  variant="ghost"
-                  size="sm"
-                  className="justify-between text-xs"
-                  onClick={() => {
-                    // 태그 필터링 기능 구현
-                    setActiveTab('notes');
-                    // 태그로 필터링하는 상태 설정 (별도 구현 필요)
-                  }}
-                >
-                  <span>#{tag}</span>
-                  <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
-                    {count}
-                  </span>
-                </Button>
-              ))}
-            </div>
+          <div className="flex flex-col gap-1">
+            {popularTags.map(({ tag, count }) => (
+              <Button
+                key={tag}
+                variant="ghost"
+                size="sm"
+                className="justify-between text-xs"
+                onClick={() => {
+                  setActiveTab('notes');
+                  
+                }}
+              >
+                <span>#{tag}</span>
+                <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
+                  {count}
+                </span>
+              </Button>
+            ))}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </aside>
   );
 };
 
@@ -379,12 +385,10 @@ const MobileNavigation = ({
   activeTab,
   setActiveTab,
   handleCreateNote,
-  handleCreatePlan,
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   handleCreateNote: () => void;
-  handleCreatePlan: () => void;
 }) => (
   <Sheet>
     <SheetTrigger asChild>
@@ -393,7 +397,7 @@ const MobileNavigation = ({
       </Button>
     </SheetTrigger>
     <SheetContent side="right" className="w-64 bg-background">
-      <div className="flex flex-col gap-4 py-4">
+      <div className="flex flex-col gap-4 py-4 h-full">
         <Button
           variant="outline"
           className="w-full justify-start"
@@ -401,28 +405,23 @@ const MobileNavigation = ({
         >
           <PlusCircle className="mr-2 h-4 w-4" />새 노트
         </Button>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={handleCreatePlan}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />새 일정
-        </Button>
         <Separator />
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Button
-              key={item.id}
-              variant={activeTab === item.id ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => setActiveTab(item.id)}
-            >
-              <Icon className="mr-2 h-4 w-4" />
-              {item.label}
-            </Button>
-          );
-        })}
+        <nav className="flex flex-col gap-2">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                variant={activeTab === item.id ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                onClick={() => setActiveTab(item.id)}
+              >
+                <Icon className="mr-2 h-4 w-4" />
+                {item.label}
+              </Button>
+            );
+          })}
+        </nav>
         <div className="mt-auto">
           <UserProfile />
         </div>
@@ -433,19 +432,13 @@ const MobileNavigation = ({
 
 const DesktopActions = ({
   handleCreateNote,
-  handleCreatePlan,
 }: {
   handleCreateNote: () => void;
-  handleCreatePlan: () => void;
 }) => (
   <div className="flex items-center gap-2">
     <Button variant="outline" size="sm" onClick={handleCreateNote}>
       <PlusCircle className="mr-2 h-4 w-4" />새 노트
     </Button>
-    {/* <Button variant="outline" size="sm" onClick={handleCreatePlan}>
-      <PlusCircle className="mr-2 h-4 w-4" />새 일정
-    </Button> */}
-    {/* 유저 프로필 */}
     <UserProfile />
   </div>
 );
