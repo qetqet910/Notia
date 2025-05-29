@@ -100,11 +100,15 @@ export function UserProfile() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => navigate('/dashboard/myPage?tab=profile')}
+        >
           <User className="mr-2 h-4 w-4" />
           <span>마이페이지</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => navigate('/dashboard/myPage?tab=settings')}
+        >
           <Settings className="mr-2 h-4 w-4" />
           <span>설정</span>
         </DropdownMenuItem>
