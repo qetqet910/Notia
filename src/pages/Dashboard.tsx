@@ -62,7 +62,6 @@ export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('notes');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { isDarkMode, isDeepDarkMode } = useThemeStore();
   const { notes, addNote, updateNote, deleteNote } = useNotes();
   const { searchResults, setSearchQuery } = useSearch();
@@ -159,6 +158,41 @@ export const Dashboard: React.FC = () => {
     [],
   );
 
+  // 리마인더 삭제 업데이트
+  const handleDeleteReminder = useCallback(async (reminderId: string) => {
+  // 삭제할 리마인더 찾기
+  const reminderToDelete = reminders.find(r => r.id === reminderId);
+  if (!reminderToDelete || !selectedNote) return;
+
+  const { error } = await supabase
+    .from('reminders')
+    .delete()
+    .eq('id', reminderId);
+    
+  if (error) {
+    console.error('Error delete reminder:', error);
+    return;
+  }
+
+  // 노트 텍스트에서 리마인더 부분 제거 (@원본텍스트. 형태)
+  const updatedContent = selectedNote.content.replace(`@${reminderToDelete.original_text}.`, '');
+  
+  // 노트 업데이트
+  const updatedNote = {
+    ...selectedNote,
+    content: updatedContent
+  };
+  
+  // useNotes 훅의 updateNote 함수로 DB 업데이트
+  await updateNote(updatedNote);
+  
+  // selectedNote 상태 업데이트
+  setSelectedNote(updatedNote);
+  
+  // 리마인더 목록에서 제거
+  setReminders(prev => prev.filter(r => r.id !== reminderId));
+}, [reminders, selectedNote, updateNote]);
+
   // 새 노트 생성
   const handleCreateNote = useCallback(async () => {
     const newNoteData = {
@@ -221,6 +255,7 @@ export const Dashboard: React.FC = () => {
             reminders={reminders}
             onToggleReminder={handleToggleReminder}
             onMarkCompleted={handleMarkCompleted}
+            onDeleteReminder={handleDeleteReminder}
             onOpenNote={(noteId) => {
               const noteToOpen =
                 notes.find((note) => note.id === noteId) || null;
@@ -349,7 +384,7 @@ const Sidebar = ({
         <h3 className="text-sm font-medium text-muted-foreground mb-2">
           팀 스페이스
         </h3>
-        <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} /> */}
       </div>
       {popularTags.length > 0 && (
         <div className="mt-6">
@@ -365,7 +400,6 @@ const Sidebar = ({
                 className="justify-between text-xs"
                 onClick={() => {
                   setActiveTab('notes');
-                  
                 }}
               >
                 <span>#{tag}</span>

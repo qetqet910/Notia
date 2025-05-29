@@ -77,7 +77,7 @@ export const useNotes = () => {
               text: reminder.reminder_text,
               date: new Date(reminder.reminder_time),
               completed: reminder.completed,
-              originalText: `@${reminder.reminder_text}.`,
+              original_text: `@${reminder.reminder_text}.`,
             }),
           ) || [],
       }));
@@ -150,44 +150,45 @@ export const useNotes = () => {
 
   // 리마인더 저장/업데이트 함수
   const saveReminders = async (noteId: string, reminders: EditorReminder[]) => {
-    if (!user) return false;
+  if (!user) return false;
 
-    try {
-      // 기존 리마인더 삭제
-      await supabase
+  try {
+    // 기존 리마인더 삭제
+    await supabase
+      .from('reminders')
+      .delete()
+      .eq('note_id', noteId)
+      .eq('owner_id', user.id);
+
+    // 새 리마인더들 추가
+    if (reminders.length > 0) {
+      const koreaTime = getKoreaTimeAsUTC();
+
+      const reminderData = reminders.map((reminder) => ({
+        note_id: noteId,
+        owner_id: user.id,
+        reminder_text: reminder.text,
+        reminder_time: convertKoreaDateToUTC(reminder.date),
+        completed: reminder.completed || false,
+        enabled: true,
+        original_text: reminder.original_text, // 추가
+        created_at: koreaTime,
+        updated_at: koreaTime,
+      }));
+
+      const { error: insertError } = await supabase
         .from('reminders')
-        .delete()
-        .eq('note_id', noteId)
-        .eq('owner_id', user.id);
+        .insert(reminderData);
 
-      // 새 리마인더들 추가
-      if (reminders.length > 0) {
-        const koreaTime = getKoreaTimeAsUTC();
-
-        const reminderData = reminders.map((reminder) => ({
-          note_id: noteId,
-          owner_id: user.id,
-          reminder_text: reminder.text,
-          reminder_time: convertKoreaDateToUTC(reminder.date), // 리마인더 시간도 한국 시간대 기준으로 변환
-          completed: reminder.completed || false,
-          enabled: true,
-          created_at: koreaTime,
-          updated_at: koreaTime,
-        }));
-
-        const { error: insertError } = await supabase
-          .from('reminders')
-          .insert(reminderData);
-
-        if (insertError) throw insertError;
-      }
-
-      return true;
-    } catch (err) {
-      console.error('리마인더 저장 중 오류 발생:', err);
-      return false;
+      if (insertError) throw insertError;
     }
-  };
+
+    return true;
+  } catch (err) {
+    console.error('리마인더 저장 중 오류 발생:', err);
+    return false;
+  }
+};
 
   // 노트 업데이트 (리마인더 포함)
   const updateNote = async (updatedNote: Note) => {
@@ -371,7 +372,7 @@ export const useNotes = () => {
                   text: reminder.reminder_text,
                   date: new Date(reminder.reminder_time),
                   completed: reminder.completed,
-                  originalText: `@${reminder.reminder_text}.`,
+                  original_text: `@${reminder.reminder_text}.`,
                 }),
               ) || [],
           } as Note & { accessLevel: string }),
@@ -459,7 +460,7 @@ export const useNotes = () => {
 
       return data.map((item) => ({
         teamId: item.group_id,
-        teamName: item.user_groups.name,
+        teamName: item.user_groups,
         accessLevel: item.access_level,
       }));
     } catch (err) {

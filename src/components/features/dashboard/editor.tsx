@@ -591,12 +591,12 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
           }}
           placeholder="내용을 입력하세요...
 
-          #프로젝트 #중요
+#프로젝트 #중요
 
-          @내일 2시 팀 미팅 참석하기.
-          @1시간 코드 리뷰 완료하기.
-          @10시 양치질하기.
-          @2025-05-25 프로젝트 마감."
+@내일 2시 팀 미팅 참석하기.
+@1시간 코드 리뷰 완료하기.
+@10시 양치질하기.
+@2025-05-25 프로젝트 마감."
           className="min-h-full border-0 focus-visible:ring-0 resize-none font-mono"
           rows={20}
         />

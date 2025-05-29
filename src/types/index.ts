@@ -19,7 +19,7 @@ export interface EditorReminder {
   text: string; // reminderText (파싱된 할일 내용)
   date: Date; // parsedDate (파싱된 시간)
   completed: boolean;
-  originalText: string;
+  original_text: string;
 }
 
 export interface Reminder {
@@ -32,6 +32,7 @@ export interface Reminder {
   enabled: boolean;
   created_at: string;
   updated_at: string;
+  original_text: string; // 원본 텍스트 리마인더 삭제 이슈
 }
 
 export interface Team {

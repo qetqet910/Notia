@@ -23,6 +23,8 @@ import {
   CalendarClock,
   FileText,
   ArrowUpDown,
+  Trash2,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Note, Reminder } from '@/types';
 
@@ -43,6 +45,7 @@ interface ReminderViewProps {
   reminders: Reminder[]; // Supabase에서 가져온 리마인더들
   onToggleReminder: (reminderId: string, enabled: boolean) => void;
   onMarkCompleted: (reminderId: string, completed: boolean) => void;
+  onDeleteReminder: (reminderId: string) => void; // 삭제 함수 추가
   onOpenNote: (noteId: string) => void;
 }
 
@@ -92,15 +95,20 @@ const isWithinInterval = (
 };
 
 const formatDate = (date: Date): string => {
-  const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Seoul',
-  };
-  return new Intl.DateTimeFormat('ko-KR', options).format(date);
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+  
+  if (isToday(date)) {
+    return `오늘 ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+  } else if (isTomorrow(date)) {
+    return `내일 ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+  } else if (diffHours > 0 && diffHours < 168) { // 1주일 이내
+    const diffDays = Math.ceil(diffHours / 24);
+    return `${diffDays}일 후 ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+  } else {
+    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
 };
 
 export const ReminderView: React.FC<ReminderViewProps> = ({
@@ -108,6 +116,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
   reminders,
   onToggleReminder,
   onMarkCompleted,
+  onDeleteReminder,
   onOpenNote,
 }) => {
   const { isDarkMode, isDeepDarkMode } = useThemeStore();
@@ -160,20 +169,16 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
 
       switch (activeFilter) {
         case 'recent':
-          // 오늘과 내일 (완료되지 않은 것만)
           return (
             !reminder.completed &&
             reminderDate >= today &&
             reminderDate < dayAfterTomorrow
           );
         case 'upcoming':
-          // 모레부터 미래 (완료되지 않은 것만)
           return !reminder.completed && reminderDate >= dayAfterTomorrow;
         case 'overdue':
-          // 어제까지 (완료되지 않은 것만)
           return !reminder.completed && reminderDate < today;
         case 'completed':
-          // 완료된 것들
           return reminder.completed;
         default:
           return true;
@@ -238,6 +243,14 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     onToggleReminder(reminderId, enabled);
   };
 
+  // 리마인더 삭제
+  const handleDeleteReminder = (reminderId: string) => {
+    setInternalReminders((prev) =>
+      prev.filter((reminder) => reminder.id !== reminderId)
+    );
+    onDeleteReminder(reminderId);
+  };
+
   // 리마인더 그룹 렌더링
   const renderReminderGroup = (
     title: string,
@@ -248,10 +261,10 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
 
     return (
       <div className="mb-6">
-        <div className="flex items-center mb-4 px-1">
+        <div className="flex items-center mb-3 px-1">
           {icon}
-          <h3 className="text-sm font-semibold ml-2 text-gray-700">{title}</h3>
-          <Badge variant="secondary" className="ml-2 text-xs">
+          <h3 className="text-sm font-medium ml-2 text-gray-600">{title}</h3>
+          <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0.5">
             {reminders.length}
           </Badge>
         </div>
@@ -262,7 +275,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     );
   };
 
-  // 리마인더 카드 렌더링
+  // 리마인더 카드 렌더링 (개선된 버전)
   const renderReminderCard = (reminder: InternalReminder) => {
     const now = new Date();
     const isOverdue =
@@ -273,13 +286,13 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     return (
       <Card
         key={reminder.id}
-        className={`transition-all duration-200 hover:shadow-md border-l-4 ${
+        className={`transition-all duration-200 hover:shadow-sm border-l-3 ${
           isOverdue
             ? 'border-l-red-400'
             : reminder.completed
             ? 'border-l-green-400'
             : 'border-l-blue-400'
-        }`}
+        } ${reminder.completed ? 'opacity-70' : ''}`}
       >
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
@@ -287,7 +300,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="p-0 h-6 w-6 rounded-full flex-shrink-0 mt-1"
+              className="p-0 h-6 w-6 rounded-full flex-shrink-0 mt-0.5 hover:bg-transparent"
               onClick={() =>
                 handleMarkCompleted(reminder.id, !reminder.completed)
               }
@@ -295,23 +308,29 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
               <div
                 className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
                   reminder.completed
-                    ? 'border-green-500'
+                    ? 'border-green-500 bg-green-500'
                     : 'border-gray-300 hover:border-green-400'
                 }`}
               >
-                {reminder.completed && <CheckCircle2 className="h-3 w-3" />}
+                {reminder.completed && (
+                  <CheckCircle2 className="h-3 w-3 text-white" />
+                )}
               </div>
             </Button>
 
             {/* 메인 콘텐츠 */}
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-medium text-lg leading-tight">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3
+                  className={`font-medium text-base leading-snug ${
+                    reminder.completed ? 'line-through text-gray-500' : ''
+                  }`}
+                >
                   {reminder.reminderText}
                 </h3>
 
-                {/* 알림/노트 버튼 */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                {/* 액션 버튼들 */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   {!reminder.completed && (
                     <Switch
                       checked={reminder.enabled && globalNotifications}
@@ -319,52 +338,64 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                         handleToggleReminder(reminder.id, checked)
                       }
                       disabled={!globalNotifications}
-                      className="size-sm"
+                      className="scale-90"
                     />
                   )}
 
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+                    className="h-7 w-7 p-0 text-gray-400 hover:text-blue-600"
                     onClick={() => onOpenNote(reminder.noteId)}
                   >
                     <FileText className="h-4 w-4" />
                   </Button>
+
+                  {/* 완료된 리마인더에만 삭제 버튼 표시 */}
+                  {reminder.completed && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
+                      onClick={() => handleDeleteReminder(reminder.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
 
-              {/* 시간 정보 */}
-              <div
-                className={`flex items-center text-sm ${
-                  isOverdue ? 'text-red-600' : 'text-gray-600'
-                }`}
-              >
-                <Clock className="h-3.5 w-3.5 mr-1.5" />
-                <span>{formatDate(reminder.reminderTime)}</span>
-                {isOverdue && (
-                  <Badge
-                    variant="destructive"
-                    className="ml-2 text-xs px-1.5 py-0.5"
-                  >
-                    지연됨
-                  </Badge>
-                )}
+              {/* 시간 및 노트 정보를 한 줄에 */}
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <div
+                  className={`flex items-center ${
+                    isOverdue ? 'text-red-600' : ''
+                  }`}
+                >
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  <span>{formatDate(reminder.reminderTime)}</span>
+                  {isOverdue && (
+                    <Badge
+                      variant="destructive"
+                      className="ml-2 text-xs px-1.5 py-0.5 h-5"
+                    >
+                      지연
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center text-sm text-gray-400 max-w-36 truncate">
+                  <span>📝</span>
+                  <span className="ml-1.5 truncate">{reminder.noteTitle}</span>
+                </div>
               </div>
 
-              {/* 노트 정보 */}
-              <div className="text-sm text-gray-500">
-                <div className="flex items-start gap-1.5">
-                  <span className="font-medium text-gray-600 text-xs">
-                    📝 {reminder.noteTitle}
-                  </span>
-                </div>
-                {reminder.noteContent && (
-                  <p className="line-clamp-2 mt-1 text-xs opacity-75">
-                    {reminder.noteContent}
-                  </p>
-                )}
-              </div>
+              {/* 노트 내용 프리뷰 (선택적 표시) */}
+              {reminder.noteContent && !reminder.completed && (
+                <p className="text-sm text-gray-400 mt-2 line-clamp-1 opacity-60">
+                  {reminder.noteContent}
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -390,6 +421,21 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     );
   };
 
+  // 완료된 모든 리마인더 삭제
+  const handleDeleteAllCompleted = () => {
+    const completedIds = internalReminders
+      .filter(r => r.completed)
+      .map(r => r.id);
+    
+    completedIds.forEach(id => {
+      onDeleteReminder(id);
+    });
+    
+    setInternalReminders(prev => 
+      prev.filter(reminder => !reminder.completed)
+    );
+  };
+
   return (
     <div
       className={`flex flex-col h-full theme-${
@@ -400,9 +446,22 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
       <div className="border-b p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <CalendarClock className="h-6 w-6 mr-3 text-blue-600" />
-            <h1 className="text-xl font-bold">리마인더</h1>
+            <CalendarClock className="h-5 w-5 mr-2 text-blue-600" />
+            <h1 className="text-lg font-bold">리마인더</h1>
           </div>
+          
+          {/* 완료된 항목 일괄 삭제 버튼 */}
+          {activeFilter === 'completed' && filteredReminders.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={handleDeleteAllCompleted}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              모두 삭제
+            </Button>
+          )}
         </div>
 
         <Tabs
@@ -415,36 +474,35 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overdue">이전</TabsTrigger>
-            <TabsTrigger value="recent">최근</TabsTrigger>
-            <TabsTrigger value="upcoming">예정</TabsTrigger>
-            <TabsTrigger value="completed">완료</TabsTrigger>
+            <TabsTrigger value="overdue" className="text-xs">이전</TabsTrigger>
+            <TabsTrigger value="recent" className="text-xs">최근</TabsTrigger>
+            <TabsTrigger value="upcoming" className="text-xs">예정</TabsTrigger>
+            <TabsTrigger value="completed" className="text-xs">완료</TabsTrigger>
           </TabsList>
         </Tabs>
 
         {/* 알림 설정 */}
-        <div
-          className={`${
-            activeFilter === 'recent' ? 'mt-2' : 'mt-4'
-          } flex items-center justify-between`}
-        >
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="notifications" className="text-sm font-medium">
-              전체 알림
-            </Label>
-            <Switch
-              id="notifications"
-              checked={globalNotifications}
-              onCheckedChange={handleGlobalNotificationsToggle}
-            />
+        {activeFilter !== 'completed' && (
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="notifications" className="text-sm">
+                전체 알림
+              </Label>
+              <Switch
+                id="notifications"
+                checked={globalNotifications}
+                onCheckedChange={handleGlobalNotificationsToggle}
+                className="scale-90"
+              />
+            </div>
+            <Badge
+              variant={globalNotifications ? 'default' : 'secondary'}
+              className="text-xs px-2 py-0.5"
+            >
+              {globalNotifications ? '켜짐' : '꺼짐'}
+            </Badge>
           </div>
-          <Badge
-            variant={globalNotifications ? 'default' : 'secondary'}
-            className="text-xs"
-          >
-            {globalNotifications ? '켜짐' : '꺼짐'}
-          </Badge>
-        </div>
+        )}
       </div>
 
       {/* 메인 콘텐츠 */}
@@ -452,7 +510,6 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
         {filteredReminders.length > 0 ? (
           <div>
             {activeFilter === 'recent' ? (
-              // 최근 탭: 오늘/내일로 그룹화
               <>
                 {renderReminderGroup(
                   '오늘',
@@ -466,21 +523,18 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                 )}
               </>
             ) : activeFilter === 'upcoming' ? (
-              // 예정 탭
               renderReminderGroup(
                 '예정된 항목',
                 filteredReminders,
                 <Calendar className="h-4 w-4 text-gray-600" />,
               )
             ) : activeFilter === 'overdue' ? (
-              // 이전 탭
               renderReminderGroup(
                 '기한이 지난 항목',
                 filteredReminders,
                 <AlertCircle className="h-4 w-4 text-red-500" />,
               )
             ) : (
-              // 완료 탭
               renderReminderGroup(
                 '완료된 항목',
                 filteredReminders,
@@ -489,16 +543,16 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center py-16">
-            <Bell className="h-16 w-16 mb-6 text-gray-300" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="flex flex-col items-center justify-center h-full text-center py-12">
+            <Bell className="h-12 w-12 mb-4 text-gray-300" />
+            <h3 className="text-base font-medium text-gray-900 mb-2">
               {activeFilter === 'completed'
                 ? '완료된 리마인더가 없습니다'
                 : activeFilter === 'overdue'
                 ? '기한이 지난 리마인더가 없습니다'
                 : '리마인더가 없습니다'}
             </h3>
-            <p className="text-sm text-gray-500 max-w-md">
+            <p className="text-sm text-gray-500 max-w-xs">
               에디터에서 리마인더를 추가하면 여기에 표시됩니다
             </p>
           </div>
