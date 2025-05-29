@@ -30,7 +30,9 @@ export function ThemeProvider({
   // 경로 기반 테마 적용
   useEffect(() => {
     const root = window.document.documentElement;
-    const isDashboard = location.pathname === '/dashboard';
+    const isDashboard =
+      location.pathname === '/dashboard' ||
+      location.pathname === '/dashboard/myPage';
 
     // 클래스 변경 함수
     const applyThemeClasses = () => {
