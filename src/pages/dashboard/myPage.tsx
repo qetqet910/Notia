@@ -66,8 +66,12 @@ export const MyPage: React.FC = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [reminderNotifications, setReminderNotifications] = useState(true);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') ?? 'profile';
+
+  const handleTabChange = (newTab: string) => {
+    setSearchParams({ tab: newTab });
+  };
 
   // 통계 데이터
   const [stats, setStats] = useState({
@@ -137,7 +141,7 @@ export const MyPage: React.FC = () => {
   };
 
   const handleBackUrl = () => {
-    navigate(-1);
+    navigate('/dashboard');
   };
 
   const getInitials = (name: string) => {
@@ -192,7 +196,11 @@ export const MyPage: React.FC = () => {
         {/* 메인 콘텐츠 */}
         <ScrollArea className="flex-1">
           <div className="container mx-auto p-6 max-w-4xl">
-            <Tabs value={tab} className="w-full">
+            <Tabs
+              value={tab}
+              onValueChange={handleTabChange}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="profile">프로필</TabsTrigger>
                 <TabsTrigger value="settings">설정</TabsTrigger>

@@ -112,7 +112,7 @@ export function UserProfile() {
           <Settings className="mr-2 h-4 w-4" />
           <span>설정</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/dashboard/help')}>
           <Monitor className="mr-2 h-4 w-4" />
           <span>도움말</span>
         </DropdownMenuItem>
