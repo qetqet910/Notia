@@ -2,7 +2,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Key, AlertCircle, Loader2 } from 'lucide-react';
-import Lottie from 'lottie-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { isGenerator, motion } from 'framer-motion';
 import { supabase } from '@/services/supabaseClient';
@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/useToast';
 import { generateRandomKey, formatKey } from '@/utils/keys';
 
 import logoImage from '@/assets/images/Logo.png';
-import animationData from '@/assets/data/loginAnimation.json';
+import animation from '@/assets/data/loginAnimation.lottie';
 
 // 애니메이션 변수들
 const animations = {
@@ -583,14 +583,14 @@ export const Login: React.FC = () => {
   // 애니메이션 섹션 렌더링
   const renderAnimationSection = () => (
     <motion.div
-      className="w-full lg:w-1/2 pl-16 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
+      className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
       initial={!initialAnimationComplete ? { opacity: 0, x: 20 } : false}
       animate={!initialAnimationComplete ? { opacity: 1, x: 0 } : {}}
       transition={{ duration: 0.8, delay: 0.2 }}
     >
       <div className="w-full max-w-md">
         <motion.div
-          className="w-full md:w-4/5 mx-auto"
+          className="w-full h-full mx-auto"
           initial={!initialAnimationComplete ? { scale: 0.9 } : false}
           animate={!initialAnimationComplete ? { scale: 1 } : {}}
           transition={{
@@ -599,7 +599,12 @@ export const Login: React.FC = () => {
             bounce: 0.3,
           }}
         >
-          <Lottie animationData={animationData} className="drop-shadow-xl" />
+          <DotLottieReact
+            src={animation}
+            loop
+            autoplay
+            className="drop-shadow-xl w-full h-full transform scale-150"
+          />
         </motion.div>
 
         <motion.div
@@ -614,7 +619,7 @@ export const Login: React.FC = () => {
             animate={!initialAnimationComplete ? { opacity: 1 } : {}}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            안전하게 기록하세요
+            순간을 기록하세요,
           </motion.h2>
           <motion.p
             className="text-gray-600 mt-2 max-w-sm mx-auto"
@@ -622,9 +627,9 @@ export const Login: React.FC = () => {
             animate={!initialAnimationComplete ? { opacity: 1 } : {}}
             transition={{ duration: 0.5, delay: 0.7 }}
           >
-            Amnesia는 생각과 아이디어를 항상 안전하게 보관합니다.
+            중요한 순간으로 내일을 만들어 드릴게요.
             <br />
-            언제 어디서나 접근하세요.
+            언제, 어디서나 기록하세요.
           </motion.p>
         </motion.div>
       </div>
