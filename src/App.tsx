@@ -11,6 +11,7 @@ import { Dashboard } from '@/pages/Dashboard';
 import { DownloadPage } from '@/pages/Download';
 import { NotFound } from '@/pages/404';
 import { MyPage } from '@/pages/dashboard/myPage';
+import { HelpPage } from '@/pages/dashboard/help';
 
 import { AuthCallback } from '@/components/features/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
@@ -41,6 +42,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/help"
+            element={
+              <ProtectedRoute>
+                <HelpPage />
               </ProtectedRoute>
             }
           />

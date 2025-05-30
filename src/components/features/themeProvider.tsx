@@ -32,7 +32,8 @@ export function ThemeProvider({
     const root = window.document.documentElement;
     const isDashboard =
       location.pathname === '/dashboard' ||
-      location.pathname === '/dashboard/myPage';
+      location.pathname === '/dashboard/myPage' ||
+      location.pathname === '/dashboard/help';
 
     // 클래스 변경 함수
     const applyThemeClasses = () => {
