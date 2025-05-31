@@ -98,16 +98,31 @@ const formatDate = (date: Date): string => {
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
   const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-  
+
   if (isToday(date)) {
-    return `오늘 ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+    return `오늘 ${date.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
   } else if (isTomorrow(date)) {
-    return `내일 ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
-  } else if (diffHours > 0 && diffHours < 168) { // 1주일 이내
+    return `내일 ${date.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+  } else if (diffHours > 0 && diffHours < 168) {
+    // 1주일 이내
     const diffDays = Math.ceil(diffHours / 24);
-    return `${diffDays}일 후 ${date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+    return `${diffDays}일 후 ${date.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
   } else {
-    return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString('ko-KR', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 };
 
@@ -243,12 +258,23 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     onToggleReminder(reminderId, enabled);
   };
 
+  // 완료된 모든 리마인더 삭제
+  const handleDeleteAllCompleted = async () => {
+    const completedIds = internalReminders
+      .filter((r) => r.completed)
+      .map((r) => r.id);
+
+    for (const id of completedIds) {
+      await onDeleteReminder(id);
+    }
+  };
+
   // 리마인더 삭제
-  const handleDeleteReminder = (reminderId: string) => {
+  const handleDeleteReminder = async (reminderId: string) => {
+    await onDeleteReminder(reminderId);
     setInternalReminders((prev) =>
-      prev.filter((reminder) => reminder.id !== reminderId)
+      prev.filter((reminder) => reminder.id !== reminderId),
     );
-    onDeleteReminder(reminderId);
   };
 
   // 리마인더 그룹 렌더링
@@ -421,21 +447,6 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     );
   };
 
-  // 완료된 모든 리마인더 삭제
-  const handleDeleteAllCompleted = () => {
-    const completedIds = internalReminders
-      .filter(r => r.completed)
-      .map(r => r.id);
-    
-    completedIds.forEach(id => {
-      onDeleteReminder(id);
-    });
-    
-    setInternalReminders(prev => 
-      prev.filter(reminder => !reminder.completed)
-    );
-  };
-
   return (
     <div
       className={`flex flex-col h-full theme-${
@@ -449,7 +460,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
             <CalendarClock className="h-5 w-5 mr-2 text-blue-600" />
             <h1 className="text-lg font-bold">리마인더</h1>
           </div>
-          
+
           {/* 완료된 항목 일괄 삭제 버튼 */}
           {activeFilter === 'completed' && filteredReminders.length > 0 && (
             <Button
@@ -474,10 +485,18 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overdue" className="text-xs">이전</TabsTrigger>
-            <TabsTrigger value="recent" className="text-xs">최근</TabsTrigger>
-            <TabsTrigger value="upcoming" className="text-xs">예정</TabsTrigger>
-            <TabsTrigger value="completed" className="text-xs">완료</TabsTrigger>
+            <TabsTrigger value="overdue" className="text-xs">
+              이전
+            </TabsTrigger>
+            <TabsTrigger value="recent" className="text-xs">
+              최근
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="text-xs">
+              예정
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="text-xs">
+              완료
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 

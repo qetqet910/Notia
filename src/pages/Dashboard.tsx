@@ -63,7 +63,7 @@ export const Dashboard: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const { isDarkMode, isDeepDarkMode } = useThemeStore();
-  const { notes, addNote, updateNote, deleteNote } = useNotes();
+  const { notes, addNote, updateNote, updateNoteOnly, deleteNote } = useNotes();
   const { searchResults, setSearchQuery } = useSearch();
   const { session, isAuthenticated, isLoginLoading, checkSession } =
     useAuthStore();
@@ -159,39 +159,57 @@ export const Dashboard: React.FC = () => {
   );
 
   // 리마인더 삭제 업데이트
-  const handleDeleteReminder = useCallback(async (reminderId: string) => {
-  // 삭제할 리마인더 찾기
-  const reminderToDelete = reminders.find(r => r.id === reminderId);
-  if (!reminderToDelete || !selectedNote) return;
+  const handleDeleteReminder = useCallback(
+    async (reminderId: string) => {
+      const reminderToDelete = reminders.find((r) => r.id === reminderId);
+      if (!reminderToDelete) return;
 
-  const { error } = await supabase
-    .from('reminders')
-    .delete()
-    .eq('id', reminderId);
-    
-  if (error) {
-    console.error('Error delete reminder:', error);
-    return;
-  }
+      const targetNote = notes.find(
+        (note) => note.id === reminderToDelete.note_id,
+      );
+      if (!targetNote) return;
 
-  // 노트 텍스트에서 리마인더 부분 제거 (@원본텍스트. 형태)
-  const updatedContent = selectedNote.content.replace(`@${reminderToDelete.original_text}.`, '');
-  
-  // 노트 업데이트
-  const updatedNote = {
-    ...selectedNote,
-    content: updatedContent
-  };
-  
-  // useNotes 훅의 updateNote 함수로 DB 업데이트
-  await updateNote(updatedNote);
-  
-  // selectedNote 상태 업데이트
-  setSelectedNote(updatedNote);
-  
-  // 리마인더 목록에서 제거
-  setReminders(prev => prev.filter(r => r.id !== reminderId));
-}, [reminders, selectedNote, updateNote]);
+      // 1. DB에서 리마인더 삭제
+      const { error } = await supabase
+        .from('reminders')
+        .delete()
+        .eq('id', reminderId);
+
+      if (error) {
+        console.error('Error delete reminder:', error);
+        return;
+      }
+
+      const updatedContent = targetNote.content.replace(
+        `@${reminderToDelete.original_text}.`,
+        '',
+      );
+
+      const updatedNote = {
+        ...targetNote,
+        content: updatedContent,
+      };
+
+      // 3. 리마인더 처리 없이 노트만 업데이트
+      await updateNoteOnly(updatedNote);
+
+      // 4. selectedNote가 업데이트된 노트와 같다면 상태도 업데이트
+      if (selectedNote?.id === targetNote.id) {
+        setSelectedNote(updatedNote);
+      }
+
+      // 5. 리마인더 목록에서 제거
+      setReminders((prev) => prev.filter((r) => r.id !== reminderId));
+    },
+    [
+      reminders,
+      notes,
+      updateNoteOnly,
+      selectedNote,
+      setSelectedNote,
+      setReminders,
+    ],
+  );
 
   // 새 노트 생성
   const handleCreateNote = useCallback(async () => {

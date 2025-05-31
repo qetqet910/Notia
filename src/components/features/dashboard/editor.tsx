@@ -408,7 +408,7 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         text: r.reminderText!,
         date: r.parsedDate!,
         completed: false,
-        originalText: r.originalText,
+        original_text: r.text + ' ' + r.reminderText,
       }));
 
     const updatedNote: Note = {

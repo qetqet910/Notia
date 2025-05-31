@@ -150,45 +150,77 @@ export const useNotes = () => {
 
   // 리마인더 저장/업데이트 함수
   const saveReminders = async (noteId: string, reminders: EditorReminder[]) => {
-  if (!user) return false;
-
-  try {
-    // 기존 리마인더 삭제
-    await supabase
-      .from('reminders')
-      .delete()
-      .eq('note_id', noteId)
-      .eq('owner_id', user.id);
-
-    // 새 리마인더들 추가
-    if (reminders.length > 0) {
-      const koreaTime = getKoreaTimeAsUTC();
-
-      const reminderData = reminders.map((reminder) => ({
-        note_id: noteId,
-        owner_id: user.id,
-        reminder_text: reminder.text,
-        reminder_time: convertKoreaDateToUTC(reminder.date),
-        completed: reminder.completed || false,
-        enabled: true,
-        original_text: reminder.original_text, // 추가
-        created_at: koreaTime,
-        updated_at: koreaTime,
-      }));
-
-      const { error: insertError } = await supabase
+    if (!user) return false;
+    try {
+      // 기존 리마인더 삭제
+      await supabase
         .from('reminders')
-        .insert(reminderData);
+        .delete()
+        .eq('note_id', noteId)
+        .eq('owner_id', user.id);
 
-      if (insertError) throw insertError;
+      // 새 리마인더들 추가
+      if (reminders.length > 0) {
+        const koreaTime = getKoreaTimeAsUTC();
+        const reminderData = reminders.map((reminder) => ({
+          note_id: noteId,
+          owner_id: user.id,
+          reminder_text: reminder.text,
+          reminder_time: convertKoreaDateToUTC(reminder.date),
+          completed: reminder.completed || false,
+          enabled: true,
+          original_text: reminder.original_text, // 추가
+          created_at: koreaTime,
+          updated_at: koreaTime,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('reminders')
+          .insert(reminderData);
+
+        if (insertError) throw insertError;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('리마인더 저장 중 오류 발생:', err);
+      return false;
     }
+  };
 
-    return true;
-  } catch (err) {
-    console.error('리마인더 저장 중 오류 발생:', err);
-    return false;
-  }
-};
+  const updateNoteOnly = async (updatedNote: Note) => {
+    if (!user) return false;
+
+    try {
+      // 노트만 업데이트 (리마인더 처리 제외)
+      const { error: noteError } = await supabase
+        .from('notes')
+        .update({
+          title: updatedNote.title,
+          content: updatedNote.content,
+          tags: updatedNote.tags,
+          updated_at: getKoreaTimeAsUTC(),
+        })
+        .eq('id', updatedNote.id)
+        .eq('owner_id', user.id);
+
+      if (noteError) throw noteError;
+
+      // 상태 업데이트
+      setNotes((prevNotes) =>
+        prevNotes.map((note) =>
+          note.id === updatedNote.id
+            ? { ...updatedNote, updatedAt: new Date() }
+            : note,
+        ),
+      );
+
+      return true;
+    } catch (err) {
+      console.error('노트 업데이트 중 오류 발생:', err);
+      return false;
+    }
+  };
 
   // 노트 업데이트 (리마인더 포함)
   const updateNote = async (updatedNote: Note) => {
@@ -499,6 +531,7 @@ export const useNotes = () => {
     error,
     fetchNotes,
     addNote,
+    updateNoteOnly,
     updateNote,
     deleteNote,
     toggleReminderComplete,
