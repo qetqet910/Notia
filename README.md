@@ -33,7 +33,6 @@ editor regex 바꾸고 reminder crawling 실패중 해결 O
 에디터 마크다운 도입
 에디터 강조 이펙트 구현
 
-Note Card 분 실시간 변경
 토스터, 확인 모달 추가
 태그 클릭 이벤트 구현
 
