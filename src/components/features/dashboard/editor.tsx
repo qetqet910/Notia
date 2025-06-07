@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import mermaid from 'mermaid';
 import {
   Trash2,
   Save,
@@ -11,6 +14,9 @@ import {
   Clock,
   CheckCircle,
   HelpCircle,
+  Edit3,
+  Eye,
+  X,
 } from 'lucide-react';
 import {
   Popover,
@@ -18,29 +24,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Note, EditorReminder } from '@/types';
-import {
-  MDXEditor,
-  headingsPlugin,
-  listsPlugin,
-  quotePlugin,
-  thematicBreakPlugin,
-  markdownShortcutPlugin,
-  linkPlugin,
-  linkDialogPlugin,
-  tablePlugin,
-  codeBlockPlugin,
-  codeMirrorPlugin,
-  diffSourcePlugin,
-  toolbarPlugin,
-  UndoRedo,
-  BoldItalicUnderlineToggles,
-  CreateLink,
-  InsertTable,
-  BlockTypeSelect,
-  ListsToggle,
-  Separator,
-} from '@mdxeditor/editor';
-import '@mdxeditor/editor/style.css';
 
 interface EditorProps {
   note: Note;
@@ -56,10 +39,16 @@ interface ParsedTag {
   reminderText?: string;
 }
 
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'default',
+});
+
 export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [isDirty, setIsDirty] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     setTitle(note.title);
@@ -67,10 +56,41 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
     setIsDirty(false);
   }, [note]);
 
+  const MermaidComponent = ({ chart }: { chart: string }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    const [rendered, setRendered] = useState(false);
+
+    useEffect(() => {
+      if (ref.current && !rendered) {
+        const id = `mermaid-${Date.now()}-${Math.random()}`;
+        ref.current.innerHTML = ''; // 기존 내용 초기화
+
+        mermaid
+          .render(id, chart)
+          .then((result) => {
+            if (ref.current) {
+              ref.current.innerHTML = result.svg;
+              setRendered(true);
+            }
+          })
+          .catch((error) => {
+            console.error('Mermaid render error:', error);
+            if (ref.current) {
+              ref.current.innerHTML = `<pre class="bg-red-100 p-2 rounded text-red-700">Mermaid 렌더링 오류: ${error.message}</pre>`;
+            }
+          });
+      }
+    }, [chart, rendered]);
+
+    // chart가 변경되면 다시 렌더링
+    useEffect(() => {
+      setRendered(false);
+    }, [chart]);
+  };
+
   const parseTimeExpression = (timeText: string): Date | undefined => {
     const now = new Date();
     const timeStr = timeText.trim().toLowerCase();
-    const currentHour = now.getHours();
 
     // 시간 단위 처리 (@1시간, @30분)
     const hoursMatch = timeStr.match(/(\d+)\s*시간/);
@@ -96,14 +116,11 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
       let hour = parseInt(amPmMatch[2]);
       const minute = amPmMatch[3] ? parseInt(amPmMatch[3]) : 0;
 
-      // 자정 처리 (0시, 00시, 24시)
       if (hour === 0 || hour === 24) {
         hour = 0;
       } else if (isAm) {
-        // 오전: 12시는 0시로, 나머지는 그대로
         if (hour === 12) hour = 0;
       } else {
-        // 오후: 12시는 그대로, 나머지는 +12
         if (hour !== 12) hour += 12;
       }
 
@@ -117,7 +134,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         0,
       );
 
-      // 자정이거나 이미 지난 시간이면 내일로
       if (hour === 0 || result <= now) {
         result.setDate(result.getDate() + 1);
       }
@@ -137,16 +153,14 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         let hour = parseInt(timeMatch[2]);
         const minute = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
 
-        // 자정 처리
         if (hour === 0 || hour === 24) {
           hour = 0;
-          result.setDate(result.getDate() + 1); // 자정은 다음날
+          result.setDate(result.getDate() + 1);
         } else if (amPm === '오전') {
           if (hour === 12) hour = 0;
         } else if (amPm === '오후') {
           if (hour !== 12) hour += 12;
         } else {
-          // 오전/오후 명시 없음 - 현재 시간 기준으로 판단
           if (hour >= 1 && hour <= 11) {
             const targetTime = new Date(
               now.getFullYear(),
@@ -157,18 +171,15 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
               0,
               0,
             );
-            // 현재 시간보다 이전이면 오후로, 이후면 오전으로
             if (targetTime <= now) {
-              hour += 12; // 오후
+              hour += 12;
             }
-            // else: 오전 그대로
           }
-          // 12시, 13-23시는 그대로
         }
 
         result.setHours(hour, minute, 0, 0);
       } else {
-        result.setHours(9, 0, 0, 0); // 기본값 9시
+        result.setHours(9, 0, 0, 0);
       }
       return result;
     }
@@ -185,7 +196,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         let hour = parseInt(timeMatch[2]);
         const minute = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
 
-        // 자정 처리
         if (hour === 0 || hour === 24) {
           hour = 0;
         } else if (amPm === '오전') {
@@ -193,7 +203,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         } else if (amPm === '오후') {
           if (hour !== 12) hour += 12;
         } else {
-          // 오전/오후 명시 없음 - 1-11시는 오후로 해석
           if (hour >= 1 && hour <= 11) {
             hour += 12;
           }
@@ -201,7 +210,7 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
 
         result.setHours(hour, minute, 0, 0);
       } else {
-        result.setHours(9, 0, 0, 0); // 기본값 9시
+        result.setHours(9, 0, 0, 0);
       }
       return result;
     }
@@ -218,7 +227,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         let hour = parseInt(timeMatch[2]);
         const minute = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
 
-        // 자정 처리
         if (hour === 0 || hour === 24) {
           hour = 0;
         } else if (amPm === '오전') {
@@ -226,7 +234,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         } else if (amPm === '오후') {
           if (hour !== 12) hour += 12;
         } else {
-          // 오전/오후 명시 없음 - 1-11시는 오후로 해석
           if (hour >= 1 && hour <= 11) {
             hour += 12;
           }
@@ -234,7 +241,7 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
 
         result.setHours(hour, minute, 0, 0);
       } else {
-        result.setHours(9, 0, 0, 0); // 기본값 9시
+        result.setHours(9, 0, 0, 0);
       }
       return result;
     }
@@ -248,7 +255,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
       let hour = parseInt(hourStr);
       const minute = timeOnlyMatch[2] ? parseInt(timeOnlyMatch[2]) : 0;
 
-      // 자정 처리 (0시, 00시, 24시)
       if (hour === 0 || hour === 24) {
         hour = 0;
         const result = new Date(
@@ -263,7 +269,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         return result;
       }
 
-      // 01, 02, ... 09 형태는 오전으로 해석
       if (
         hourStr.length === 2 &&
         hourStr.startsWith('0') &&
@@ -271,9 +276,7 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         hour <= 9
       ) {
         // 01시 ~ 09시는 오전으로 해석
-        // hour는 그대로 사용 (1-9)
       } else if (hour >= 1 && hour <= 11) {
-        // 1-11시는 현재 시간 기준으로 오전/오후 판단
         const targetTime = new Date(
           now.getFullYear(),
           now.getMonth(),
@@ -284,11 +287,9 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
           0,
         );
         if (targetTime <= now) {
-          hour += 12; // 오후
+          hour += 12;
         }
-        // else: 오전 그대로
       }
-      // 12시, 13-23시는 그대로 사용
 
       const result = new Date(
         now.getFullYear(),
@@ -300,7 +301,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         0,
       );
 
-      // 현재 시간보다 이전이면 내일로 설정
       if (result <= now) {
         result.setDate(result.getDate() + 1);
       }
@@ -314,13 +314,12 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
     );
     if (fullDateTimeMatch) {
       const year = parseInt(fullDateTimeMatch[1]);
-      const month = parseInt(fullDateTimeMatch[2]) - 1; // 월은 0부터 시작
+      const month = parseInt(fullDateTimeMatch[2]) - 1;
       const day = parseInt(fullDateTimeMatch[3]);
       const amPm = fullDateTimeMatch[4];
       let hour = parseInt(fullDateTimeMatch[5]);
       const minute = fullDateTimeMatch[6] ? parseInt(fullDateTimeMatch[6]) : 0;
 
-      // 자정 처리
       if (hour === 0 || hour === 24) {
         hour = 0;
       } else if (amPm === '오전') {
@@ -328,7 +327,6 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
       } else if (amPm === '오후') {
         if (hour !== 12) hour += 12;
       } else {
-        // 오전/오후 명시 없음 - 1-11시는 오후로 해석
         if (hour >= 1 && hour <= 11) {
           hour += 12;
         }
@@ -341,19 +339,19 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
     const dateMatch = timeStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (dateMatch) {
       const year = parseInt(dateMatch[1]);
-      const month = parseInt(dateMatch[2]) - 1; // 월은 0부터 시작
+      const month = parseInt(dateMatch[2]) - 1;
       const day = parseInt(dateMatch[3]);
 
-      return new Date(year, month, day, 9, 0, 0, 0); // 기본값 9시
+      return new Date(year, month, day, 9, 0, 0, 0);
     }
 
     // MM-DD 형식
     const shortDateMatch = timeStr.match(/^(\d{1,2})-(\d{1,2})$/);
     if (shortDateMatch) {
-      const month = parseInt(shortDateMatch[1]) - 1; // 월은 0부터 시작
+      const month = parseInt(shortDateMatch[1]) - 1;
       const day = parseInt(shortDateMatch[2]);
 
-      return new Date(now.getFullYear(), month, day, 9, 0, 0, 0); // 기본값 9시
+      return new Date(now.getFullYear(), month, day, 9, 0, 0, 0);
     }
 
     return undefined;
@@ -379,20 +377,18 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
     while ((match = reminderRegex.exec(content)) !== null) {
       const fullText = match[1].trim();
 
-      // 시간 부분과 내용 부분 분리
       let timeText = '';
       let reminderText = '';
 
-      // 패턴별로 시간 부분 추출 (우선순위 순서로 배치)
       const patterns = [
-        /^(\d{4}-\d{1,2}-\d{1,2}(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/, // 날짜 형식 우선
-        /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/, // 오전/오후 명시 (분 포함)
+        /^(\d{4}-\d{1,2}-\d{1,2}(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
+        /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
         /^(내일\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
         /^(오늘\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
         /^(모레\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
         /^(\d{1,2}\s*시간)/,
         /^(\d{1,2}\s*분)/,
-        /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/, // 시간만 (분 포함)
+        /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
         /^(\d{1,2}-\d{1,2})/,
       ];
 
@@ -444,6 +440,14 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
 
     onSave(updatedNote);
     setIsDirty(false);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setTitle(note.title);
+    setContent(note.content);
+    setIsDirty(false);
+    setIsEditing(false);
   };
 
   const formatDate = (date: Date): string => {
@@ -469,9 +473,12 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header */}
       <div className="flex justify-between items-center p-4 border-b border-border">
         <div className="flex items-center">
-          <h2 className="text-lg font-semibold">편집기</h2>
+          <h2 className="text-lg font-semibold">
+            {isEditing ? '편집 중' : '미리보기'}
+          </h2>
 
           {/* 정보 아이콘 및 팝오버 */}
           <Popover>
@@ -497,55 +504,78 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
                   <p>• @00시, @0시, @24시 → 자정 (00:00)</p>
                   <p>• @2025-05-25 → 해당 날짜 09:00</p>
                 </div>
-                <h3 className="font-semibold mt-3">예시</h3>
-                <div className="space-y-1">
-                  <p>• @내일 오후 3시 30분 회의 참석하기.</p>
-                  <p>• @오전 6시 30분 기상하기.</p>
-                  <p>• @10시 양치질하기.</p>
-                  <p>• @00시 30분 보이는 건 확인하기.</p>
-                  <p>• @2025-05-25 오후 2시 프로젝트 마감.</p>
-                </div>
               </div>
             </PopoverContent>
           </Popover>
         </div>
 
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDelete(note.id)}
-            className="text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            삭제
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleSave}
-            disabled={!isDirty}
-          >
-            <Save className="h-4 w-4 mr-1" />
-            저장
-          </Button>
+          {!isEditing ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete(note.id)}
+                className="text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                삭제
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                <Edit3 className="h-4 w-4 mr-1" />
+                수정
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={handleCancel}>
+                <X className="h-4 w-4 mr-1" />
+                취소
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleSave}
+                disabled={!isDirty}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                저장
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
+      {/* Title */}
       <div className="p-4 border-b border-border">
-        <Input
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            setIsDirty(true);
-          }}
-          placeholder="제목을 입력하세요"
-          className="text-lg font-medium"
-        />
+        {isEditing ? (
+          <Input
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setIsDirty(true);
+            }}
+            placeholder="제목을 입력하세요"
+            className="text-lg font-medium"
+          />
+        ) : (
+          <h1 className="text-lg font-medium text-foreground min-h-[2.5rem] flex items-center">
+            {title || '제목 없음'}
+          </h1>
+        )}
       </div>
 
+      {/* Tags and Reminders */}
       {(parsedData.tags.length > 0 || parsedData.reminders.length > 0) && (
-        <div className="p-4 border-b border-border bg-muted/30">
+        <div
+          className={`border-b border-border bg-muted/30 transition-all duration-300 ease-in-out ${
+            isEditing ? 'p-2' : 'p-4'
+          }`}
+        >
           {parsedData.tags.length > 0 && (
             <div className="mb-3">
               <div className="flex items-center mb-2">
@@ -604,57 +634,23 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
         </div>
       )}
 
-      <div className="flex-1 p-4 relative">
-        <div className="h-full [&_.cm-editor]:h-full [&_.cm-scroller]:h-full">
-          <MDXEditor
-            markdown={content}
-            onChange={(value) => {
-              setContent(value);
-              setIsDirty(true);
-            }}
-            className="h-full dark-theme"
-            contentEditableClassName="min-h-full prose prose-sm max-w-none dark:prose-invert"
-            plugins={[
-              listsPlugin(),
-              quotePlugin(),
-              thematicBreakPlugin(),
-              markdownShortcutPlugin(),
-              linkPlugin(),
-              linkDialogPlugin(),
-              tablePlugin(),
-              codeBlockPlugin({ defaultCodeBlockLanguage: 'txt' }),
-              codeMirrorPlugin({
-                codeBlockLanguages: {
-                  js: 'JavaScript',
-                  ts: 'TypeScript',
-                  tsx: 'TypeScript React',
-                  jsx: 'JavaScript React',
-                  css: 'CSS',
-                  html: 'HTML',
-                  json: 'JSON',
-                  md: 'Markdown',
-                  txt: 'Plain Text',
-                },
-              }),
-              toolbarPlugin({
-                toolbarContents: () => (
-                  <>
-                    <UndoRedo />
-                    <Separator />
-                    <BoldItalicUnderlineToggles />
-                    <CreateLink />
-                    <Separator />
-                    <ListsToggle />
-                    <InsertTable />
-                  </>
-                ),
-              }),
-              diffSourcePlugin({
-                viewMode: 'rich-text',
-                diffMarkdown: content,
-              }),
-            ]}
-            placeholder="내용을 입력하세요...
+      {/* Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {isEditing ? (
+          <div className="absolute inset-0 flex">
+            {/* Editor */}
+            <div className="w-1/2 p-4 border-r border-border flex flex-col">
+              <div className="flex items-center mb-2">
+                <Edit3 className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span className="text-sm font-medium">편집</span>
+              </div>
+              <Textarea
+                value={content}
+                onChange={(e) => {
+                  setContent(e.target.value);
+                  setIsDirty(true);
+                }}
+                placeholder="내용을 입력하세요...
 
 #프로젝트 #중요
 
@@ -662,196 +658,244 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
 @1시간 코드 리뷰 완료하기.
 @10시 양치질하기.
 @2025-05-25 프로젝트 마감."
-          />
-        </div>
-
-        {note.reminders && note.reminders.length > 0 && (
-          <div className="mt-4 pt-4 pr-2 pl-2 border-t border-border bg-muted/20">
-            <div className="flex items-center mb-2">
-              <CheckCircle className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span className="text-sm font-medium">저장된 리마인더</span>
+                className="w-full resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-sm font-mono overflow-y-auto"
+                style={{ height: 'calc(100vh - 400px)' }}
+              />
             </div>
-            <div className="space-y-1">
-              {note.reminders.map((reminder) => (
-                <div
-                  key={reminder.id}
-                  className="flex justify-between items-center text-xs"
+
+            {/* Preview */}
+            <div className="w-1/2 p-4">
+              <div className="flex items-center mb-2">
+                <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span className="text-sm font-medium">미리보기</span>
+              </div>
+              <div className="prose prose-sm max-w-none dark:prose-invert h-full overflow-y-auto">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ children, ...props }) => (
+                      <h1 className="text-xl font-bold mb-4" {...props}>
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children, ...props }) => (
+                      <h2 className="text-lg font-semibold mb-3" {...props}>
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children, ...props }) => (
+                      <h3 className="text-base font-medium mb-2" {...props}>
+                        {children}
+                      </h3>
+                    ),
+                    p: ({ children, ...props }) => (
+                      <p className="mb-3 leading-relaxed" {...props}>
+                        {children}
+                      </p>
+                    ),
+                    ul: ({ children, ...props }) => (
+                      <ul
+                        className="list-disc list-inside mb-3 space-y-1"
+                        {...props}
+                      >
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children, ...props }) => (
+                      <ol
+                        className="list-decimal list-inside mb-3 space-y-1"
+                        {...props}
+                      >
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children, ...props }) => (
+                      <li className="leading-relaxed" {...props}>
+                        {children}
+                      </li>
+                    ),
+                    blockquote: ({ children, ...props }) => (
+                      <blockquote
+                        className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-3"
+                        {...props}
+                      >
+                        {children}
+                      </blockquote>
+                    ),
+                    code: ({ className, children, ...props }: any) => {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const language = match ? match[1] : '';
+                      const isInline = !match;
+
+                      if (!isInline && language === 'mermaid') {
+                        return <MermaidComponent chart={String(children)} />;
+                      }
+
+                      return (
+                        <code
+                          className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      );
+                    },
+                    pre: ({ children, ...props }) => (
+                      <pre
+                        className="bg-muted p-3 rounded-lg overflow-x-auto mb-3"
+                        {...props}
+                      >
+                        {children}
+                      </pre>
+                    ),
+                    table: ({ children, ...props }) => (
+                      <table
+                        className="border-collapse border border-border mb-3 w-full"
+                        {...props}
+                      >
+                        {children}
+                      </table>
+                    ),
+                    th: ({ children, ...props }) => (
+                      <th
+                        className="border border-border px-3 py-2 bg-muted font-semibold text-left"
+                        {...props}
+                      >
+                        {children}
+                      </th>
+                    ),
+                    td: ({ children, ...props }) => (
+                      <td className="border border-border px-3 py-2" {...props}>
+                        {children}
+                      </td>
+                    ),
+                    a: ({ children, ...props }) => (
+                      <a className="text-primary hover:underline" {...props}>
+                        {children}
+                      </a>
+                    ),
+                  }}
                 >
-                  <span
-                    className={
-                      reminder.completed
-                        ? 'line-through text-muted-foreground'
-                        : ''
+                  {content || '*내용이 없습니다.*'}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 h-full overflow-y-auto transition-all duration-300 ease-in-out">
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ children, ...props }) => (
+                    <h1 className="text-2xl font-bold mb-4" {...props}>
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ children, ...props }) => (
+                    <h2 className="text-xl font-semibold mb-3" {...props}>
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children, ...props }) => (
+                    <h3 className="text-lg font-medium mb-2" {...props}>
+                      {children}
+                    </h3>
+                  ),
+                  p: ({ children, ...props }) => (
+                    <p className="mb-4 leading-relaxed" {...props}>
+                      {children}
+                    </p>
+                  ),
+                  ul: ({ children, ...props }) => (
+                    <ul
+                      className="list-disc list-inside mb-4 space-y-2"
+                      {...props}
+                    >
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children, ...props }) => (
+                    <ol
+                      className="list-decimal list-inside mb-4 space-y-2"
+                      {...props}
+                    >
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ children, ...props }) => (
+                    <li className="leading-relaxed" {...props}>
+                      {children}
+                    </li>
+                  ),
+                  blockquote: ({ children, ...props }) => (
+                    <blockquote
+                      className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-4 bg-muted/30 py-2 rounded-r-lg"
+                      {...props}
+                    >
+                      {children}
+                    </blockquote>
+                  ),
+                  code: ({ className, children, ...props }: any) => {
+                    const match = /language-(\w+)/.exec(className || '');
+                    const language = match ? match[1] : '';
+                    const isInline = !match;
+
+                    if (!isInline && language === 'mermaid') {
+                      return <MermaidComponent chart={String(children)} />;
                     }
-                  >
-                    {reminder.text}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {formatDate(reminder.date)}
-                  </span>
-                </div>
-              ))}
+
+                    return (
+                      <code
+                        className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  },
+                  pre: ({ children, ...props }) => (
+                    <pre
+                      className="bg-muted p-4 rounded-lg overflow-x-auto mb-4"
+                      {...props}
+                    >
+                      {children}
+                    </pre>
+                  ),
+                  table: ({ children, ...props }) => (
+                    <table
+                      className="border-collapse border border-border mb-4 w-full"
+                      {...props}
+                    >
+                      {children}
+                    </table>
+                  ),
+                  th: ({ children, ...props }) => (
+                    <th
+                      className="border border-border px-4 py-3 bg-muted font-semibold text-left"
+                      {...props}
+                    >
+                      {children}
+                    </th>
+                  ),
+                  td: ({ children, ...props }) => (
+                    <td className="border border-border px-4 py-3" {...props}>
+                      {children}
+                    </td>
+                  ),
+                  a: ({ children, ...props }) => (
+                    <a className="text-primary hover:underline" {...props}>
+                      {children}
+                    </a>
+                  ),
+                }}
+              >
+                {content || '*내용이 없습니다.*'}
+              </ReactMarkdown>
             </div>
           </div>
         )}
       </div>
-
-      <style>{`
-        .dark-theme {
-          --mdx-color-primary: hsl(var(--primary));
-          --mdx-color-primary-contrast: hsl(var(--primary-foreground));
-          --mdx-color-secondary: hsl(var(--secondary));
-          --mdx-color-secondary-contrast: hsl(var(--secondary-foreground));
-          --mdx-color-accent: hsl(var(--accent));
-          --mdx-color-accent-contrast: hsl(var(--accent-foreground));
-          --mdx-color-bg: hsl(var(--background));
-          --mdx-color-fg: hsl(var(--foreground));
-          --mdx-color-border: hsl(var(--border));
-          --mdx-color-muted: hsl(var(--muted));
-          --mdx-color-muted-contrast: hsl(var(--muted-foreground));
-        }
-        
-        .dark .dark-theme {
-          --mdx-editor-focus-ring: hsl(var(--ring));
-        }
-        
-        .dark-theme .mdx-editor {
-          background-color: hsl(var(--background));
-          color: hsl(var(--foreground));
-          border: 1px solid hsl(var(--border));
-          border-radius: 0.5rem;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .dark-theme .mdx-editor:focus-within {
-          outline: 2px solid hsl(var(--ring));
-          outline-offset: 2px;
-        }
-        
-        .dark-theme .mdx-editor .mdx-toolbar {
-          background-color: hsl(var(--background));
-          border-bottom: 1px solid hsl(var(--border));
-        }
-        
-        .dark-theme .mdx-editor .mdx-toolbar button {
-          color: hsl(var(--foreground));
-          transition: all 0.2s ease;
-        }
-        
-        .dark-theme .mdx-editor .mdx-toolbar button:hover {
-          background-color: hsl(var(--accent));
-          color: hsl(var(--accent-foreground));
-        }
-        
-        .dark-theme .mdx-editor .mdx-content-editable {
-          background-color: transparent;
-          color: hsl(var(--foreground));
-          transition: all 0.2s ease;
-        }
-        
-        .dark-theme .mdx-editor .mdx-content-editable:focus {
-          outline: none;
-        }
-        
-        .dark-theme .mdx-editor .cm-editor {
-          background-color: hsl(var(--background));
-          color: hsl(var(--foreground));
-        }
-        
-        .dark-theme .mdx-editor .cm-editor.cm-focused {
-          outline: none;
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-content {
-          color: hsl(var(--foreground));
-          caret-color: hsl(var(--foreground));
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-line {
-          color: hsl(var(--foreground));
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-activeLine {
-          background-color: hsl(var(--accent) / 0.1);
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-selectionBackground {
-          background-color: hsl(var(--primary) / 0.2) !important;
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-cursor {
-          border-left-color: hsl(var(--foreground));
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-gutters {
-          background-color: hsl(var(--muted));
-          border-right: 1px solid hsl(var(--border));
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-lineNumbers .cm-gutterElement {
-          color: hsl(var(--muted-foreground));
-        }
-        
-        .dark-theme .mdx-editor a {
-          color: hsl(var(--primary));
-          text-decoration: underline;
-          transition: color 0.2s ease;
-        }
-        
-        .dark-theme .mdx-editor a:hover {
-          color: hsl(var(--primary) / 0.8);
-        }
-        
-        .dark-theme .mdx-editor table {
-          border-collapse: collapse;
-          border: 1px solid hsl(var(--border));
-        }
-        
-        .dark-theme .mdx-editor table th,
-        .dark-theme .mdx-editor table td {
-          border: 1px solid hsl(var(--border));
-          padding: 0.5rem;
-        }
-        
-        .dark-theme .mdx-editor table th {
-          background-color: hsl(var(--muted));
-          font-weight: 600;
-        }
-        
-        .dark-theme .mdx-editor blockquote {
-          border-left: 4px solid hsl(var(--primary));
-          padding-left: 1rem;
-          margin-left: 0;
-          color: hsl(var(--muted-foreground));
-          background-color: hsl(var(--muted) / 0.5);
-          padding: 1rem;
-          border-radius: 0.375rem;
-        }
-        
-        .dark-theme .mdx-editor ul,
-        .dark-theme .mdx-editor ol {
-          color: hsl(var(--foreground));
-        }
-        
-        .dark-theme .mdx-editor li::marker {
-          color: hsl(var(--muted-foreground));
-        }
-        
-        .dark-theme .mdx-editor [data-tooltip] {
-          background-color: hsl(var(--popover));
-          color: hsl(var(--popover-foreground));
-          border: 1px solid hsl(var(--border));
-        }
-        
-        .dark-theme .mdx-editor * {
-          transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-        }
-        
-        .dark-theme .mdx-editor .cm-editor .cm-placeholder {
-          color: hsl(var(--muted-foreground));
-          opacity: 0.7;
-        }
-      `}</style>
     </div>
   );
 };
