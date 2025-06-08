@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNoteParser } from '@/hooks/useNoteParser';
+import { useToast } from '@/hooks/useToast';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -23,12 +30,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+// import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"; // 리사이즈 패널 import
 import { Note, EditorReminder } from '@/types';
 
 interface EditorProps {
   note: Note;
   onSave: (note: Note) => void;
   onDelete: (id: string) => void;
+  isEditing: boolean; // ⭐️ 부모로부터 상태를 받음
+  setIsEditing: (isEditing: boolean) => void; // ⭐️ 부모의 상태를 제어
 }
 
 interface ParsedTag {
@@ -44,11 +54,85 @@ mermaid.initialize({
   theme: 'default',
 });
 
-export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
+const MermaidComponent = ({ chart, isEditing }: { chart: string; isEditing: boolean }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (ref.current && chart && !isEditing) {
+      // 이전 내용 초기화 
+      ref.current.innerHTML = '';
+      
+      try {
+        const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
+        
+        // DOM에서 기존 mermaid 오류 SVG 제거
+        const existingErrors = document.querySelectorAll('svg[id*="mermaid"]');
+        existingErrors.forEach(svg => {
+          if (svg.textContent?.includes('Syntax error')) {
+            svg.remove();
+          }
+        });
+        
+        mermaid.render(id, chart).then(({ svg }) => {
+          if (ref.current) {
+            ref.current.innerHTML = svg;
+          }
+        }).catch((error) => {
+          console.error('Mermaid render error:', error);
+          
+          // DOM에서 새로 생긴 오류 SVG 찾아서 이동
+          setTimeout(() => {
+            const errorSvg = document.querySelector('svg[id*="mermaid"]');
+            if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
+              if (ref.current) {
+                ref.current.appendChild(errorSvg.cloneNode(true));
+              }
+              errorSvg.remove();
+            }
+          }, 100);
+          
+          toast({
+            title: 'Mermaid 렌더링 오류',
+            description: '다이어그램 문법을 확인해주세요.',
+          });
+        });
+      } catch (error) {
+        console.error('Mermaid render error:', error);
+        
+        // DOM에서 오류 SVG 찾아서 이동
+        setTimeout(() => {
+          const errorSvg = document.querySelector('svg[id*="mermaid"]');
+          if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
+            if (ref.current) {
+              ref.current.appendChild(errorSvg.cloneNode(true));
+            }
+            errorSvg.remove();
+          }
+        }, 100);
+        
+        toast({
+          title: 'Mermaid 렌더링 오류',
+          description: '다이어그램 문법을 확인해주세요.',
+        });
+      }
+    }
+  }, [chart, isEditing]);
+
+  return <div ref={ref} className="mermaid-container" />;
+};
+
+export const Editor: React.FC<EditorProps> = ({
+  note,
+  onSave,
+  onDelete,
+  isEditing,
+  setIsEditing,
+}) => {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [isDirty, setIsDirty] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const { tags, reminders } = useNoteParser(content);
 
   useEffect(() => {
     setTitle(note.title);
@@ -56,398 +140,35 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
     setIsDirty(false);
   }, [note]);
 
-  const MermaidComponent = ({ chart }: { chart: string }) => {
-    const ref = useRef<HTMLDivElement>(null);
-    const [rendered, setRendered] = useState(false);
-
-    useEffect(() => {
-      if (ref.current && !rendered) {
-        const id = `mermaid-${Date.now()}-${Math.random()}`;
-        ref.current.innerHTML = ''; // 기존 내용 초기화
-
-        mermaid
-          .render(id, chart)
-          .then((result) => {
-            if (ref.current) {
-              ref.current.innerHTML = result.svg;
-              setRendered(true);
-            }
-          })
-          .catch((error) => {
-            console.error('Mermaid render error:', error);
-            if (ref.current) {
-              ref.current.innerHTML = `<pre class="bg-red-100 p-2 rounded text-red-700">Mermaid 렌더링 오류: ${error.message}</pre>`;
-            }
-          });
-      }
-    }, [chart, rendered]);
-
-    // chart가 변경되면 다시 렌더링
-    useEffect(() => {
-      setRendered(false);
-    }, [chart]);
-  };
-
-  const parseTimeExpression = (timeText: string): Date | undefined => {
-    const now = new Date();
-    const timeStr = timeText.trim().toLowerCase();
-
-    // 시간 단위 처리 (@1시간, @30분)
-    const hoursMatch = timeStr.match(/(\d+)\s*시간/);
-    if (hoursMatch) {
-      const result = new Date(now);
-      result.setHours(result.getHours() + parseInt(hoursMatch[1]));
-      return result;
-    }
-
-    const minutesMatch = timeStr.match(/(\d+)\s*분/);
-    if (minutesMatch) {
-      const result = new Date(now);
-      result.setMinutes(result.getMinutes() + parseInt(minutesMatch[1]));
-      return result;
-    }
-
-    // 오전/오후가 명시된 경우 처리 (분 포함)
-    const amPmMatch = timeStr.match(
-      /(오전|오후)\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
-    );
-    if (amPmMatch) {
-      const isAm = amPmMatch[1] === '오전';
-      let hour = parseInt(amPmMatch[2]);
-      const minute = amPmMatch[3] ? parseInt(amPmMatch[3]) : 0;
-
-      if (hour === 0 || hour === 24) {
-        hour = 0;
-      } else if (isAm) {
-        if (hour === 12) hour = 0;
-      } else {
-        if (hour !== 12) hour += 12;
-      }
-
-      const result = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        hour,
-        minute,
-        0,
-        0,
-      );
-
-      if (hour === 0 || result <= now) {
-        result.setDate(result.getDate() + 1);
-      }
-
-      return result;
-    }
-
-    // 한국어 날짜 처리 (오늘, 내일, 모레) - 분 포함
-    if (timeStr.includes('오늘')) {
-      const timeMatch = timeStr.match(
-        /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
-      );
-      const result = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      if (timeMatch) {
-        const amPm = timeMatch[1];
-        let hour = parseInt(timeMatch[2]);
-        const minute = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
-
-        if (hour === 0 || hour === 24) {
-          hour = 0;
-          result.setDate(result.getDate() + 1);
-        } else if (amPm === '오전') {
-          if (hour === 12) hour = 0;
-        } else if (amPm === '오후') {
-          if (hour !== 12) hour += 12;
-        } else {
-          if (hour >= 1 && hour <= 11) {
-            const targetTime = new Date(
-              now.getFullYear(),
-              now.getMonth(),
-              now.getDate(),
-              hour,
-              minute,
-              0,
-              0,
-            );
-            if (targetTime <= now) {
-              hour += 12;
-            }
-          }
-        }
-
-        result.setHours(hour, minute, 0, 0);
-      } else {
-        result.setHours(9, 0, 0, 0);
-      }
-      return result;
-    }
-
-    if (timeStr.includes('내일')) {
-      const timeMatch = timeStr.match(
-        /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
-      );
-      const result = new Date(now);
-      result.setDate(result.getDate() + 1);
-
-      if (timeMatch) {
-        const amPm = timeMatch[1];
-        let hour = parseInt(timeMatch[2]);
-        const minute = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
-
-        if (hour === 0 || hour === 24) {
-          hour = 0;
-        } else if (amPm === '오전') {
-          if (hour === 12) hour = 0;
-        } else if (amPm === '오후') {
-          if (hour !== 12) hour += 12;
-        } else {
-          if (hour >= 1 && hour <= 11) {
-            hour += 12;
-          }
-        }
-
-        result.setHours(hour, minute, 0, 0);
-      } else {
-        result.setHours(9, 0, 0, 0);
-      }
-      return result;
-    }
-
-    if (timeStr.includes('모레')) {
-      const timeMatch = timeStr.match(
-        /(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
-      );
-      const result = new Date(now);
-      result.setDate(result.getDate() + 2);
-
-      if (timeMatch) {
-        const amPm = timeMatch[1];
-        let hour = parseInt(timeMatch[2]);
-        const minute = timeMatch[3] ? parseInt(timeMatch[3]) : 0;
-
-        if (hour === 0 || hour === 24) {
-          hour = 0;
-        } else if (amPm === '오전') {
-          if (hour === 12) hour = 0;
-        } else if (amPm === '오후') {
-          if (hour !== 12) hour += 12;
-        } else {
-          if (hour >= 1 && hour <= 11) {
-            hour += 12;
-          }
-        }
-
-        result.setHours(hour, minute, 0, 0);
-      } else {
-        result.setHours(9, 0, 0, 0);
-      }
-      return result;
-    }
-
-    // 시간만 입력된 경우 (@1시, @13시, @01시, @1시 30분 등) - 분 포함
-    const timeOnlyMatch = timeStr.match(
-      /^(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?$/,
-    );
-    if (timeOnlyMatch) {
-      const hourStr = timeOnlyMatch[1];
-      let hour = parseInt(hourStr);
-      const minute = timeOnlyMatch[2] ? parseInt(timeOnlyMatch[2]) : 0;
-
-      if (hour === 0 || hour === 24) {
-        hour = 0;
-        const result = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() + 1,
-          hour,
-          minute,
-          0,
-          0,
-        );
-        return result;
-      }
-
-      if (
-        hourStr.length === 2 &&
-        hourStr.startsWith('0') &&
-        hour >= 1 &&
-        hour <= 9
-      ) {
-        // 01시 ~ 09시는 오전으로 해석
-      } else if (hour >= 1 && hour <= 11) {
-        const targetTime = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          hour,
-          minute,
-          0,
-          0,
-        );
-        if (targetTime <= now) {
-          hour += 12;
-        }
-      }
-
-      const result = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        hour,
-        minute,
-        0,
-        0,
-      );
-
-      if (result <= now) {
-        result.setDate(result.getDate() + 1);
-      }
-
-      return result;
-    }
-
-    // YYYY-MM-DD HH시 형식 - 분 포함
-    const fullDateTimeMatch = timeStr.match(
-      /(\d{4})-(\d{1,2})-(\d{1,2})\s*(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/,
-    );
-    if (fullDateTimeMatch) {
-      const year = parseInt(fullDateTimeMatch[1]);
-      const month = parseInt(fullDateTimeMatch[2]) - 1;
-      const day = parseInt(fullDateTimeMatch[3]);
-      const amPm = fullDateTimeMatch[4];
-      let hour = parseInt(fullDateTimeMatch[5]);
-      const minute = fullDateTimeMatch[6] ? parseInt(fullDateTimeMatch[6]) : 0;
-
-      if (hour === 0 || hour === 24) {
-        hour = 0;
-      } else if (amPm === '오전') {
-        if (hour === 12) hour = 0;
-      } else if (amPm === '오후') {
-        if (hour !== 12) hour += 12;
-      } else {
-        if (hour >= 1 && hour <= 11) {
-          hour += 12;
-        }
-      }
-
-      return new Date(year, month, day, hour, minute, 0, 0);
-    }
-
-    // YYYY-MM-DD 형식 (시간 없음)
-    const dateMatch = timeStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (dateMatch) {
-      const year = parseInt(dateMatch[1]);
-      const month = parseInt(dateMatch[2]) - 1;
-      const day = parseInt(dateMatch[3]);
-
-      return new Date(year, month, day, 9, 0, 0, 0);
-    }
-
-    // MM-DD 형식
-    const shortDateMatch = timeStr.match(/^(\d{1,2})-(\d{1,2})$/);
-    if (shortDateMatch) {
-      const month = parseInt(shortDateMatch[1]) - 1;
-      const day = parseInt(shortDateMatch[2]);
-
-      return new Date(now.getFullYear(), month, day, 9, 0, 0, 0);
-    }
-
-    return undefined;
-  };
-
-  const parsedData = useMemo(() => {
-    const tags: ParsedTag[] = [];
-    const reminders: ParsedTag[] = [];
-
-    // 해시태그 파싱
-    const hashtagRegex = /#([^\s#@]+)/g;
-    let match;
-    while ((match = hashtagRegex.exec(content)) !== null) {
-      tags.push({
-        text: match[1],
-        type: 'tag',
-        originalText: match[0],
-      });
-    }
-
-    // 리마인더 파싱 (@시간 내용.)
-    const reminderRegex = /@([^@#\n]+?)\./g;
-    while ((match = reminderRegex.exec(content)) !== null) {
-      const fullText = match[1].trim();
-
-      let timeText = '';
-      let reminderText = '';
-
-      const patterns = [
-        /^(\d{4}-\d{1,2}-\d{1,2}(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
-        /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-        /^(내일\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-        /^(오늘\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-        /^(모레\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-        /^(\d{1,2}\s*시간)/,
-        /^(\d{1,2}\s*분)/,
-        /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-        /^(\d{1,2}-\d{1,2})/,
-      ];
-
-      for (const pattern of patterns) {
-        const timeMatch = fullText.match(pattern);
-        if (timeMatch) {
-          timeText = timeMatch[1];
-          reminderText = fullText.substring(timeMatch[0].length).trim();
-          break;
-        }
-      }
-
-      if (reminderText) {
-        const parsedDate = parseTimeExpression(timeText);
-        reminders.push({
-          text: timeText,
-          type: 'reminder',
-          originalText: match[0],
-          parsedDate,
-          reminderText,
-        });
-      }
-    }
-
-    return { tags, reminders };
-  }, [content]);
-
   const handleSave = () => {
-    const extractedTags = parsedData.tags.map((tag) => tag.text);
-
-    const extractedReminders: EditorReminder[] = parsedData.reminders
+    const extractedTags = tags.map((tag) => tag.text);
+    const extractedReminders: EditorReminder[] = reminders
       .filter((r) => r.parsedDate && r.reminderText)
       .map((r) => ({
-        id: `${Date.now()}-${Math.random()}`,
+        id: `${note.id}-${r.originalText}`, // 더 예측 가능한 ID 생성
         text: r.reminderText!,
         date: r.parsedDate!,
         completed: false,
         original_text: r.originalText,
       }));
 
-    const updatedNote: Note = {
+    onSave({
       ...note,
       title,
       content,
       tags: extractedTags,
       reminders: extractedReminders,
       updatedAt: new Date(),
-    };
-
-    onSave(updatedNote);
+    });
     setIsDirty(false);
-    setIsEditing(false);
+    setIsEditing(false); // 부모의 상태 변경
   };
 
   const handleCancel = () => {
     setTitle(note.title);
     setContent(note.content);
     setIsDirty(false);
-    setIsEditing(false);
+    setIsEditing(false); // 부모의 상태 변경
   };
 
   const formatDate = (date: Date): string => {
@@ -518,23 +239,20 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
                 onClick={() => onDelete(note.id)}
                 className="text-destructive hover:bg-destructive/10"
               >
-                <Trash2 className="h-4 w-4 mr-1" />
-                삭제
+                <Trash2 className="h-4 w-4 mr-1" /> 삭제
               </Button>
               <Button
                 variant="default"
                 size="sm"
                 onClick={() => setIsEditing(true)}
               >
-                <Edit3 className="h-4 w-4 mr-1" />
-                수정
+                <Edit3 className="h-4 w-4 mr-1" /> 수정
               </Button>
             </>
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={handleCancel}>
-                <X className="h-4 w-4 mr-1" />
-                취소
+                <X className="h-4 w-4 mr-1" /> 취소
               </Button>
               <Button
                 variant="default"
@@ -542,8 +260,7 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
                 onClick={handleSave}
                 disabled={!isDirty}
               >
-                <Save className="h-4 w-4 mr-1" />
-                저장
+                <Save className="h-4 w-4 mr-1" /> 저장
               </Button>
             </>
           )}
@@ -570,20 +287,20 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
       </div>
 
       {/* Tags and Reminders */}
-      {(parsedData.tags.length > 0 || parsedData.reminders.length > 0) && (
+      {(tags.length > 0 || reminders.length > 0) && (
         <div
           className={`border-b border-border bg-muted/30 transition-all duration-300 ease-in-out ${
             isEditing ? 'p-2' : 'p-4'
           }`}
         >
-          {parsedData.tags.length > 0 && (
+          {tags.length > 0 && (
             <div className="mb-3">
               <div className="flex items-center mb-2">
                 <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">태그</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {parsedData.tags.map((tag, index) => (
+                {tags.map((tag, index) => (
                   <Badge key={index} variant="secondary">
                     #{tag.text}
                   </Badge>
@@ -592,14 +309,14 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
             </div>
           )}
 
-          {parsedData.reminders.length > 0 && (
+          {reminders.length > 0 && (
             <div>
               <div className="flex items-center mb-2">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">리마인더</span>
               </div>
               <div className="space-y-2">
-                {parsedData.reminders.map((reminder, index) => (
+                {reminders.map((reminder, index) => (
                   <div
                     key={index}
                     className="inline-flex mr-2 items-center gap-2 p-2 bg-background rounded-lg border border-border"
@@ -637,152 +354,163 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
       {/* Content Area */}
       <div className="flex-1 overflow-hidden">
         {isEditing ? (
-          <div className="absolute inset-0 flex">
-            {/* Editor */}
-            <div className="w-1/2 p-4 border-r border-border flex flex-col">
-              <div className="flex items-center mb-2">
-                <Edit3 className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span className="text-sm font-medium">편집</span>
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={50}>
+              <div className="p-4 h-full flex flex-col">
+                <div className="flex items-center mb-2 flex-shrink-0">
+                  <Edit3 className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span className="text-sm font-medium">편집</span>
+                </div>
+                <Textarea
+                  value={content}
+                  onChange={(e) => {
+                    setContent(e.target.value);
+                    setIsDirty(true);
+                  }}
+                  placeholder="
+  내용을 입력하세요...
+
+  #프로젝트 #중요
+
+  @내일 2시 팀 미팅 참석하기.
+  @1시간 코드 리뷰 완료하기.
+  @10시 양치질하기.
+  @2025-05-25 프로젝트 마감."
+                  className="w-full h-full flex-1 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-sm font-mono custom-scrollbar px-2"
+                  style={{ height: 'calc(100vh - 400px)' }}
+                />
               </div>
-              <Textarea
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value);
-                  setIsDirty(true);
-                }}
-                placeholder="내용을 입력하세요...
-
-#프로젝트 #중요
-
-@내일 2시 팀 미팅 참석하기.
-@1시간 코드 리뷰 완료하기.
-@10시 양치질하기.
-@2025-05-25 프로젝트 마감."
-                className="w-full resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-sm font-mono overflow-y-auto"
-                style={{ height: 'calc(100vh - 400px)' }}
-              />
-            </div>
-
-            {/* Preview */}
-            <div className="w-1/2 p-4">
-              <div className="flex items-center mb-2">
-                <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span className="text-sm font-medium">미리보기</span>
-              </div>
-              <div className="prose prose-sm max-w-none dark:prose-invert h-full overflow-y-auto">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h1: ({ children, ...props }) => (
-                      <h1 className="text-xl font-bold mb-4" {...props}>
-                        {children}
-                      </h1>
-                    ),
-                    h2: ({ children, ...props }) => (
-                      <h2 className="text-lg font-semibold mb-3" {...props}>
-                        {children}
-                      </h2>
-                    ),
-                    h3: ({ children, ...props }) => (
-                      <h3 className="text-base font-medium mb-2" {...props}>
-                        {children}
-                      </h3>
-                    ),
-                    p: ({ children, ...props }) => (
-                      <p className="mb-3 leading-relaxed" {...props}>
-                        {children}
-                      </p>
-                    ),
-                    ul: ({ children, ...props }) => (
-                      <ul
-                        className="list-disc list-inside mb-3 space-y-1"
-                        {...props}
-                      >
-                        {children}
-                      </ul>
-                    ),
-                    ol: ({ children, ...props }) => (
-                      <ol
-                        className="list-decimal list-inside mb-3 space-y-1"
-                        {...props}
-                      >
-                        {children}
-                      </ol>
-                    ),
-                    li: ({ children, ...props }) => (
-                      <li className="leading-relaxed" {...props}>
-                        {children}
-                      </li>
-                    ),
-                    blockquote: ({ children, ...props }) => (
-                      <blockquote
-                        className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-3"
-                        {...props}
-                      >
-                        {children}
-                      </blockquote>
-                    ),
-                    code: ({ className, children, ...props }: any) => {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const language = match ? match[1] : '';
-                      const isInline = !match;
-
-                      if (!isInline && language === 'mermaid') {
-                        return <MermaidComponent chart={String(children)} />;
-                      }
-
-                      return (
-                        <code
-                          className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={50}>
+              <div className="h-full overflow-y-auto custom-scrollbar p-4 pr-2">
+                <div className="flex items-center mb-2">
+                  <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span className="text-sm font-medium">미리보기</span>
+                </div>
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children, ...props }) => (
+                        <h1 className="text-xl font-bold mb-4" {...props}>
+                          {children}
+                        </h1>
+                      ),
+                      h2: ({ children, ...props }) => (
+                        <h2 className="text-lg font-semibold mb-3" {...props}>
+                          {children}
+                        </h2>
+                      ),
+                      h3: ({ children, ...props }) => (
+                        <h3 className="text-base font-medium mb-2" {...props}>
+                          {children}
+                        </h3>
+                      ),
+                      p: ({ children, ...props }) => (
+                        <p className="mb-3 leading-relaxed" {...props}>
+                          {children}
+                        </p>
+                      ),
+                      ul: ({ children, ...props }) => (
+                        <ul
+                          className="list-disc list-inside mb-3 space-y-1"
                           {...props}
                         >
                           {children}
-                        </code>
-                      );
-                    },
-                    pre: ({ children, ...props }) => (
-                      <pre
-                        className="bg-muted p-3 rounded-lg overflow-x-auto mb-3"
-                        {...props}
-                      >
-                        {children}
-                      </pre>
-                    ),
-                    table: ({ children, ...props }) => (
-                      <table
-                        className="border-collapse border border-border mb-3 w-full"
-                        {...props}
-                      >
-                        {children}
-                      </table>
-                    ),
-                    th: ({ children, ...props }) => (
-                      <th
-                        className="border border-border px-3 py-2 bg-muted font-semibold text-left"
-                        {...props}
-                      >
-                        {children}
-                      </th>
-                    ),
-                    td: ({ children, ...props }) => (
-                      <td className="border border-border px-3 py-2" {...props}>
-                        {children}
-                      </td>
-                    ),
-                    a: ({ children, ...props }) => (
-                      <a className="text-primary hover:underline" {...props}>
-                        {children}
-                      </a>
-                    ),
-                  }}
-                >
-                  {content || '*내용이 없습니다.*'}
-                </ReactMarkdown>
+                        </ul>
+                      ),
+                      ol: ({ children, ...props }) => (
+                        <ol
+                          className="list-decimal list-inside mb-3 space-y-1"
+                          {...props}
+                        >
+                          {children}
+                        </ol>
+                      ),
+                      li: ({ children, ...props }) => (
+                        <li className="leading-relaxed" {...props}>
+                          {children}
+                        </li>
+                      ),
+                      blockquote: ({ children, ...props }) => (
+                        <blockquote
+                          className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-3"
+                          {...props}
+                        >
+                          {children}
+                        </blockquote>
+                      ),
+                      code: ({ className, children, ...props }: any) => {
+                        const match = /language-(\w+)/.exec(className || '');
+                        const language = match ? match[1] : '';
+                        const isInline = !match;
+
+                        if (!isInline && language === 'mermaid') {
+                          return (
+                            <MermaidComponent
+                              chart={String(children)}
+                              isEditing={isEditing}
+                            />
+                          );
+                        }
+
+                        return (
+                          <code
+                            className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                            {...props}
+                          >
+                            {children}
+                          </code>
+                        );
+                      },
+                      pre: ({ children, ...props }) => (
+                        <pre
+                          className="bg-muted p-3 rounded-lg overflow-x-auto mb-3"
+                          {...props}
+                        >
+                          {children}
+                        </pre>
+                      ),
+                      table: ({ children, ...props }) => (
+                        <table
+                          className="border-collapse border border-border mb-3 w-full"
+                          {...props}
+                        >
+                          {children}
+                        </table>
+                      ),
+                      th: ({ children, ...props }) => (
+                        <th
+                          className="border border-border px-3 py-2 bg-muted font-semibold text-left"
+                          {...props}
+                        >
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children, ...props }) => (
+                        <td
+                          className="border border-border px-3 py-2"
+                          {...props}
+                        >
+                          {children}
+                        </td>
+                      ),
+                      a: ({ children, ...props }) => (
+                        <a className="text-primary hover:underline" {...props}>
+                          {children}
+                        </a>
+                      ),
+                    }}
+                  >
+                    {content || '*내용이 없습니다.*'}
+                  </ReactMarkdown>
+                </div>
               </div>
-            </div>
-          </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         ) : (
-          <div className="p-4 h-full overflow-y-auto transition-all duration-300 ease-in-out">
+          <div className="p-4 h-full overflow-y-auto custom-scrollbar">
             <div className="prose prose-sm max-w-none dark:prose-invert">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -842,7 +570,12 @@ export const Editor: React.FC<EditorProps> = ({ note, onSave, onDelete }) => {
                     const isInline = !match;
 
                     if (!isInline && language === 'mermaid') {
-                      return <MermaidComponent chart={String(children)} />;
+                      return (
+                        <MermaidComponent
+                          chart={String(children)}
+                          isEditing={isEditing}
+                        />
+                      );
                     }
 
                     return (

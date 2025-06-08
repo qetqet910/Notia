@@ -68,7 +68,7 @@ export const Dashboard: React.FC = () => {
   const { session, isAuthenticated, isLoginLoading, checkSession } =
     useAuthStore();
   const navigate = useNavigate();
-
+  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [reminders, setReminders] = useState<Reminder[]>([]);
 
@@ -104,6 +104,11 @@ export const Dashboard: React.FC = () => {
       fetchReminders(session.user.id);
     }
   }, [session]); // session이 변경될 때마다 실행
+
+  const handleSelectNote = (note: Note) => {
+    setSelectedNote(note);
+    setIsEditing(false); // 항상 보기 모드로 시작
+  };
 
   // Supabase에서 리마인더 가져오기
   const fetchReminders = useCallback(async (userId: string) => {
@@ -213,15 +218,12 @@ export const Dashboard: React.FC = () => {
 
   // 새 노트 생성
   const handleCreateNote = useCallback(async () => {
-    const newNoteData = {
-      title: '새로운 노트',
-      content: '',
-      tags: [],
-    };
+    const newNoteData = { title: '새로운 노트', content: '', tags: [] };
     const newNote = await addNote(newNoteData);
     if (newNote) {
       setSelectedNote(newNote);
       setActiveTab('notes');
+      setIsEditing(true); // 새 노트는 바로 편집 모드로
     }
   }, [addNote]);
 
@@ -240,25 +242,40 @@ export const Dashboard: React.FC = () => {
       case 'notes':
         return (
           <div className="flex h-full">
-            <div className="w-full md:w-1/3 border-r border-border h-full overflow-y-auto">
+            {/* ❗️ isEditing 상태에 따라 NoteList 너비가 조절됩니다. */}
+            <div
+              className={`h-full overflow-y-auto border-r border-border transition-all duration-300 ease-in-out ${
+                isEditing ? 'w-0 opacity-0 md:w-0' : 'w-full md:w-1/3'
+              }`}
+            >
               <NoteList
                 notes={notes}
-                onSelectNote={setSelectedNote}
+                onSelectNote={handleSelectNote} // 변경된 핸들러 사용
                 selectedNote={selectedNote}
               />
             </div>
-            <div className="hidden md:block w-2/3 h-full">
+
+            {/* ❗️ isEditing 상태에 따라 Editor 너비가 조절됩니다. */}
+            <div
+              className={`h-full transition-all duration-300 ease-in-out ${
+                isEditing ? 'w-full' : 'hidden md:block w-2/3'
+              }`}
+            >
               {selectedNote ? (
                 <Editor
-                  key={selectedNote.id} // 선택된 노트가 바뀔 때마다 Editor를 새로 마운트
+                  key={selectedNote.id}
                   note={selectedNote}
                   onSave={updateNote}
                   onDelete={() => {
                     if (selectedNote) {
                       deleteNote(selectedNote.id);
                       setSelectedNote(null);
+                      setIsEditing(false); // 노트 삭제 시 편집 모드 해제
                     }
                   }}
+                  // ❗️ isEditing 상태와 핸들러를 props로 전달합니다.
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
                 />
               ) : (
                 <EmptyNoteState handleCreateNote={handleCreateNote} />
@@ -347,7 +364,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          {!isMobile && (
+          {!isMobile && !isEditing && (
             <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
           )}
           <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
@@ -356,8 +373,6 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 };
-
-// --- 하위 컴포넌트들 (변경 없음, 가독성을 위해 분리) ---
 
 const Sidebar = ({
   activeTab,
