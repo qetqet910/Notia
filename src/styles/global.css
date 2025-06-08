@@ -97,3 +97,31 @@
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 }
+
+/* 스크롤이 필요한 요소에 custom-scrollbar 클래스를 추가하세요 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px; /* 스크롤바 너비 */
+  height: 8px; /* 가로 스크롤바 높이 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* 트랙 배경을 투명하게 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(
+    var(--border)
+  ); /* 스크롤바 색상 (테두리 색상과 동일하게) */
+  border-radius: 10px; /* 스크롤바를 둥글게 */
+  border: 2px solid hsl(var(--background)); /* 트랙과 약간의 여백 생성 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--ring)); /* 마우스 호버 시 색상 */
+}
+
+/* Firefox를 위한 설정 */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) hsl(var(--background));
+}
