@@ -30,8 +30,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-// import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable"; // 리사이즈 패널 import
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Note, EditorReminder } from '@/types';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface EditorProps {
   note: Note;
@@ -54,52 +66,61 @@ mermaid.initialize({
   theme: 'default',
 });
 
-const MermaidComponent = ({ chart, isEditing }: { chart: string; isEditing: boolean }) => {
+const MermaidComponent = ({
+  chart,
+  isEditing,
+}: {
+  chart: string;
+  isEditing: boolean;
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (ref.current && chart && !isEditing) {
-      // 이전 내용 초기화 
+      // 이전 내용 초기화
       ref.current.innerHTML = '';
-      
+
       try {
         const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
-        
+
         // DOM에서 기존 mermaid 오류 SVG 제거
         const existingErrors = document.querySelectorAll('svg[id*="mermaid"]');
-        existingErrors.forEach(svg => {
+        existingErrors.forEach((svg) => {
           if (svg.textContent?.includes('Syntax error')) {
             svg.remove();
           }
         });
-        
-        mermaid.render(id, chart).then(({ svg }) => {
-          if (ref.current) {
-            ref.current.innerHTML = svg;
-          }
-        }).catch((error) => {
-          console.error('Mermaid render error:', error);
-          
-          // DOM에서 새로 생긴 오류 SVG 찾아서 이동
-          setTimeout(() => {
-            const errorSvg = document.querySelector('svg[id*="mermaid"]');
-            if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
-              if (ref.current) {
-                ref.current.appendChild(errorSvg.cloneNode(true));
-              }
-              errorSvg.remove();
+
+        mermaid
+          .render(id, chart)
+          .then(({ svg }) => {
+            if (ref.current) {
+              ref.current.innerHTML = svg;
             }
-          }, 100);
-          
-          toast({
-            title: 'Mermaid 렌더링 오류',
-            description: '다이어그램 문법을 확인해주세요.',
+          })
+          .catch((error) => {
+            console.error('Mermaid render error:', error);
+
+            // DOM에서 새로 생긴 오류 SVG 찾아서 이동
+            setTimeout(() => {
+              const errorSvg = document.querySelector('svg[id*="mermaid"]');
+              if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
+                if (ref.current) {
+                  ref.current.appendChild(errorSvg.cloneNode(true));
+                }
+                errorSvg.remove();
+              }
+            }, 100);
+
+            toast({
+              title: 'Mermaid 렌더링 오류',
+              description: '다이어그램 문법을 확인해주세요.',
+            });
           });
-        });
       } catch (error) {
         console.error('Mermaid render error:', error);
-        
+
         // DOM에서 오류 SVG 찾아서 이동
         setTimeout(() => {
           const errorSvg = document.querySelector('svg[id*="mermaid"]');
@@ -110,7 +131,7 @@ const MermaidComponent = ({ chart, isEditing }: { chart: string; isEditing: bool
             errorSvg.remove();
           }
         }, 100);
-        
+
         toast({
           title: 'Mermaid 렌더링 오류',
           description: '다이어그램 문법을 확인해주세요.',
@@ -197,9 +218,11 @@ export const Editor: React.FC<EditorProps> = ({
       {/* Header */}
       <div className="flex justify-between items-center p-4 border-b border-border">
         <div className="flex items-center">
-          <h2 className="text-lg font-semibold">
-            {isEditing ? '편집 중' : '미리보기'}
-          </h2>
+          {isEditing ? (
+            <h2 className="text-lg font-semibold pl-3">편집 중</h2>
+          ) : (
+            <h2 className="text-lg font-semibold">미리보기</h2>
+          )}
 
           {/* 정보 아이콘 및 팝오버 */}
           <Popover>
@@ -233,14 +256,33 @@ export const Editor: React.FC<EditorProps> = ({
         <div className="flex gap-2">
           {!isEditing ? (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete(note.id)}
-                className="text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="h-4 w-4 mr-1" /> 삭제
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 text-destructive hover:bg-destructive/10">
+                    <Trash2 className="h-4 w-4 mr-1" /> 삭제
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      정말로 삭제하시겠습니까?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      이 작업은 되돌릴 수 없습니다. 노트가 영구적으로
+                      삭제됩니다.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => onDelete(note.id)}
+                      className="bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                    >
+                      삭제
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button
                 variant="default"
                 size="sm"
@@ -268,8 +310,8 @@ export const Editor: React.FC<EditorProps> = ({
       </div>
 
       {/* Title */}
-      <div className="p-4 border-b border-border">
-        {isEditing ? (
+      {isEditing ? (
+        <div className="p-4 border-b border-border pl-6">
           <Input
             value={title}
             onChange={(e) => {
@@ -279,12 +321,14 @@ export const Editor: React.FC<EditorProps> = ({
             placeholder="제목을 입력하세요"
             className="text-lg font-medium"
           />
-        ) : (
+        </div>
+      ) : (
+        <div className="p-4 border-b border-border">
           <h1 className="text-lg font-medium text-foreground min-h-[2.5rem] flex items-center">
             {title || '제목 없음'}
           </h1>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Tags and Reminders */}
       {(tags.length > 0 || reminders.length > 0) && (
@@ -294,7 +338,7 @@ export const Editor: React.FC<EditorProps> = ({
           }`}
         >
           {tags.length > 0 && (
-            <div className="mb-3">
+            <div className={`mb-3 ${isEditing ? 'pl-5' : ''}`}>
               <div className="flex items-center mb-2">
                 <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">태그</span>
@@ -310,7 +354,7 @@ export const Editor: React.FC<EditorProps> = ({
           )}
 
           {reminders.length > 0 && (
-            <div>
+            <div className={`mb-3 ${isEditing ? 'pl-5' : ''}`}>
               <div className="flex items-center mb-2">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">리마인더</span>
@@ -455,22 +499,36 @@ export const Editor: React.FC<EditorProps> = ({
                           );
                         }
 
+                        // 인라인 코드
+                        if (isInline) {
+                          return (
+                            <code
+                              className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                              {...props}
+                            >
+                              {children}
+                            </code>
+                          );
+                        }
+
+                        // 코드 블록
                         return (
-                          <code
-                            className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                          <SyntaxHighlighter
+                            language={language || 'text'}
+                            style={oneDark}
+                            customStyle={{
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              marginBottom: '1rem',
+                            }}
                             {...props}
                           >
-                            {children}
-                          </code>
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
                         );
                       },
                       pre: ({ children, ...props }) => (
-                        <pre
-                          className="bg-muted p-3 rounded-lg overflow-x-auto mb-3"
-                          {...props}
-                        >
-                          {children}
-                        </pre>
+                        <pre {...props}>{children}</pre>
                       ),
                       table: ({ children, ...props }) => (
                         <table
@@ -578,22 +636,36 @@ export const Editor: React.FC<EditorProps> = ({
                       );
                     }
 
+                    // 인라인 코드
+                    if (isInline) {
+                      return (
+                        <code
+                          className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                          {...props}
+                        >
+                          {children}
+                        </code>
+                      );
+                    }
+
+                    // 코드 블록
                     return (
-                      <code
-                        className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
+                      <SyntaxHighlighter
+                        language={language || 'text'}
+                        style={oneDark}
+                        customStyle={{
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          marginBottom: '1rem',
+                        }}
                         {...props}
                       >
-                        {children}
-                      </code>
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
                     );
                   },
                   pre: ({ children, ...props }) => (
-                    <pre
-                      className="bg-muted p-4 rounded-lg overflow-x-auto mb-4"
-                      {...props}
-                    >
-                      {children}
-                    </pre>
+                    <pre {...props}>{children}</pre>
                   ),
                   table: ({ children, ...props }) => (
                     <table

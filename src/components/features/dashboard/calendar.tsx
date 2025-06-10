@@ -1,246 +1,280 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Clock, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
-interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  tags: string[];
-}
+const Calendar = ({ reminders, notes, onOpenNote }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
 
-interface CalendarProps {
-  plans: Plan[];
-  selectedDate: Date;
-  onSelectDate: (date: Date) => void;
-}
+  const today = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
 
-export const Calendar: React.FC<CalendarProps> = ({ plans, selectedDate, onSelectDate }) => {
-  const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
-  const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
+  // 월의 첫날과 마지막날 계산
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+  const startingDayOfWeek = firstDayOfMonth.getDay();
+  const daysInMonth = lastDayOfMonth.getDate();
 
-  // Helper to get priority color
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
-  };
+  // 이전 달 마지막 몇 일 계산
+  const lastDayOfPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
-  // Get first day of the month
-  const getFirstDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month, 1).getDay();
-  };
+  const monthNames = [
+    '1월',
+    '2월',
+    '3월',
+    '4월',
+    '5월',
+    '6월',
+    '7월',
+    '8월',
+    '9월',
+    '10월',
+    '11월',
+    '12월',
+  ];
 
-  // Get number of days in the month
-  const getDaysInMonth = (year: number, month: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-  // Switch to previous month
-  const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
-  };
-
-  // Switch to next month
-  const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
-  };
-
-  // Check if a date has plans
-  const getDatePlans = (date: Date) => {
-    return plans.filter(plan => {
-      const planStart = new Date(plan.startDate);
-      const planEnd = new Date(plan.endDate);
-      return (
-        date.getDate() === planStart.getDate() &&
-        date.getMonth() === planStart.getMonth() &&
-        date.getFullYear() === planStart.getFullYear()
-      );
+  // 날짜별 리마인더 그룹화
+  const getRemindersByDate = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return reminders.filter((reminder) => {
+      const reminderDate = new Date(reminder.reminder_time)
+        .toISOString()
+        .split('T')[0];
+      return reminderDate === dateStr;
     });
   };
 
-  // Format date for display
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long',
-    }).format(date);
+  // 선택된 날짜의 리마인더들
+  const selectedDateReminders = selectedDate
+    ? getRemindersByDate(selectedDate)
+    : [];
+
+  // 이전/다음 달로 이동
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
   };
 
-  // Render calendar
-  const renderCalendar = () => {
-    const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
-    const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-    const days = [];
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+  };
 
-    // Day names
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  // 오늘로 이동
+  const goToToday = () => {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+  };
 
-    // Render day names
-    const dayNamesRow = (
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {dayNames.map((day, index) => (
+  // 캘린더 셀 생성
+  const renderCalendarCells = () => {
+    const cells = [];
+
+    // 이전 달의 마지막 며칠
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+      const day = lastDayOfPrevMonth - i;
+      cells.push(
+        <div
+          key={`prev-${day}`}
+          className="h-24 p-1 text-muted-foreground bg-muted/30"
+        >
+          <div className="text-sm">{day}</div>
+        </div>,
+      );
+    }
+
+    // 현재 달
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(currentYear, currentMonth, day);
+      const isToday = cellDate.toDateString() === today.toDateString();
+      const isSelected =
+        selectedDate && cellDate.toDateString() === selectedDate.toDateString();
+      const dayReminders = getRemindersByDate(cellDate);
+
+      cells.push(
+        <div
+          key={day}
+          className={`h-24 p-1 border border-border cursor-pointer hover:bg-accent transition-colors ${
+            isToday ? 'bg-primary/10 border-primary' : ''
+          } ${isSelected ? 'bg-accent' : ''}`}
+          onClick={() =>
+            setSelectedDate(
+              selectedDate &&
+                cellDate.toDateString() === selectedDate.toDateString()
+                ? null
+                : cellDate,
+            )
+          }
+        >
           <div
-            key={`day-name-${index}`}
-            className={`text-center text-sm font-medium p-2 ${
-              index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : ''
-            }`}
+            className={`text-sm font-medium ${isToday ? 'text-primary' : ''}`}
           >
             {day}
           </div>
-        ))}
-      </div>
-    );
-
-    let rows = [];
-    let cells = [];
-
-    // Empty cells for days before the first day of the month
-    for (let i = 0; i < firstDay; i++) {
-      cells.push(<div key={`empty-${i}`} className="p-2"></div>);
+          <div className="mt-1 space-y-1">
+            {dayReminders.slice(0, 2).map((reminder) => (
+              <div
+                key={reminder.id}
+                className={`text-xs p-1 rounded truncate ${
+                  reminder.completed
+                    ? 'bg-muted text-muted-foreground line-through'
+                    : 'bg-primary/20 text-primary'
+                }`}
+                title={reminder.reminder_text}
+              >
+                <Clock className="w-3 h-3 inline mr-1" />
+                {reminder.reminder_text.length > 15
+                  ? `${reminder.reminder_text.substring(0, 15)}...`
+                  : reminder.reminder_text}
+              </div>
+            ))}
+            {dayReminders.length > 2 && (
+              <div className="text-xs text-muted-foreground">
+                +{dayReminders.length - 2}개 더
+              </div>
+            )}
+          </div>
+        </div>,
+      );
     }
 
-    // Cells for days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentYear, currentMonth, day);
-      const isToday = date.toDateString() === new Date().toDateString();
-      const isSelected = date.toDateString() === selectedDate.toDateString();
-      const dayPlans = getDatePlans(date);
-      
+    // 다음 달의 첫 며칠
+    const totalCells = cells.length;
+    const remainingCells = 42 - totalCells; // 6주 * 7일
+    for (let day = 1; day <= remainingCells; day++) {
       cells.push(
         <div
-          key={`day-${day}`}
-          className={`p-1 text-center cursor-pointer transition-colors min-h-16
-            ${isToday ? 'bg-blue-100' : ''}
-            ${isSelected ? 'bg-primary/20 font-bold' : ''}
-            hover:bg-muted`}
-          onClick={() => onSelectDate(date)}
+          key={`next-${day}`}
+          className="h-24 p-1 text-muted-foreground bg-muted/30"
         >
-          <div className={`text-sm mb-1 ${
-            date.getDay() === 0 ? 'text-red-500' : date.getDay() === 6 ? 'text-blue-500' : ''
-          }`}>
-            {day}
-          </div>
-          {dayPlans.length > 0 && (
-            <div className="flex flex-col gap-1">
-              {dayPlans.slice(0, 2).map(plan => (
-                <div
-                  key={plan.id}
-                  className={`text-xs p-1 rounded truncate ${getPriorityColor(plan.priority)} text-white`}
-                >
-                  {plan.title}
-                </div>
-              ))}
-              {dayPlans.length > 2 && (
-                <div className="text-xs text-center">+ {dayPlans.length - 2} 더</div>
-              )}
-            </div>
-          )}
-        </div>
-      );
-
-      // Start new row after every 7 cells
-      if ((firstDay + day) % 7 === 0) {
-        rows.push(
-          <div key={`row-${day}`} className="grid grid-cols-7 gap-1">
-            {cells}
-          </div>
-        );
-        cells = [];
-      }
-    }
-
-    // Add remaining cells to last row
-    if (cells.length > 0) {
-      rows.push(
-        <div key="last-row" className="grid grid-cols-7 gap-1">
-          {cells}
-        </div>
+          <div className="text-sm">{day}</div>
+        </div>,
       );
     }
 
-    return (
-      <div>
-        {dayNamesRow}
-        <div className="space-y-1">{rows}</div>
-      </div>
-    );
+    return cells;
   };
 
-  // Get selected date plans
-  const selectedDatePlans = getDatePlans(selectedDate);
-
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">캘린더</h2>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={prevMonth}>
-              <ChevronLeft className="h-4 w-4" />
+    <div className="flex h-full">
+      {/* 캘린더 영역 */}
+      <div className="flex-1 p-4">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold">
+              {currentYear}년 {monthNames[currentMonth]}
+            </h2>
+            <Button variant="outline" size="sm" onClick={goToToday}>
+              오늘
             </Button>
-            <div className="font-medium">
-              {`${currentYear}년 ${currentMonth + 1}월`}
-            </div>
-            <Button variant="outline" size="icon" onClick={nextMonth}>
-              <ChevronRight className="h-4 w-4" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={goToNextMonth}>
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
-        <div>{renderCalendar()}</div>
-      </div>
-      <div className="p-4">
-        <div className="flex items-center mb-2">
-          <CalendarIcon className="h-4 w-4 mr-2" />
-          <h3 className="font-medium">{formatDate(selectedDate)}</h3>
+
+        {/* 요일 헤더 */}
+        <div className="grid grid-cols-7 mb-2">
+          {dayNames.map((day) => (
+            <div
+              key={day}
+              className="p-2 text-center font-medium text-muted-foreground"
+            >
+              {day}
+            </div>
+          ))}
         </div>
-        <ScrollArea className="h-48">
-          {selectedDatePlans.length === 0 ? (
-            <div className="text-center text-muted-foreground p-4">
-              일정이 없습니다
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {selectedDatePlans.map(plan => (
-                <Card key={plan.id}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center">
-                      <div className={`w-2 h-2 rounded-full mr-2 ${getPriorityColor(plan.priority)}`}></div>
-                      <div className="font-medium">{plan.title}</div>
-                    </div>
-                    {plan.description && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        {plan.description}
+
+        {/* 캘린더 그리드 */}
+        <div className="grid grid-cols-7 border border-border">
+          {renderCalendarCells()}
+        </div>
+      </div>
+
+      {/* 사이드바 - 선택된 날짜의 상세 정보 */}
+      <div
+        className={`border-l border-border bg-muted/30 transition-all duration-300 ease-in-out overflow-hidden ${
+          selectedDate ? 'w-80 opacity-100' : 'w-0 opacity-0'
+        }`}
+      >
+        {selectedDate && (
+          <div className="p-4 w-80">
+            <h3 className="text-lg font-semibold mb-4">
+              {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일
+            </h3>
+
+            {selectedDateReminders.length > 0 ? (
+              <div className="space-y-3">
+                {selectedDateReminders.map((reminder) => {
+                  const note = notes.find((n) => n.id === reminder.note_id);
+                  const reminderTime = new Date(reminder.reminder_time);
+
+                  return (
+                    <div
+                      key={reminder.id}
+                      className={`p-3 rounded-lg border ${
+                        reminder.completed
+                          ? 'bg-muted/50 text-muted-foreground'
+                          : 'bg-background'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge
+                          variant={reminder.completed ? 'secondary' : 'default'}
+                        >
+                          {reminder.completed ? '완료' : '대기중'}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {reminderTime.toLocaleTimeString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
+
+                      <p
+                        className={`text-sm mb-2 ${
+                          reminder.completed ? 'line-through' : ''
+                        }`}
+                      >
+                        {reminder.reminder_text}
+                      </p>
+
+                      {note && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-0 h-auto text-left justify-start"
+                          onClick={() => onOpenNote(note.id)}
+                        >
+                          <FileText className="w-3 h-3 mr-1" />
+                          <span className="text-xs text-muted-foreground truncate">
+                            {note.title}
+                          </span>
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">
+                이 날짜에는 리마인더가 없습니다.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+export default Calendar;

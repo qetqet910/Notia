@@ -7,8 +7,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { NoteList } from '@/components/features/dashboard/noteList';
 import { Editor } from '@/components/features/dashboard/editor';
 import { ReminderView } from '@/components/features/dashboard/reminder';
-import { Calendar } from '@/components/features/dashboard/calendar';
-import { TimelineView } from '@/components/features/dashboard/timelineView';
+import Calendar from '@/components/features/dashboard/calendar';
+import TimelineView from '@/components/features/dashboard/timelineView';
 import { Search } from '@/components/features/dashboard/search';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
@@ -299,16 +299,32 @@ export const Dashboard: React.FC = () => {
             }}
           />
         );
-      // case 'calendar':
-      //   return (
-      //     <Calendar
-      //       plans={[]} // `plans` 상태 정의 필요
-      //       onSelectDate={setSelectedDate}
-      //       selectedDate={selectedDate}
-      //     />
-      //   );
-      // case 'timeline':
-      //   return <TimelineView plans={[]} notes={notes} />; // `plans` 상태 정의 필요
+      case 'calendar':
+        return (
+          <Calendar
+            reminders={reminders}
+            notes={notes}
+            onOpenNote={(noteId) => {
+              const noteToOpen =
+                notes.find((note) => note.id === noteId) || null;
+              setSelectedNote(noteToOpen);
+              setActiveTab('notes');
+            }}
+          />
+        );
+      case 'timeline':
+        return (
+          <TimelineView
+            notes={notes}
+            reminders={reminders}
+            onOpenNote={(noteId) => {
+              const noteToOpen =
+                notes.find((note) => note.id === noteId) || null;
+              setSelectedNote(noteToOpen);
+              setActiveTab('notes');
+            }}
+          />
+        );
       case 'search':
         return (
           <Search

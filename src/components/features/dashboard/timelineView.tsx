@@ -1,267 +1,284 @@
-import React, { useState } from 'react';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, isSameDay, addDays, startOfDay, endOfDay } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import { Calendar, FileText, ArrowLeft, ArrowRight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { FileText, Clock, Calendar, Tag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+const TimelineView = ({ notes, reminders, onOpenNote }) => {
+  const [filter, setFilter] = useState('all'); // all, notes, reminders
+  const [sortBy, setSortBy] = useState('date'); // date, title
 
-interface Plan {
-  id: string;
-  title: string;
-  description: string;
-  startDate: Date;
-  endDate: Date;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  tags: string[];
-}
+  // 노트와 리마인더를 통합하여 타임라인 데이터 생성
+  const timelineData = useMemo(() => {
+    const items = [];
 
-interface TimelineViewProps {
-  plans: Plan[];
-  notes: Note[];
-}
-
-export const TimelineView: React.FC<TimelineViewProps> = ({ plans, notes }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month'>('day');
-  
-  const priorityColors = {
-    low: 'bg-blue-100 text-blue-800 border-blue-200',
-    medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    high: 'bg-red-100 text-red-800 border-red-200'
-  };
-
-  const getTimelineItems = () => {
-    let startDate, endDate;
-    
-    if (timeRange === 'day') {
-      startDate = startOfDay(currentDate);
-      endDate = endOfDay(currentDate);
-    } else if (timeRange === 'week') {
-      startDate = startOfDay(currentDate);
-      endDate = endOfDay(addDays(currentDate, 6));
-    } else {
-      startDate = startOfDay(currentDate);
-      endDate = endOfDay(addDays(currentDate, 29));
-    }
-    
-    const plansInRange = plans.filter(plan => 
-      plan.startDate <= endDate && plan.endDate >= startDate
-    );
-    
-    const notesInRange = notes.filter(note => 
-      note.createdAt >= startDate && note.createdAt <= endDate
-    );
-    
-    // Combine and sort items
-    const timelineItems = [
-      ...plansInRange.map(plan => ({
-        type: 'plan' as const,
-        id: plan.id,
-        title: plan.title,
-        description: plan.description,
-        date: plan.startDate,
-        tags: plan.tags,
-        priority: plan.priority,
-        completed: plan.completed
-      })),
-      ...notesInRange.map(note => ({
-        type: 'note' as const,
-        id: note.id,
+    // 노트 추가
+    notes.forEach(note => {
+      items.push({
+        id: `note-${note.id}`,
+        type: 'note',
         title: note.title,
         content: note.content,
-        date: note.createdAt,
-        tags: note.tags
-      }))
-    ].sort((a, b) => a.date.getTime() - b.date.getTime());
-    
-    return timelineItems;
-  };
-  
-  const timelineItems = getTimelineItems();
-  
-  const handlePrevious = () => {
-    if (timeRange === 'day') {
-      setCurrentDate(prev => addDays(prev, -1));
-    } else if (timeRange === 'week') {
-      setCurrentDate(prev => addDays(prev, -7));
-    } else {
-      setCurrentDate(prev => addDays(prev, -30));
-    }
-  };
-  
-  const handleNext = () => {
-    if (timeRange === 'day') {
-      setCurrentDate(prev => addDays(prev, 1));
-    } else if (timeRange === 'week') {
-      setCurrentDate(prev => addDays(prev, 7));
-    } else {
-      setCurrentDate(prev => addDays(prev, 30));
-    }
-  };
-  
-  const getDateRangeText = () => {
-    if (timeRange === 'day') {
-      return format(currentDate, 'PPP', { locale: ko });
-    } else if (timeRange === 'week') {
-      const endDate = addDays(currentDate, 6);
-      return `${format(currentDate, 'PPP', { locale: ko })} - ${format(endDate, 'PPP', { locale: ko })}`;
-    } else {
-      const endDate = addDays(currentDate, 29);
-      return `${format(currentDate, 'PPP', { locale: ko })} - ${format(endDate, 'PPP', { locale: ko })}`;
-    }
-  };
-  
-  // Function to group items by date for better organization
-  const groupItemsByDate = () => {
-    const grouped: Record<string, typeof timelineItems> = {};
-    
-    timelineItems.forEach(item => {
-      const dateKey = format(item.date, 'yyyy-MM-dd');
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(item);
+        date: new Date(note.updated_at || note.created_at),
+        tags: note.tags || [],
+        noteId: note.id,
+        originalData: note
+      });
     });
-    
-    return Object.entries(grouped).map(([date, items]) => ({
-      date: new Date(date),
-      items
-    }));
-  };
-  
-  const groupedItems = groupItemsByDate();
 
-  return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
-        <div className="flex justify-between items-center mb-4">
-          <Button variant="outline" size="sm" onClick={handlePrevious}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            이전
-          </Button>
-          
-          <h2 className="text-lg font-semibold">
-            {getDateRangeText()}
-          </h2>
-          
-          <Button variant="outline" size="sm" onClick={handleNext}>
-            다음
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Button>
+    // 리마인더 추가
+    reminders.forEach(reminder => {
+      const relatedNote = notes.find(n => n.id === reminder.note_id);
+      items.push({
+        id: `reminder-${reminder.id}`,
+        type: 'reminder',
+        title: reminder.reminder_text,
+        content: reminder.original_text,
+        date: new Date(reminder.reminder_time),
+        completed: reminder.completed,
+        enabled: reminder.enabled,
+        noteId: reminder.note_id,
+        noteTitle: relatedNote?.title || '알 수 없는 노트',
+        originalData: reminder
+      });
+    });
+
+    // 필터링
+    let filteredItems = items;
+    if (filter === 'notes') {
+      filteredItems = items.filter(item => item.type === 'note');
+    } else if (filter === 'reminders') {
+      filteredItems = items.filter(item => item.type === 'reminder');
+    }
+
+    // 정렬
+    filteredItems.sort((a, b) => {
+      if (sortBy === 'date') {
+        return b.date - a.date; // 최신순
+      } else {
+        return a.title.localeCompare(b.title);
+      }
+    });
+
+    return filteredItems;
+  }, [notes, reminders, filter, sortBy]);
+
+  // 날짜별로 그룹화
+  const groupedData = useMemo(() => {
+    const groups = {};
+    
+    timelineData.forEach(item => {
+      const dateKey = item.date.toISOString().split('T')[0];
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(item);
+    });
+
+    return Object.entries(groups).sort(([a], [b]) => new Date(b) - new Date(a));
+  }, [timelineData]);
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return '오늘';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return '어제';
+    } else {
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const renderTimelineItem = (item) => {
+    const isNote = item.type === 'note';
+    
+    return (
+      <div
+        key={item.id}
+        className={`ml-6 pb-6 border-l-2 pl-4 relative ${
+          isNote ? 'border-blue-200 dark:border-blue-800' : 'border-orange-200 dark:border-orange-800'
+        }`}
+      >
+        {/* 타임라인 점 */}
+        <div
+          className={`absolute -left-2 w-4 h-4 rounded-full border-2 border-background ${
+            isNote ? 'bg-blue-500 dark:bg-blue-400' : 'bg-orange-500 dark:bg-orange-400'
+          }`}
+        />
+
+        {/* 시간 */}
+        <div className="text-xs text-muted-foreground mb-2">
+          {formatTime(item.date)}
         </div>
-        
-        <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as 'day' | 'week' | 'month')}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="day">일간</TabsTrigger>
-            <TabsTrigger value="week">주간</TabsTrigger>
-            <TabsTrigger value="month">월간</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-      
-      <ScrollArea className="flex-1">
-        <div className="p-6">
-          {groupedItems.length > 0 ? (
-            <div className="relative">
-              {/* Timeline connector */}
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-muted" />
-              
-              <div className="space-y-8">
-                {groupedItems.map(group => (
-                  <div key={format(group.date, 'yyyy-MM-dd')} className="relative">
-                    {/* Date marker */}
-                    <div className="flex items-center mb-4 relative z-10">
-                      <div className="h-8 w-8 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                        <Calendar className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="ml-4 py-1 px-3 bg-muted rounded-md">
-                        <h3 className="font-medium">{format(group.date, 'PPP', { locale: ko })}</h3>
-                      </div>
-                    </div>
-                    
-                    {/* Timeline items for this date */}
-                    <div className="space-y-4 ml-12">
-                      {group.items.map(item => (
-                        <Card key={`${item.type}-${item.id}`} className="overflow-hidden relative">
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                                item.type === 'plan' 
-                                  ? item.completed
-                                    ? 'bg-green-100 text-green-800 border border-green-200'
-                                    : priorityColors[item.priority]
-                                  : 'bg-purple-100 text-purple-800 border border-purple-200'
-                              }`}>
-                                {item.type === 'plan' ? (
-                                  <Calendar className="h-4 w-4" />
-                                ) : (
-                                  <FileText className="h-4 w-4" />
-                                )}
-                              </div>
-                              
-                              <div className="flex-1">
-                                <div className="flex items-center">
-                                  <h4 className={`font-medium ${
-                                    item.type === 'plan' && item.completed ? 'line-through text-muted-foreground' : ''
-                                  }`}>
-                                    {item.title}
-                                  </h4>
-                                  <Badge variant="outline" className="ml-2">
-                                    {item.type === 'plan' ? '일정' : '노트'}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {format(item.date, 'p', { locale: ko })}
-                                </div>
-                                
-                                {item.type === 'plan' && item.description && (
-                                  <p className="text-sm mt-2">{item.description}</p>
-                                )}
-                                
-                                {item.type === 'note' && item.content && (
-                                  <p className="text-sm mt-2 line-clamp-2">{item.content.replace(/<[^>]*>/g, '')}</p>
-                                )}
-                                
-                                {item.tags?.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-3">
-                                    {item.tags.map(tag => (
-                                      <Badge key={tag} variant="outline" className="text-xs">
-                                        {tag}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+
+        {/* 콘텐츠 카드 */}
+        <div
+          className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
+            isNote 
+              ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 dark:hover:bg-blue-950/50' 
+              : item.completed 
+                ? 'bg-muted/50 border-muted dark:bg-muted/30 dark:border-muted' 
+                : 'bg-orange-50/50 border-orange-200 hover:bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800 dark:hover:bg-orange-950/50'
+          }`}
+          onClick={() => onOpenNote(item.noteId)}
+        >
+          {/* 헤더 */}
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {isNote ? (
+                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              ) : (
+                <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+              )}
+              <Badge variant={isNote ? 'default' : item.completed ? 'secondary' : 'destructive'}>
+                {isNote ? '노트' : item.completed ? '완료된 리마인더' : '리마인더'}
+              </Badge>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-center text-muted-foreground">
-              <p>선택한 기간에 일정과 노트가 없습니다</p>
+          </div>
+
+          {/* 제목 */}
+          <h4 className={`font-medium mb-2 ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
+            {item.title}
+          </h4>
+
+          {/* 내용 미리보기 */}
+          {item.content && (
+            <p className={`text-sm text-muted-foreground line-clamp-2 mb-2 ${
+              item.completed ? 'line-through' : ''
+            }`}>
+              {item.content.length > 100 
+                ? `${item.content.substring(0, 100)}...` 
+                : item.content}
+            </p>
+          )}
+
+          {/* 태그 (노트인 경우) */}
+          {isNote && item.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {item.tags.slice(0, 3).map(tag => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  <Tag className="w-3 h-3 mr-1" />
+                  {tag}
+                </Badge>
+              ))}
+              {item.tags.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{item.tags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* 연결된 노트 (리마인더인 경우) */}
+          {!isNote && (
+            <div className="text-xs text-muted-foreground">
+              📝 {item.noteTitle}
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-6 h-full overflow-y-auto">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">타임라인</h2>
+        
+        <div className="flex items-center gap-4">
+          {/* 필터 */}
+          <Tabs value={filter} onValueChange={setFilter} className="w-auto">
+            <TabsList>
+              <TabsTrigger value="all">전체</TabsTrigger>
+              <TabsTrigger value="notes">노트</TabsTrigger>
+              <TabsTrigger value="reminders">리마인더</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* 정렬 */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortBy(sortBy === 'date' ? 'title' : 'date')}
+          >
+            {sortBy === 'date' ? '📅 날짜순' : '📝 제목순'}
+          </Button>
+        </div>
+      </div>
+
+      {/* 통계 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+          <div className="flex items-center gap-2 mb-1">
+            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-300">총 노트</span>
+          </div>
+          <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{notes.length}</div>
+        </div>
+        
+        <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            <span className="text-sm font-medium text-orange-800 dark:text-orange-300">총 리마인더</span>
+          </div>
+          <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{reminders.length}</div>
+        </div>
+        
+        <div className="p-4 rounded-lg bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-800">
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <span className="text-sm font-medium text-green-800 dark:text-green-300">완료된 리마인더</span>
+          </div>
+          <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+            {reminders.filter(r => r.completed).length}
+          </div>
+        </div>
+      </div>
+
+      {/* 타임라인 */}
+      <div className="space-y-8">
+        {groupedData.length > 0 ? (
+          groupedData.map(([dateStr, items]) => (
+            <div key={dateStr}>
+              {/* 날짜 헤더 */}
+              <div className="flex items-center gap-3 mb-4">
+                <h3 className="text-lg font-semibold">{formatDate(dateStr)}</h3>
+                <div className="flex-1 h-px bg-border" />
+                <Badge variant="outline">{items.length}개 항목</Badge>
+              </div>
+
+              {/* 해당 날짜의 아이템들 */}
+              <div className="space-y-0">
+                {items.map(renderTimelineItem)}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>표시할 항목이 없습니다.</p>
+            <p className="text-sm">노트를 작성하거나 리마인더를 설정해보세요.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+
+export default TimelineView;
