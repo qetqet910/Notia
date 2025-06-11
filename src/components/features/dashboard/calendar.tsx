@@ -68,7 +68,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
     setSelectedDate(new Date());
   };
 
-  // 캘린더 셀 생성
+  // 캘린더 셀 생성 (5줄)
   const renderCalendarCells = () => {
     const cells = [];
 
@@ -140,9 +140,9 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       );
     }
 
-    // 다음 달의 첫 며칠
+    // 다음 달의 첫 며칠 (5줄로 제한)
     const totalCells = cells.length;
-    const remainingCells = 42 - totalCells; // 6주 * 7일
+    const remainingCells = 35 - totalCells; // 5주 * 7일
     for (let day = 1; day <= remainingCells; day++) {
       cells.push(
         <div
@@ -154,7 +154,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       );
     }
 
-    return cells;
+    return cells.slice(0, 35); // 5줄 = 35개 셀
   };
 
   return (
@@ -220,11 +220,12 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
                   return (
                     <div
                       key={reminder.id}
-                      className={`p-3 rounded-lg border ${
+                      className={`p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
                         reminder.completed
                           ? 'bg-muted/50 text-muted-foreground'
                           : 'bg-background'
                       }`}
+                      onClick={() => note && onOpenNote(note.id)}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <Badge
@@ -249,17 +250,10 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
                       </p>
 
                       {note && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="p-0 h-auto text-left justify-start"
-                          onClick={() => onOpenNote(note.id)}
-                        >
+                        <div className="flex items-center text-xs text-muted-foreground">
                           <FileText className="w-3 h-3 mr-1" />
-                          <span className="text-xs text-muted-foreground truncate">
-                            {note.title}
-                          </span>
-                        </Button>
+                          <span className="truncate">{note.title}</span>
+                        </div>
                       )}
                     </div>
                   );

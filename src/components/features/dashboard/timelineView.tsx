@@ -13,7 +13,7 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
     const items = [];
 
     // 노트 추가
-    notes.forEach(note => {
+    notes.forEach((note) => {
       items.push({
         id: `note-${note.id}`,
         type: 'note',
@@ -22,13 +22,13 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
         date: new Date(note.updated_at || note.created_at),
         tags: note.tags || [],
         noteId: note.id,
-        originalData: note
+        originalData: note,
       });
     });
 
     // 리마인더 추가
-    reminders.forEach(reminder => {
-      const relatedNote = notes.find(n => n.id === reminder.note_id);
+    reminders.forEach((reminder) => {
+      const relatedNote = notes.find((n) => n.id === reminder.note_id);
       items.push({
         id: `reminder-${reminder.id}`,
         type: 'reminder',
@@ -39,16 +39,16 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
         enabled: reminder.enabled,
         noteId: reminder.note_id,
         noteTitle: relatedNote?.title || '알 수 없는 노트',
-        originalData: reminder
+        originalData: reminder,
       });
     });
 
     // 필터링
     let filteredItems = items;
     if (filter === 'notes') {
-      filteredItems = items.filter(item => item.type === 'note');
+      filteredItems = items.filter((item) => item.type === 'note');
     } else if (filter === 'reminders') {
-      filteredItems = items.filter(item => item.type === 'reminder');
+      filteredItems = items.filter((item) => item.type === 'reminder');
     }
 
     // 정렬
@@ -66,8 +66,8 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
   // 날짜별로 그룹화
   const groupedData = useMemo(() => {
     const groups = {};
-    
-    timelineData.forEach(item => {
+
+    timelineData.forEach((item) => {
       const dateKey = item.date.toISOString().split('T')[0];
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -92,7 +92,7 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
       return date.toLocaleDateString('ko-KR', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       });
     }
   };
@@ -100,25 +100,31 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
   const formatTime = (date) => {
     return date.toLocaleTimeString('ko-KR', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
   const renderTimelineItem = (item) => {
     const isNote = item.type === 'note';
-    
+
     return (
       <div
         key={item.id}
         className={`ml-6 pb-6 border-l-2 pl-4 relative ${
-          isNote ? 'border-blue-200 dark:border-blue-800' : 'border-orange-200 dark:border-orange-800'
+          isNote ? 'border-blue-200' : 'border-orange-200'
         }`}
+        style={{
+          borderLeftColor: isNote
+            ? 'rgb(147 197 253)' // blue-200 equivalent
+            : 'rgb(254 215 170)', // orange-200 equivalent
+        }}
       >
         {/* 타임라인 점 */}
         <div
-          className={`absolute -left-2 w-4 h-4 rounded-full border-2 border-background ${
-            isNote ? 'bg-blue-500 dark:bg-blue-400' : 'bg-orange-500 dark:bg-orange-400'
-          }`}
+          className="absolute -left-2 w-4 h-4 rounded-full border-2 border-background"
+          style={{
+            backgroundColor: isNote ? 'rgb(59 130 246)' : 'rgb(249 115 22)', // blue-500, orange-500
+          }}
         />
 
         {/* 시간 */}
@@ -128,41 +134,71 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
 
         {/* 콘텐츠 카드 */}
         <div
-          className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-            isNote 
-              ? 'bg-blue-50/50 border-blue-200 hover:bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 dark:hover:bg-blue-950/50' 
-              : item.completed 
-                ? 'bg-muted/50 border-muted dark:bg-muted/30 dark:border-muted' 
-                : 'bg-orange-50/50 border-orange-200 hover:bg-orange-50 dark:bg-orange-950/30 dark:border-orange-800 dark:hover:bg-orange-950/50'
-          }`}
+          className="p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md bg-card hover:bg-accent/50"
           onClick={() => onOpenNote(item.noteId)}
+          style={{
+            backgroundColor: isNote
+              ? 'hsl(var(--card))'
+              : item.completed
+              ? 'hsl(var(--muted))'
+              : 'hsl(var(--card))',
+            borderColor: isNote
+              ? 'rgb(147 197 253)'
+              : item.completed
+              ? 'hsl(var(--border))'
+              : 'rgb(254 215 170)',
+          }}
         >
           {/* 헤더 */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
               {isNote ? (
-                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <FileText
+                  className="w-4 h-4"
+                  style={{ color: 'rgb(37 99 235)' }} // blue-600
+                />
               ) : (
-                <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                <Clock
+                  className="w-4 h-4"
+                  style={{ color: 'rgb(234 88 12)' }} // orange-600
+                />
               )}
-              <Badge variant={isNote ? 'default' : item.completed ? 'secondary' : 'destructive'}>
-                {isNote ? '노트' : item.completed ? '완료된 리마인더' : '리마인더'}
+              <Badge
+                variant={
+                  isNote
+                    ? 'default'
+                    : item.completed
+                    ? 'secondary'
+                    : 'destructive'
+                }
+              >
+                {isNote
+                  ? '노트'
+                  : item.completed
+                  ? '완료된 리마인더'
+                  : '리마인더'}
               </Badge>
             </div>
           </div>
 
           {/* 제목 */}
-          <h4 className={`font-medium mb-2 ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
+          <h4
+            className={`font-medium mb-2 ${
+              item.completed ? 'line-through text-muted-foreground' : ''
+            }`}
+          >
             {item.title}
           </h4>
 
           {/* 내용 미리보기 */}
           {item.content && (
-            <p className={`text-sm text-muted-foreground line-clamp-2 mb-2 ${
-              item.completed ? 'line-through' : ''
-            }`}>
-              {item.content.length > 100 
-                ? `${item.content.substring(0, 100)}...` 
+            <p
+              className={`text-sm text-muted-foreground line-clamp-2 mb-2 ${
+                item.completed ? 'line-through' : ''
+              }`}
+            >
+              {item.content.length > 100
+                ? `${item.content.substring(0, 100)}...`
                 : item.content}
             </p>
           )}
@@ -170,7 +206,7 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
           {/* 태그 (노트인 경우) */}
           {isNote && item.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
-              {item.tags.slice(0, 3).map(tag => (
+              {item.tags.slice(0, 3).map((tag) => (
                 <Badge key={tag} variant="outline" className="text-xs">
                   <Tag className="w-3 h-3 mr-1" />
                   {tag}
@@ -200,7 +236,7 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">타임라인</h2>
-        
+
         <div className="flex items-center gap-4">
           {/* 필터 */}
           <Tabs value={filter} onValueChange={setFilter} className="w-auto">
@@ -212,41 +248,60 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
           </Tabs>
 
           {/* 정렬 */}
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             onClick={() => setSortBy(sortBy === 'date' ? 'title' : 'date')}
           >
             {sortBy === 'date' ? '📅 날짜순' : '📝 제목순'}
-          </Button>
+          </Button> */}
         </div>
       </div>
 
       {/* 통계 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+        <div className="p-4 rounded-lg border bg-card">
           <div className="flex items-center gap-2 mb-1">
-            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium text-blue-800 dark:text-blue-300">총 노트</span>
+            <FileText className="w-4 h-4" style={{ color: 'rgb(37 99 235)' }} />
+            <span
+              className="text-sm font-medium"
+              style={{ color: 'rgb(37 99 235)' }}
+            >
+              총 노트
+            </span>
           </div>
-          <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{notes.length}</div>
+          <div className="text-2xl font-bold text-foreground">
+            {notes.length}
+          </div>
         </div>
-        
-        <div className="p-4 rounded-lg bg-orange-50 border border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
+
+        <div className="p-4 rounded-lg border bg-card">
           <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-            <span className="text-sm font-medium text-orange-800 dark:text-orange-300">총 리마인더</span>
+            <Clock className="w-4 h-4" style={{ color: 'rgb(234 88 12)' }} />
+            <span
+              className="text-sm font-medium"
+              style={{ color: 'rgb(234 88 12)' }}
+            >
+              총 리마인더
+            </span>
           </div>
-          <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{reminders.length}</div>
+          <div className="text-2xl font-bold text-foreground">
+            {reminders.length}
+          </div>
         </div>
-        
-        <div className="p-4 rounded-lg bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-800">
+
+        <div className="p-4 rounded-lg border bg-card">
           <div className="flex items-center gap-2 mb-1">
-            <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-medium text-green-800 dark:text-green-300">완료된 리마인더</span>
+            <Calendar className="w-4 h-4" style={{ color: 'rgb(34 197 94)' }} />
+            <span
+              className="text-sm font-medium"
+              style={{ color: 'rgb(34 197 94)' }}
+            >
+              완료된 리마인더
+            </span>
           </div>
-          <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-            {reminders.filter(r => r.completed).length}
+          <div className="text-2xl font-bold text-foreground">
+            {reminders.filter((r) => r.completed).length}
           </div>
         </div>
       </div>
@@ -264,16 +319,16 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
               </div>
 
               {/* 해당 날짜의 아이템들 */}
-              <div className="space-y-0">
-                {items.map(renderTimelineItem)}
-              </div>
+              <div className="space-y-0">{items.map(renderTimelineItem)}</div>
             </div>
           ))
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>표시할 항목이 없습니다.</p>
-            <p className="text-sm">노트를 작성하거나 리마인더를 설정해보세요.</p>
+            <p className="text-sm">
+              노트를 작성하거나 리마인더를 설정해보세요.
+            </p>
           </div>
         )}
       </div>

@@ -9,11 +9,9 @@ import { Editor } from '@/components/features/dashboard/editor';
 import { ReminderView } from '@/components/features/dashboard/reminder';
 import Calendar from '@/components/features/dashboard/calendar';
 import TimelineView from '@/components/features/dashboard/timelineView';
-import { Search } from '@/components/features/dashboard/search';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
-import { useSearch } from '@/hooks/useSearch';
 import { supabase } from '@/services/supabaseClient';
 import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
 import {
@@ -64,9 +62,9 @@ export const Dashboard: React.FC = () => {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const { isDarkMode, isDeepDarkMode } = useThemeStore();
   const { notes, addNote, updateNote, updateNoteOnly, deleteNote } = useNotes();
-  const { searchResults, setSearchQuery } = useSearch();
   const { session, isAuthenticated, isLoginLoading, checkSession } =
     useAuthStore();
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -218,7 +216,17 @@ export const Dashboard: React.FC = () => {
 
   // 새 노트 생성
   const handleCreateNote = useCallback(async () => {
-    const newNoteData = { title: '새로운 노트', content: '', tags: [] };
+    const newNoteData = {
+      title: '새로운 노트',
+      content: '',
+      tags: [],
+      owner_id: session?.user?.id || '',
+      is_public: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     const newNote = await addNote(newNoteData);
     if (newNote) {
       setSelectedNote(newNote);
@@ -238,18 +246,54 @@ export const Dashboard: React.FC = () => {
 
   // 메인 컨텐츠 렌더링 함수
   const renderMainContent = () => {
+    const filteredNotes = selectedTag
+      ? notes.filter((note) => note.tags.includes(selectedTag))
+      : notes;
+
     switch (activeTab) {
       case 'notes':
         return (
-          <div className="flex h-full">
+          <div className="flex h-full custom-scrollbar">
             {/* ❗️ isEditing 상태에 따라 NoteList 너비가 조절됩니다. */}
             <div
               className={`h-full overflow-y-auto border-r border-border transition-all duration-300 ease-in-out ${
                 isEditing ? 'w-0 opacity-0 md:w-0' : 'w-full md:w-1/3'
               }`}
             >
+              {selectedTag && (
+                <div className="p-3 bg-muted border-b animate-in slide-in-from-top-2 duration-300 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-top-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      #{selectedTag} 필터링 중
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        // 애니메이션과 함께 제거
+                        const element =
+                          document.querySelector('[data-tag-filter]');
+                        if (element) {
+                          element.classList.add(
+                            'animate-out',
+                            'slide-out-to-top-2',
+                            'duration-300',
+                          );
+                          setTimeout(() => setSelectedTag(null), 300);
+                        } else {
+                          setSelectedTag(null);
+                        }
+                      }}
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive transition-all duration-200 hover:scale-105"
+                      data-tag-filter
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </div>
+              )}
               <NoteList
-                notes={notes}
+                notes={filteredNotes}
                 onSelectNote={handleSelectNote} // 변경된 핸들러 사용
                 selectedNote={selectedNote}
               />
@@ -325,17 +369,6 @@ export const Dashboard: React.FC = () => {
             }}
           />
         );
-      case 'search':
-        return (
-          <Search
-            onSearch={setSearchQuery}
-            results={searchResults}
-            onSelectNote={(note) => {
-              setSelectedNote(note);
-              setActiveTab('notes');
-            }}
-          />
-        );
       default:
         return null;
     }
@@ -361,13 +394,13 @@ export const Dashboard: React.FC = () => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button
+            {/* <Button
               variant="ghost"
               size="icon"
               onClick={() => setActiveTab('search')}
             >
               <SearchIcon className="h-5 w-5" />
-            </Button>
+            </Button> */}
             {isMobile ? (
               <MobileNavigation
                 activeTab={activeTab}
@@ -381,7 +414,11 @@ export const Dashboard: React.FC = () => {
         </header>
         <div className="flex flex-1 overflow-hidden">
           {!isMobile && !isEditing && (
-            <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+            <Sidebar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              onTagSelect={setSelectedTag}
+            />
           )}
           <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
         </div>
@@ -393,9 +430,11 @@ export const Dashboard: React.FC = () => {
 const Sidebar = ({
   activeTab,
   setActiveTab,
+  onTagSelect,
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onTagSelect: (tag: string) => void;
 }) => {
   const { notes } = useNotes();
   const popularTags = useMemo(() => {
@@ -449,6 +488,7 @@ const Sidebar = ({
                 className="justify-between text-xs"
                 onClick={() => {
                   setActiveTab('notes');
+                  onTagSelect(tag);
                 }}
               >
                 <span>#{tag}</span>
