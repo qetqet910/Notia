@@ -354,19 +354,31 @@ export const Editor: React.FC<EditorProps> = ({
           )}
 
           {reminders.length > 0 && (
-            <div className={`mb-3 ${isEditing ? 'pl-5' : ''}`}>
+            <div className={`mt-3 ${isEditing ? 'pl-5' : ''}`}>
               <div className="flex items-center mb-2">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm font-medium">리마인더</span>
               </div>
-              <div className="space-y-2">
+              <div
+                className="flex gap-2 overflow-x-auto scrollbar-hide pb-2"
+                style={{
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                }}
+                onWheel={(e) => {
+                  e.currentTarget.scrollBy({
+                    left: e.deltaY > 0 ? 120 : -120,
+                    behavior: 'smooth',
+                  });
+                }}
+              >
                 {reminders.map((reminder, index) => (
                   <div
                     key={index}
-                    className="inline-flex mr-2 items-center gap-2 p-2 bg-background rounded-lg border border-border"
+                    className="flex-shrink-0 flex items-center gap-2 p-2 bg-background rounded-lg border border-border min-w-fit"
                   >
                     <Clock className="h-4 w-4 text-blue-500" />
-                    <div className="flex-1">
+                    <div className="flex-1 whitespace-nowrap">
                       <div className="font-medium text-sm">
                         {reminder.reminderText}
                       </div>
@@ -383,7 +395,10 @@ export const Editor: React.FC<EditorProps> = ({
                       </div>
                     </div>
                     {reminder.parsedDate && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge
+                        variant="outline"
+                        className="text-xs whitespace-nowrap"
+                      >
                         {reminder.text}
                       </Badge>
                     )}

@@ -178,6 +178,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     const today = startOfDay(now);
     const tomorrow = startOfDay(addDays(now, 1));
     const dayAfterTomorrow = startOfDay(addDays(now, 2));
+    const threeDaysLater = startOfDay(addDays(now, 3)); // 모레 다음날까지
 
     let filtered = internalReminders.filter((reminder) => {
       const reminderDate = startOfDay(reminder.reminderTime);
@@ -187,10 +188,10 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
           return (
             !reminder.completed &&
             reminderDate >= today &&
-            reminderDate < dayAfterTomorrow
+            reminderDate < threeDaysLater // 모레까지 포함
           );
         case 'upcoming':
-          return !reminder.completed && reminderDate >= dayAfterTomorrow;
+          return !reminder.completed && reminderDate >= threeDaysLater; // 모레 다음날부터
         case 'overdue':
           return !reminder.completed && reminderDate < today;
         case 'completed':
@@ -209,14 +210,17 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
 
   // 시간대별 그룹화 (recent 탭용)
   const groupedRecentReminders = useMemo(() => {
-    if (activeFilter !== 'recent') return { today: [], tomorrow: [] };
+    if (activeFilter !== 'recent')
+      return { today: [], tomorrow: [], dayAfter: [] };
 
     const now = new Date();
     const today = startOfDay(now);
     const tomorrow = startOfDay(addDays(now, 1));
+    const dayAfter = startOfDay(addDays(now, 2));
 
     const todayReminders: InternalReminder[] = [];
     const tomorrowReminders: InternalReminder[] = [];
+    const dayAfterReminders: InternalReminder[] = [];
 
     filteredReminders.forEach((reminder) => {
       const reminderDate = startOfDay(reminder.reminderTime);
@@ -232,10 +236,21 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
         })
       ) {
         tomorrowReminders.push(reminder);
+      } else if (
+        isWithinInterval(reminderDate, {
+          start: dayAfter,
+          end: endOfDay(dayAfter),
+        })
+      ) {
+        dayAfterReminders.push(reminder);
       }
     });
 
-    return { today: todayReminders, tomorrow: tomorrowReminders };
+    return {
+      today: todayReminders,
+      tomorrow: tomorrowReminders,
+      dayAfter: dayAfterReminders,
+    };
   }, [filteredReminders, activeFilter]);
 
   // 리마인더 완료 상태 토글
@@ -544,6 +559,11 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                   '내일',
                   groupedRecentReminders.tomorrow,
                   <Calendar className="h-4 w-4 text-green-600" />,
+                )}
+                {renderReminderGroup(
+                  '모레',
+                  groupedRecentReminders.dayAfter,
+                  <Calendar className="h-4 w-4 text-purple-600" />,
                 )}
               </>
             ) : activeFilter === 'upcoming' ? (

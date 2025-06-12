@@ -96,7 +96,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       cells.push(
         <div
           key={day}
-          className={`h-24 p-1 border border-border cursor-pointer hover:bg-accent transition-colors ${
+          className={`h-28 p-1 border border-border cursor-pointer hover:bg-accent transition-colors ${
             isToday ? 'bg-primary/10 border-primary' : ''
           } ${isSelected ? 'bg-accent' : ''}`}
           onClick={() =>
