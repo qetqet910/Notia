@@ -30,7 +30,8 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
   };
 
   // 1. 상대 시간 (@1시간, @30분)
-  let match = timeStr.match(/(\d+)\s*(시간|분)/);
+  //    - 문자열 전체가 상대 시간일 경우에만 매치하도록 ^와 $를 추가하여 안정성 확보
+  let match = timeStr.match(/^(\d+)\s*(시간|분)$/);
   if (match) {
     const amount = parseInt(match[1], 10);
     const unit = match[2];
@@ -77,8 +78,19 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
     let hour = hourStr ? parseInt(hourStr, 10) : 9;
     const minute = minStr ? parseInt(minStr, 10) : 0;
 
-    if (ampm === '오전' && hour === 12) hour = 0;
-    else if (ampm === '오후' && hour !== 12) hour += 12;
+    if (ampm) {
+      // 오전/오후가 명시된 경우
+      if (ampm === '오전' && hour === 12) hour = 0; // 오전 12시 -> 0시
+      if (ampm === '오후' && hour !== 12) hour += 12; // 오후 1-11시 -> 13-23시
+    } else if (hourStr) {
+      // 오전/오후가 명시되지 않은 경우
+      // "1시" 처럼 0으로 시작하는 두자리수가 아니면 오후로 간주 (12시는 정오)
+      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
+        if (hour !== 12) {
+          hour += 12;
+        }
+      }
+    }
 
     result.setHours(hour, minute);
 
@@ -90,20 +102,19 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
   match = timeStr.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
   if (match) {
     let [, ampm, hourStr, minStr] = match;
+    if (!hourStr) return undefined;
+
     let hour = parseInt(hourStr, 10);
     const minute = minStr ? parseInt(minStr, 10) : 0;
 
-    // '오전' 또는 '0'으로 시작하는 두자리수(01~09)가 아니면서,
-    // 현재 시간보다 이른 시간(1~6시)을 입력하면 오후로 간주 (예: 현재 3PM일때 '2시' -> 내일 2AM, '4시' -> 오늘 4PM)
-    if (!ampm && hourStr.length < 2 && hour >= 1 && hour <= 6) {
-      const temp = new Date();
-      temp.setHours(hour, minute, 0, 0);
-      if (temp <= now) {
-        hour += 12;
+    if (!ampm) {
+      // 0으로 시작하는 두자리수(01~09)가 아니면 오후로 처리 (12시는 정오)
+      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
+        if (hour !== 12) hour += 12;
       }
     } else {
-      if (ampm === '오전' && hour === 12) hour = 0; // 오전 12시 -> 0시
-      if (ampm === '오후' && hour !== 12) hour += 12; // 오후 1~11시 -> 13~23시
+      if (ampm === '오전' && hour === 12) hour = 0;
+      if (ampm === '오후' && hour !== 12) hour += 12;
     }
 
     const result = new Date();

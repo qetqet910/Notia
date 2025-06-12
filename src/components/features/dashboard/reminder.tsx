@@ -312,7 +312,8 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     return (
       <Card
         key={reminder.id}
-        className={`transition-all duration-200 hover:shadow-sm border-l-3 ${
+        onClick={() => onOpenNote(reminder.noteId)}
+        className={`group transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 border-l-3 cursor-pointer ${
           isOverdue
             ? 'border-l-red-400'
             : reminder.completed
@@ -326,16 +327,17 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="p-0 h-6 w-6 rounded-full flex-shrink-0 mt-0.5 hover:bg-transparent"
-              onClick={() =>
-                handleMarkCompleted(reminder.id, !reminder.completed)
-              }
+              className="p-0 h-6 w-6 rounded-full flex-shrink-0 hover:bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMarkCompleted(reminder.id, !reminder.completed);
+              }}
             >
               <div
                 className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
                   reminder.completed
                     ? 'border-green-500 bg-green-500'
-                    : 'border-gray-300 hover:border-green-400'
+                    : 'border-gray-300 group-hover:border-green-400'
                 }`}
               >
                 {reminder.completed && (
@@ -346,7 +348,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
 
             {/* 메인 콘텐츠 */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-center justify-between gap-2 mb-2">
                 <h3
                   className={`font-medium text-base leading-snug ${
                     reminder.completed ? 'line-through text-gray-500' : ''
@@ -355,7 +357,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                   {reminder.reminderText}
                 </h3>
 
-                {/* 액션 버튼들 */}
+                {/* 알람 버튼 - 항상 표시 */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {!reminder.completed && (
                     <Switch
@@ -365,25 +367,19 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                       }
                       disabled={!globalNotifications}
                       className="scale-90"
+                      onClick={(e) => e.stopPropagation()}
                     />
                   )}
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-gray-400 hover:text-blue-600"
-                    onClick={() => onOpenNote(reminder.noteId)}
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
-
-                  {/* 완료된 리마인더에만 삭제 버튼 표시 */}
                   {reminder.completed && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
-                      onClick={() => handleDeleteReminder(reminder.id)}
+                      className="h-7 w-7 p-0 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteReminder(reminder.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -391,11 +387,11 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                 </div>
               </div>
 
-              {/* 시간 및 노트 정보를 한 줄에 */}
-              <div className="flex items-center justify-between text-sm text-gray-500">
+              {/* 시간 및 노트 정보 */}
+              <div className="flex items-center justify-between text-sm text-gray-500 mb-1">
                 <div
                   className={`flex items-center ${
-                    isOverdue ? 'text-red-600' : ''
+                    isOverdue ? 'text-red-600 font-medium' : ''
                   }`}
                 >
                   <Clock className="h-3.5 w-3.5 mr-1.5" />
@@ -409,19 +405,28 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                     </Badge>
                   )}
                 </div>
-
                 <div className="flex items-center text-sm text-gray-400 max-w-36 truncate">
                   <span>📝</span>
                   <span className="ml-1.5 truncate">{reminder.noteTitle}</span>
                 </div>
               </div>
 
-              {/* 노트 내용 프리뷰 (선택적 표시) */}
-              {reminder.noteContent && !reminder.completed && (
-                <p className="text-sm text-gray-400 mt-2 line-clamp-1 opacity-60">
-                  {reminder.noteContent}
-                </p>
-              )}
+              {/* 노트 내용 프리뷰 - 완료 상태에 따른 애니메이션 */}
+              <div
+                className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                  reminder.completed
+                    ? 'max-h-0 opacity-0'
+                    : 'max-h-6 opacity-60'
+                }`}
+              >
+                {reminder.noteContent && (
+                  <p className="text-xs text-gray-400 truncate">
+                    {reminder.noteContent.length > 50
+                      ? `${reminder.noteContent.substring(0, 50)}...`
+                      : reminder.noteContent}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

@@ -3,12 +3,12 @@ export interface Note {
   title: string;
   content: string;
   owner_id: string;
-  created_at: string;
-  updated_at: string;
   is_public: boolean;
   parent_id?: string;
   note_type?: string;
   tags: string[];
+  created_at: string;
+  updated_at: string;
   createdAt: Date;
   updatedAt: Date;
   reminders?: EditorReminder[]; // Editor 호환성을 위해

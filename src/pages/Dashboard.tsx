@@ -124,23 +124,65 @@ export const Dashboard: React.FC = () => {
   }, []); // useCallback으로 감싸 불필요한 재선언 방지
 
   // 리마인더 완료 상태 업데이트
-  const handleMarkCompleted = useCallback(
-    async (reminderId: string, completed: boolean) => {
-      const { error } = await supabase
-        .from('reminders')
-        .update({ completed, updated_at: new Date().toISOString() })
-        .eq('id', reminderId);
+const handleMarkCompleted = useCallback(
+ async (reminderId: string, completed: boolean) => {
+   const reminderToUpdate = reminders.find((r) => r.id === reminderId);
+   if (!reminderToUpdate) return;
 
-      if (error) {
-        console.error('Error updating reminder:', error);
-      } else {
-        setReminders((prev) =>
-          prev.map((r) => (r.id === reminderId ? { ...r, completed } : r)),
-        );
-      }
-    },
-    [],
-  );
+   const targetNote = notes.find(
+     (note) => note.id === reminderToUpdate.note_id,
+   );
+   if (!targetNote) return;
+
+   // 1. DB에서 리마인더 상태 업데이트
+   const { error } = await supabase
+     .from('reminders')
+     .update({ completed, updated_at: new Date().toISOString() })
+     .eq('id', reminderId);
+
+   if (error) {
+     console.error('Error updating reminder:', error);
+     return;
+   }
+
+   // 2. 노트 내용에서 ~~ 토글
+   let updatedContent;
+   const originalText = reminderToUpdate.original_text;
+   
+   if (completed) {
+     // 완료: ~~ 추가
+     updatedContent = targetNote.content.replace(
+       originalText,
+       `~~${originalText}~~`
+     );
+   } else {
+     // 미완료: ~~ 제거
+     updatedContent = targetNote.content.replace(
+       `~~${originalText}~~`,
+       originalText
+     );
+   }
+
+   const updatedNote = {
+     ...targetNote,
+     content: updatedContent,
+   };
+
+   // 3. 노트 업데이트
+   await updateNoteOnly(updatedNote);
+
+   // 4. selectedNote 상태 업데이트
+   if (selectedNote?.id === targetNote.id) {
+     setSelectedNote(updatedNote);
+   }
+
+   // 5. 리마인더 상태 업데이트
+   setReminders((prev) =>
+     prev.map((r) => (r.id === reminderId ? { ...r, completed } : r)),
+   );
+ },
+ [reminders, notes, updateNoteOnly, selectedNote, setSelectedNote, setReminders],
+);
 
   // 리마인더 활성화 상태 업데이트
   const handleToggleReminder = useCallback(
@@ -184,7 +226,7 @@ export const Dashboard: React.FC = () => {
       }
 
       const updatedContent = targetNote.content.replace(
-        `@${reminderToDelete.original_text}.`,
+        `${reminderToDelete.original_text}`,
         '',
       );
 
