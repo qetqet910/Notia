@@ -28,6 +28,7 @@ import {
   Hash,
   HelpCircle,
   Sparkles,
+  Bell,
 } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
@@ -108,7 +109,14 @@ export const HelpPage: React.FC = () => {
 - [ ] 프론트엔드 구현
 
 @내일 10시 코드 리뷰하기.
-@다음주 월요일 배포 준비하기.`,
+@다음주 월요일 배포 준비하기.
+
+mermaid 문법도 지원합니다:
+graph TD;
+        A[시작] --> B{조건};
+        B -- 예 --> C[결과 1];
+        B -- 아니오 --> D[결과 2];
+`,
       description: '체크리스트와 리마인더가 포함된 프로젝트 관리',
     },
   ];
@@ -164,7 +172,7 @@ export const HelpPage: React.FC = () => {
                   <CardContent className="relative p-8 text-center">
                     <div className="mb-6">
                       <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                        <Heart className="h-8 w-8 text-primary" />
+                        <Bell className="h-8 w-8 text-primary" />
                       </div>
                       <h1 className="text-3xl font-bold mb-2">MOMENTOUS</h1>
                       <p className="text-lg text-muted-foreground">
@@ -321,7 +329,7 @@ export const HelpPage: React.FC = () => {
                       <div>
                         <h4 className="font-medium">새 노트 생성</h4>
                         <p className="text-sm text-muted-foreground">
-                          + 버튼을 클릭하거나 Ctrl+N을 눌러 새 노트를 만드세요
+                          새 노트 버튼을 클릭하거나 N을 눌러 새 노트를 만드세요
                         </p>
                       </div>
                     </div>
@@ -452,38 +460,67 @@ export const HelpPage: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span># 제목</span>
-                        <span className="text-muted-foreground">헤딩 1</span>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span># 제목</span>
+                          <span className="text-muted-foreground">헤딩 1</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>## 부제목</span>
+                          <span className="text-muted-foreground">헤딩 2</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>### 소제목</span>
+                          <span className="text-muted-foreground">헤딩 3</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>**굵게**</span>
+                          <span className="text-muted-foreground">볼드</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>*기울임*</span>
+                          <span className="text-muted-foreground">이탤릭</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>`코드`</span>
+                          <span className="text-muted-foreground">인라인</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>```코드블록```</span>
+                          <span className="text-muted-foreground">블록</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span>## 부제목</span>
-                        <span className="text-muted-foreground">헤딩 2</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>**굵게**</span>
-                        <span className="text-muted-foreground">
-                          볼드 텍스트
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>*기울임*</span>
-                        <span className="text-muted-foreground">
-                          이탤릭 텍스트
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>- 목록</span>
-                        <span className="text-muted-foreground">
-                          불릿 리스트
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>- [ ] 체크박스</span>
-                        <span className="text-muted-foreground">
-                          할 일 목록
-                        </span>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span>- 목록</span>
+                          <span className="text-muted-foreground">불릿</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>1. 순서목록</span>
+                          <span className="text-muted-foreground">번호</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>- [ ] 체크박스</span>
+                          <span className="text-muted-foreground">할 일</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>[링크](url)</span>
+                          <span className="text-muted-foreground">링크</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>![이미지](url)</span>
+                          <span className="text-muted-foreground">이미지</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>&gt; 인용</span>
+                          <span className="text-muted-foreground">인용문</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>---</span>
+                          <span className="text-muted-foreground">구분선</span>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -561,9 +598,34 @@ export const HelpPage: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground mb-4">
-                      qetqet910@대충업무메일.com로 문의해 주세요. 빠른 시간 내에
-                      답변드리겠습니다.
+                      <span>qetqet910@hanyang.ac.kr</span> 로 문의해 주세요.
+                      빠른 시간 내에 답변드리겠습니다.
                     </p>
+
+                    <div className="border-t pt-4">
+                      <h4 className="font-semibold mb-2">☕ 개발자 응원하기</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        도움이 되셨다면 커피 한 잔으로 응원해 주세요!
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <a
+                            href="https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f"
+                            target="_blank"
+                          >
+                            후원한잔으로 후원하기
+                          </a>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <a
+                            href="https://www.buymeacoffee.com/qetqet910"
+                            target="_blank"
+                          >
+                            Buy Me a Coffee
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
