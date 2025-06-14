@@ -401,18 +401,6 @@ export const MyPage: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label>이메일 알림</Label>
-                        <p className="text-sm text-muted-foreground">
-                          이메일로 알림을 받습니다
-                        </p>
-                      </div>
-                      <Switch
-                        checked={emailNotifications}
-                        onCheckedChange={setEmailNotifications}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
                         <Label>리마인더 알림</Label>
                         <p className="text-sm text-muted-foreground">
                           리마인더 시간에 알림을 받습니다

@@ -148,42 +148,88 @@ export const useNotes = () => {
     }
   };
 
-  // 리마인더 저장/업데이트 함수
-  const saveReminders = async (noteId: string, reminders: EditorReminder[]) => {
-    if (!user) return false;
-    try {
-      // 기존 리마인더 삭제
-      await supabase
-        .from('reminders')
-        .delete()
-        .eq('note_id', noteId)
-        .eq('owner_id', user.id);
+  const saveReminders = async (
+    noteId: string,
+    finalReminders: EditorReminder[],
+  ) => {
+    // ======================== 디버깅 코드 시작 ========================
+    console.log('\n--- [ saveReminders 시작 ] ---');
 
-      // 새 리마인더들 추가
-      if (reminders.length > 0) {
-        const koreaTime = getKoreaTimeAsUTC();
-        const reminderData = reminders.map((reminder) => ({
+    // [세이브리마인더-1] 클라이언트로부터 어떤 데이터를 받았는지 확인합니다.
+    console.log(
+      "[세이브리마인더-1] 전달받은 'finalReminders':",
+      JSON.stringify(finalReminders, null, 2),
+    );
+
+    if (!user) {
+      console.error('[세이브리마인더-에러] 사용자 정보가 없습니다.');
+      return false;
+    }
+
+    try {
+      const { data: existingReminders, error: fetchError } = await supabase
+        .from('reminders')
+        .select('id, original_text')
+        .eq('note_id', noteId);
+      if (fetchError) throw fetchError;
+
+      // [세이브리마인더-2] DB에서 현재 노트에 연결된 리마인더를 가져온 결과를 확인합니다.
+      console.log(
+        "[세이브리마인더-2] DB의 'existingReminders':",
+        JSON.stringify(existingReminders, null, 2),
+      );
+
+      const finalTexts = new Set(finalReminders.map((r) => r.original_text));
+      const idsToDelete = existingReminders
+        .filter((r) => !finalTexts.has(r.original_text))
+        .map((r) => r.id);
+
+      // [세이브리마인더-3] 어떤 리마인더를 삭제할지 확인합니다.
+      console.log(
+        "[세이브리마인더-3] 삭제 대상 ID 목록 'idsToDelete':",
+        idsToDelete,
+      );
+
+      if (idsToDelete.length > 0) {
+        console.log('  -> 삭제 작업을 실행합니다...');
+        const { error: deleteError } = await supabase
+          .from('reminders')
+          .delete()
+          .in('id', idsToDelete);
+        if (deleteError) throw deleteError;
+      }
+
+      if (finalReminders.length > 0) {
+        const reminderData = finalReminders.map((reminder) => ({
           note_id: noteId,
           owner_id: user.id,
           reminder_text: reminder.text,
           reminder_time: convertKoreaDateToUTC(reminder.date),
-          completed: reminder.completed || false,
+          completed: reminder.completed,
           enabled: true,
-          original_text: reminder.original_text, // 추가
-          created_at: koreaTime,
-          updated_at: koreaTime,
+          original_text: reminder.original_text,
         }));
 
-        const { error: insertError } = await supabase
-          .from('reminders')
-          .insert(reminderData);
+        // [세이브리마인더-4] DB에 삽입/업데이트(upsert)할 데이터를 확인합니다.
+        console.log(
+          "[세이브리마인더-4] Upsert 대상 데이터 'reminderData':",
+          JSON.stringify(reminderData, null, 2),
+        );
+        console.log('  -> Upsert 작업을 실행합니다...');
 
-        if (insertError) throw insertError;
+        const { error: upsertError } = await supabase
+          .from('reminders')
+          .upsert(reminderData, { onConflict: 'note_id, original_text' });
+
+        if (upsertError) throw upsertError;
       }
 
+      console.log('--- [ saveReminders 종료: 성공 ] ---');
       return true;
     } catch (err) {
-      console.error('리마인더 저장 중 오류 발생:', err);
+      // [세이브리마인더-에러] 오류 발생 시 내용을 확인합니다.
+      console.error('[세이브리마인더-에러] 리마인더 동기화 중 오류 발생:', err);
+      console.log('--- [ saveReminders 종료: 실패 ] ---');
       return false;
     }
   };

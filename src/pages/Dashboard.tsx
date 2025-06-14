@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -21,11 +27,23 @@ import {
   List,
   Search as SearchIcon,
   Menu,
+  Trash2,
 } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
 import { Note, Reminder } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 // 상수 분리
 const NAV_ITEMS = [
@@ -56,11 +74,27 @@ const EmptyNoteState = ({
   </div>
 );
 
+async function checkNotificationPermission() {
+  if ('Notification' in window) {
+    if (Notification.permission === 'default') {
+      try {
+        await Notification.requestPermission();
+      } catch (error) {
+        console.error('Notification permission request failed:', error);
+      }
+    } else if (Notification.permission === 'denied') {
+      console.warn('Notification permission denied');
+    }
+  } else {
+    console.warn('This browser does not support notifications');
+  }
+}
+
 export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('notes');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const { isDarkMode, isDeepDarkMode } = useThemeStore();
+  const { isDarkMode, isDeepDarkMode, toggleTheme } = useThemeStore();
   const { notes, addNote, updateNote, updateNoteOnly, deleteNote } = useNotes();
   const { session, isAuthenticated, isLoginLoading, checkSession } =
     useAuthStore();
@@ -69,6 +103,11 @@ export const Dashboard: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const editorRef = useRef<{ save: () => void } | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  checkNotificationPermission();
 
   // 반응형 처리
   useEffect(() => {
@@ -108,6 +147,103 @@ export const Dashboard: React.FC = () => {
     setIsEditing(false); // 항상 보기 모드로 시작
   };
 
+  // 새 노트 생성
+  const handleCreateNote = useCallback(async () => {
+    const newNoteData = {
+      title: '새로운 노트',
+      content: '',
+      tags: [],
+      owner_id: session?.user?.id || '',
+      is_public: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const newNote = await addNote(newNoteData);
+    if (newNote) {
+      setSelectedNote(newNote);
+      setActiveTab('notes');
+      setIsEditing(true); // 새 노트는 바로 편집 모드로
+    }
+  }, [addNote]);
+
+  const handleKeyboardShortcuts = useCallback(
+    (e: KeyboardEvent) => {
+      const isCtrlCmd = e.ctrlKey || e.metaKey;
+      const target = e.target as HTMLElement;
+
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
+      ) {
+        if (!(isCtrlCmd && e.key === 's')) {
+          return;
+        }
+      }
+
+      // 단축키 처리
+      switch (e.key) {
+        case 'n':
+          e.preventDefault();
+          handleCreateNote();
+          break;
+
+        case 's':
+          if (isCtrlCmd) {
+            e.preventDefault();
+            if (isEditing && editorRef.current) {
+              editorRef.current.save();
+            }
+          }
+          break;
+
+        case '/':
+          if (!isCtrlCmd) {
+            e.preventDefault();
+            navigate('/dashboard/help');
+          }
+          break;
+
+        case 't':
+          if (!isCtrlCmd) {
+            e.preventDefault();
+            toggleTheme();
+          }
+          break;
+
+        case 'b':
+          if (!isCtrlCmd) {
+            e.preventDefault();
+            setIsSidebarVisible((prev) => !prev);
+          }
+          break;
+
+        case 'd':
+          if (!isCtrlCmd && selectedNote) {
+            e.preventDefault();
+            setIsDeleteDialogOpen(true);
+          }
+          break;
+      }
+    },
+    [
+      isEditing,
+      selectedNote,
+      handleCreateNote,
+      toggleTheme,
+      deleteNote,
+      navigate,
+    ],
+  );
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    return () =>
+      document.removeEventListener('keydown', handleKeyboardShortcuts);
+  }, [handleKeyboardShortcuts]);
+
   // Supabase에서 리마인더 가져오기
   const fetchReminders = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -124,65 +260,72 @@ export const Dashboard: React.FC = () => {
   }, []); // useCallback으로 감싸 불필요한 재선언 방지
 
   // 리마인더 완료 상태 업데이트
-const handleMarkCompleted = useCallback(
- async (reminderId: string, completed: boolean) => {
-   const reminderToUpdate = reminders.find((r) => r.id === reminderId);
-   if (!reminderToUpdate) return;
+  const handleMarkCompleted = useCallback(
+    async (reminderId: string, completed: boolean) => {
+      const reminderToUpdate = reminders.find((r) => r.id === reminderId);
+      if (!reminderToUpdate) return;
 
-   const targetNote = notes.find(
-     (note) => note.id === reminderToUpdate.note_id,
-   );
-   if (!targetNote) return;
+      const targetNote = notes.find(
+        (note) => note.id === reminderToUpdate.note_id,
+      );
+      if (!targetNote) return;
 
-   // 1. DB에서 리마인더 상태 업데이트
-   const { error } = await supabase
-     .from('reminders')
-     .update({ completed, updated_at: new Date().toISOString() })
-     .eq('id', reminderId);
+      // 1. DB에서 리마인더 상태 업데이트
+      const { error } = await supabase
+        .from('reminders')
+        .update({ completed, updated_at: new Date().toISOString() })
+        .eq('id', reminderId);
 
-   if (error) {
-     console.error('Error updating reminder:', error);
-     return;
-   }
+      if (error) {
+        console.error('Error updating reminder:', error);
+        return;
+      }
 
-   // 2. 노트 내용에서 ~~ 토글
-   let updatedContent;
-   const originalText = reminderToUpdate.original_text;
-   
-   if (completed) {
-     // 완료: ~~ 추가
-     updatedContent = targetNote.content.replace(
-       originalText,
-       `~~${originalText}~~`
-     );
-   } else {
-     // 미완료: ~~ 제거
-     updatedContent = targetNote.content.replace(
-       `~~${originalText}~~`,
-       originalText
-     );
-   }
+      // 2. 노트 내용에서 ~~ 토글
+      let updatedContent;
+      const originalText = reminderToUpdate.original_text;
 
-   const updatedNote = {
-     ...targetNote,
-     content: updatedContent,
-   };
+      if (completed) {
+        // 완료: ~~ 추가
+        updatedContent = targetNote.content.replace(
+          originalText,
+          `~~${originalText}~~`,
+        );
+      } else {
+        // 미완료: ~~ 제거
+        updatedContent = targetNote.content.replace(
+          `~~${originalText}~~`,
+          originalText,
+        );
+      }
 
-   // 3. 노트 업데이트
-   await updateNoteOnly(updatedNote);
+      const updatedNote = {
+        ...targetNote,
+        content: updatedContent,
+      };
 
-   // 4. selectedNote 상태 업데이트
-   if (selectedNote?.id === targetNote.id) {
-     setSelectedNote(updatedNote);
-   }
+      // 3. 노트 업데이트
+      await updateNoteOnly(updatedNote);
 
-   // 5. 리마인더 상태 업데이트
-   setReminders((prev) =>
-     prev.map((r) => (r.id === reminderId ? { ...r, completed } : r)),
-   );
- },
- [reminders, notes, updateNoteOnly, selectedNote, setSelectedNote, setReminders],
-);
+      // 4. selectedNote 상태 업데이트
+      if (selectedNote?.id === targetNote.id) {
+        setSelectedNote(updatedNote);
+      }
+
+      // 5. 리마인더 상태 업데이트
+      setReminders((prev) =>
+        prev.map((r) => (r.id === reminderId ? { ...r, completed } : r)),
+      );
+    },
+    [
+      reminders,
+      notes,
+      updateNoteOnly,
+      selectedNote,
+      setSelectedNote,
+      setReminders,
+    ],
+  );
 
   // 리마인더 활성화 상태 업데이트
   const handleToggleReminder = useCallback(
@@ -226,7 +369,7 @@ const handleMarkCompleted = useCallback(
       }
 
       const updatedContent = targetNote.content.replace(
-        `${reminderToDelete.original_text}`,
+        `~~${reminderToDelete.original_text}~~`,
         '',
       );
 
@@ -256,27 +399,6 @@ const handleMarkCompleted = useCallback(
     ],
   );
 
-  // 새 노트 생성
-  const handleCreateNote = useCallback(async () => {
-    const newNoteData = {
-      title: '새로운 노트',
-      content: '',
-      tags: [],
-      owner_id: session?.user?.id || '',
-      is_public: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    const newNote = await addNote(newNoteData);
-    if (newNote) {
-      setSelectedNote(newNote);
-      setActiveTab('notes');
-      setIsEditing(true); // 새 노트는 바로 편집 모드로
-    }
-  }, [addNote]);
-
   const logoSrc = useMemo(
     () => (isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage),
     [isDarkMode, isDeepDarkMode],
@@ -296,7 +418,38 @@ const handleMarkCompleted = useCallback(
       case 'notes':
         return (
           <div className="flex h-full custom-scrollbar">
-            {/* ❗️ isEditing 상태에 따라 NoteList 너비가 조절됩니다. */}
+            <AlertDialog
+              open={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    이 작업은 되돌릴 수 없습니다. 노트가 영구적으로 삭제됩니다.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel
+                    onClick={() => setIsDeleteDialogOpen(false)}
+                  >
+                    취소
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      if (selectedNote) {
+                        deleteNote(selectedNote.id);
+                        setSelectedNote(null);
+                        setIsEditing(false);
+                      }
+                      setIsDeleteDialogOpen(false);
+                    }}
+                  >
+                    삭제
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <div
               className={`h-full overflow-y-auto border-r border-border transition-all duration-300 ease-in-out ${
                 isEditing ? 'w-0 opacity-0 md:w-0' : 'w-full md:w-1/3'
@@ -349,6 +502,7 @@ const handleMarkCompleted = useCallback(
             >
               {selectedNote ? (
                 <Editor
+                  ref={editorRef}
                   key={selectedNote.id}
                   note={selectedNote}
                   onSave={updateNote}
@@ -455,7 +609,7 @@ const handleMarkCompleted = useCallback(
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          {!isMobile && !isEditing && (
+          {!isMobile && !isEditing && isSidebarVisible && (
             <Sidebar
               activeTab={activeTab}
               setActiveTab={setActiveTab}

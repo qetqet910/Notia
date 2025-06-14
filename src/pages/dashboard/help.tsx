@@ -80,12 +80,12 @@ export const HelpPage: React.FC = () => {
   ];
 
   const shortcuts = [
-    { key: 'Ctrl + N', description: '새 노트 생성' },
     { key: 'Ctrl + S', description: '노트 저장' },
-    { key: 'Ctrl + K', description: '검색' },
-    { key: 'Ctrl + /', description: '도움말 열기' },
-    { key: 'Ctrl + D', description: '다크 모드 토글' },
-    { key: 'Ctrl + B', description: '사이드바 토글' },
+    { key: 'N', description: '새 노트 생성' },
+    { key: 'D', description: '노트 삭제' },
+    { key: '/', description: '도움말 열기' },
+    { key: 'T', description: '다크 모드 토글' },
+    { key: 'B', description: '사이드바 토글' },
   ];
 
   const examples = [
@@ -501,15 +501,6 @@ export const HelpPage: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <Accordion type="single" collapsible className="w-full">
-                      <AccordionItem value="item-1">
-                        <AccordionTrigger>
-                          노트가 자동으로 저장되나요?
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          네, 노트는 자동으로 저장됩니다. 하지만 수동으로
-                          Ctrl+S를 눌러 즉시 저장할 수도 있습니다.
-                        </AccordionContent>
-                      </AccordionItem>
                       <AccordionItem value="item-2">
                         <AccordionTrigger>
                           리마인더 알림은 어떻게 받나요?
@@ -570,12 +561,9 @@ export const HelpPage: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground mb-4">
-                      언제든지 문의해 주세요. 빠른 시간 내에 답변드리겠습니다.
+                      qetqet910@대충업무메일.com로 문의해 주세요. 빠른 시간 내에
+                      답변드리겠습니다.
                     </p>
-                    <div className="flex gap-2">
-                      <Button variant="outline">이메일 문의</Button>
-                      <Button variant="outline">피드백 보내기</Button>
-                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
