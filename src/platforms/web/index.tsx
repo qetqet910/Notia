@@ -20,7 +20,7 @@ export default async function initWeb() {
   initWebAnalytics();
 
   // 5. 웹 알림 권한 요청/확인
-  checkNotificationPermission();
+  // checkNotificationPermission();
 }
 
 // 페이지 떠날 때 처리
