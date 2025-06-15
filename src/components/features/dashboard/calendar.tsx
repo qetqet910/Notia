@@ -21,30 +21,65 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
   const lastDayOfPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
   const monthNames = [
-    '1월',
-    '2월',
-    '3월',
-    '4월',
-    '5월',
-    '6월',
-    '7월',
-    '8월',
-    '9월',
-    '10월',
-    '11월',
-    '12월',
+    '1월', '2월', '3월', '4월', '5월', '6월',
+    '7월', '8월', '9월', '10월', '11월', '12월',
   ];
 
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
+  // 한국 공휴일 데이터
+  const getKoreanHolidays = (year) => {
+    const holidays = new Map();
+    
+    // 고정 공휴일
+    holidays.set(`${year}-01-01`, '신정');
+    holidays.set(`${year}-03-01`, '삼일절');
+    holidays.set(`${year}-05-05`, '어린이날');
+    holidays.set(`${year}-06-06`, '현충일');
+    holidays.set(`${year}-08-15`, '광복절');
+    holidays.set(`${year}-10-03`, '개천절');
+    holidays.set(`${year}-10-09`, '한글날');
+    holidays.set(`${year}-12-25`, '크리스마스');
+    
+    // 2025년 기준 음력 공휴일 (실제로는 동적 계산 필요)
+    if (year === 2025) {
+      holidays.set('2025-01-28', '설날 전날');
+      holidays.set('2025-01-29', '설날');
+      holidays.set('2025-01-30', '설날 다음날');
+      holidays.set('2025-05-05', '부처님 오신 날');
+      holidays.set('2025-10-05', '추석 전날');
+      holidays.set('2025-10-06', '추석');
+      holidays.set('2025-10-07', '추석 다음날');
+    }
+    
+    return holidays;
+  };
+
+  const holidays = getKoreanHolidays(currentYear);
+
+  // 날짜가 공휴일인지 확인
+  const isHoliday = (date) => {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidays.has(dateStr);
+  };
+
+  // 공휴일 이름 가져오기
+  const getHolidayName = (date) => {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidays.get(dateStr);
+  };
+
   // 날짜별 리마인더 그룹화
   const getRemindersByDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    
     return reminders.filter((reminder) => {
-      const reminderDate = new Date(reminder.reminder_time)
-        .toISOString()
-        .split('T')[0];
-      return reminderDate === dateStr;
+      const reminderDate = new Date(reminder.reminder_time);
+      return reminderDate.getFullYear() === year &&
+             reminderDate.getMonth() === month &&
+             reminderDate.getDate() === day;
     });
   };
 
@@ -75,12 +110,18 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
     // 이전 달의 마지막 며칠
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       const day = lastDayOfPrevMonth - i;
+      const dayOfWeek = (startingDayOfWeek - 1 - i + 7) % 7;
+      
       cells.push(
         <div
           key={`prev-${day}`}
           className="h-24 p-1 text-muted-foreground bg-muted/30"
         >
-          <div className="text-sm">{day}</div>
+          <div className={`text-sm ${
+            dayOfWeek === 0 ? 'text-red-400' : dayOfWeek === 6 ? 'text-blue-400' : ''
+          }`}>
+            {day}
+          </div>
         </div>,
       );
     }
@@ -88,9 +129,12 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
     // 현재 달
     for (let day = 1; day <= daysInMonth; day++) {
       const cellDate = new Date(currentYear, currentMonth, day);
+      const dayOfWeek = cellDate.getDay();
       const isToday = cellDate.toDateString() === today.toDateString();
-      const isSelected =
-        selectedDate && cellDate.toDateString() === selectedDate.toDateString();
+      const isSelected = selectedDate && cellDate.toDateString() === selectedDate.toDateString();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isHolidayDate = isHoliday(cellDate);
+      const holidayName = getHolidayName(cellDate);
       const dayReminders = getRemindersByDate(cellDate);
 
       cells.push(
@@ -108,13 +152,23 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
             )
           }
         >
-          <div
-            className={`text-sm font-medium ${isToday ? 'text-primary' : ''}`}
-          >
+          <div className={`text-sm font-medium ${
+            isToday ? 'text-primary' : 
+            dayOfWeek === 0 || isHolidayDate ? 'text-red-500' : 
+            dayOfWeek === 6 ? 'text-blue-500' : ''
+          }`}>
             {day}
           </div>
+          
+          {/* 공휴일 표시 */}
+          {isHolidayDate && (
+            <div className="text-xs text-red-500 font-medium truncate" title={holidayName}>
+              {holidayName.length > 6 ? `${holidayName.substring(0, 6)}...` : holidayName}
+            </div>
+          )}
+          
           <div className="mt-1 space-y-1">
-            {dayReminders.slice(0, 2).map((reminder) => (
+            {dayReminders.slice(0, isHolidayDate ? 1 : 2).map((reminder) => (
               <div
                 key={reminder.id}
                 className={`text-xs p-1 rounded truncate ${
@@ -130,9 +184,9 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
                   : reminder.reminder_text}
               </div>
             ))}
-            {dayReminders.length > 2 && (
+            {dayReminders.length > (isHolidayDate ? 1 : 2) && (
               <div className="text-xs text-muted-foreground">
-                +{dayReminders.length - 2}개 더
+                +{dayReminders.length - (isHolidayDate ? 1 : 2)}개 더
               </div>
             )}
           </div>
@@ -142,19 +196,26 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
 
     // 다음 달의 첫 며칠 (5줄로 제한)
     const totalCells = cells.length;
-    const remainingCells = 35 - totalCells; // 5주 * 7일
+    const remainingCells = 35 - totalCells;
     for (let day = 1; day <= remainingCells; day++) {
+      const nextMonthDate = new Date(currentYear, currentMonth + 1, day);
+      const dayOfWeek = nextMonthDate.getDay();
+      
       cells.push(
         <div
           key={`next-${day}`}
           className="h-24 p-1 text-muted-foreground bg-muted/30"
         >
-          <div className="text-sm">{day}</div>
+          <div className={`text-sm ${
+            dayOfWeek === 0 ? 'text-red-400' : dayOfWeek === 6 ? 'text-blue-400' : ''
+          }`}>
+            {day}
+          </div>
         </div>,
       );
     }
 
-    return cells.slice(0, 35); // 5줄 = 35개 셀
+    return cells.slice(0, 35);
   };
 
   return (
@@ -183,10 +244,14 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
 
         {/* 요일 헤더 */}
         <div className="grid grid-cols-7 mb-2">
-          {dayNames.map((day) => (
+          {dayNames.map((day, index) => (
             <div
               key={day}
-              className="p-2 text-center font-medium text-muted-foreground"
+              className={`p-2 text-center font-medium ${
+                index === 0 ? 'text-red-500' : 
+                index === 6 ? 'text-blue-500' : 
+                'text-muted-foreground'
+              }`}
             >
               {day}
             </div>
@@ -207,15 +272,21 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       >
         {selectedDate && (
           <div className="p-4 w-80">
-            <h3 className="text-lg font-semibold mb-4">
-              {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일
-            </h3>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-lg font-semibold">
+                {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일
+              </h3>
+              {isHoliday(selectedDate) && (
+                <Badge variant="destructive" className="text-xs">
+                  {getHolidayName(selectedDate)}
+                </Badge>
+              )}
+            </div>
 
             {selectedDateReminders.length > 0 ? (
               <div className="space-y-3">
                 {selectedDateReminders.map((reminder) => {
                   const note = notes.find((n) => n.id === reminder.note_id);
-                  const reminderTime = new Date(reminder.reminder_time);
 
                   return (
                     <div
@@ -234,7 +305,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
                           {reminder.completed ? '완료' : '대기중'}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {reminderTime.toLocaleTimeString('ko-KR', {
+                          {new Date(reminder.reminder_time).toLocaleTimeString('ko-KR', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}

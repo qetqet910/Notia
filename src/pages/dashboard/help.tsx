@@ -3,7 +3,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +35,8 @@ import {
   HelpCircle,
   Sparkles,
   Bell,
+  History,
+  MessageCircle,
 } from 'lucide-react';
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
@@ -56,27 +64,39 @@ export const HelpPage: React.FC = () => {
   const features = [
     {
       icon: FileText,
-      title: '스마트한 노트 작성',
+      title: '마크다운 노트 작성',
       description: '마크다운 지원과 쓰기 편한 부가 기능들로 순간을 기록하세요.',
-      color: 'text-blue-500',
+      color: 'text-red-500',
     },
     {
       icon: Tag,
       title: '자동 태그 인식',
-      description: '#태그명으로 간편하게 노트를 분류하고 관리하세요',
-      color: 'text-green-500',
+      description: '#태그명으로 간편하게 노트를 분류하고 관리하세요.',
+      color: 'text-orange-500',
     },
     {
-      icon: Calendar,
+      icon: Bell,
       title: '스마트 리마인더',
-      description: '@시간 내용.으로 자동으로 일정을 생성하고 알림을 받으세요',
-      color: 'text-purple-500',
+      description: '@시간 내용.으로 자동으로 일정을 생성하고 알림을 받으세요.',
+      color: 'text-yellow-500',
     },
     {
       icon: Users,
       title: '팀 협업',
-      description: '그룹을 만들어 팀원들과 노트를 공유하고 함께 작업하세요',
-      color: 'text-orange-500',
+      description: '그룹을 만들어 팀원들과 노트를 공유하고 함께 작업하세요.',
+      color: 'text-green-500',
+    },
+    {
+      icon: Calendar,
+      title: '캘린더',
+      description: '저장된 리마인더로 한 눈에 일정을 파악하고 관리하세요.',
+      color: 'text-blue-500',
+    },
+    {
+      icon: History,
+      title: '타임라인',
+      description: '누가, 언제, 뭘 만들었는지 한 눈에 파악하세요.',
+      color: 'text-purple-500',
     },
   ];
 
@@ -154,7 +174,7 @@ graph TD;
 
         {/* 메인 콘텐츠 */}
         <ScrollArea className="flex-1">
-          <div className="container mx-auto p-6 max-w-4xl">
+          <div className="container mx-auto p-4 max-w-4xl">
             <Tabs defaultValue="overview" className="w-full">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="overview">개요</TabsTrigger>
@@ -196,11 +216,11 @@ graph TD;
                 </Card>
 
                 {/* 주요 기능 미리보기 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {features.map((feature, index) => (
                     <Card
                       key={index}
-                      className={`cursor-pointer transition-all duration-300 hover:scale-105 ${
+                      className={`cursor-pointer transition-all duration-300 hover:scale-95 ${
                         activeFeature === index ? 'ring-2 ring-primary' : ''
                       }`}
                       onMouseEnter={() => setActiveFeature(index)}
@@ -208,13 +228,16 @@ graph TD;
                     >
                       <CardContent className="p-6">
                         <div
-                          className={`inline-flex items-center justify-center w-12 h-12 rounded-lg mb-4`}
+                          className={`inline-flex items-center justify-start w-full h-2 rounded-lg mb-4`}
                         >
                           <feature.icon
                             className={`h-6 w-6 ${feature.color}`}
                           />
+                          <h3 className="font-semibold ml-4">
+                            {feature.title}
+                          </h3>
                         </div>
-                        <h3 className="font-semibold mb-2">{feature.title}</h3>
+
                         <p className="text-sm text-muted-foreground">
                           {feature.description}
                         </p>
@@ -222,6 +245,100 @@ graph TD;
                     </Card>
                   ))}
                 </div>
+
+                {/* 사용자 리뷰 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5" />
+                      사용자 리뷰
+                    </CardTitle>
+                    <CardDescription>
+                      실제 사용자들의 후기를 확인해보세요
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                              김
+                            </div>
+                            <div>
+                              <p className="font-medium">김개발</p>
+                              <div className="flex text-yellow-400">
+                                {'★'.repeat(5)}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            2024.06.10
+                          </span>
+                        </div>
+                        <p className="text-sm">
+                          마크다운 에디터 중에서 가장 사용하기 편해요. 키보드
+                          단축키도 직관적이고 반응속도도 빨라서 만족합니다!
+                        </p>
+                      </div>
+
+                      <div className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                              박
+                            </div>
+                            <div>
+                              <p className="font-medium">박학생</p>
+                              <div className="flex text-yellow-400">
+                                {'★'.repeat(4)}
+                                {'☆'.repeat(1)}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            2024.06.08
+                          </span>
+                        </div>
+                        <p className="text-sm">
+                          수업 필기용으로 쓰고 있는데 정말 좋네요. 실시간
+                          미리보기 기능이 특히 마음에 듭니다.
+                        </p>
+                      </div>
+
+                      <div className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                              이
+                            </div>
+                            <div>
+                              <p className="font-medium">이직장인</p>
+                              <div className="flex text-yellow-400">
+                                {'★'.repeat(5)}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            2024.06.05
+                          </span>
+                        </div>
+                        <p className="text-sm">
+                          회사에서 문서 작업할 때 자주 사용해요. 깔끔한 UI와
+                          빠른 성능이 최고입니다!
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t text-center">
+                      <p className="text-sm text-muted-foreground">
+                        평균 평점:{' '}
+                        <span className="font-semibold">4.7/5.0</span> (총 127개
+                        리뷰)
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* 통계 */}
                 <Card>
@@ -243,7 +360,7 @@ graph TD;
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-green-500 mb-2">
-                          50%
+                          99%
                         </div>
                         <div className="text-sm text-muted-foreground">
                           생산성 향상
@@ -268,7 +385,7 @@ graph TD;
                   {features.map((feature, index) => (
                     <Card key={index}>
                       <CardHeader>
-                        <CardTitle className="flex items-center">
+                        <CardTitle className="flex items-center relative">
                           <div
                             className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mr-3`}
                           >
@@ -277,15 +394,43 @@ graph TD;
                             />
                           </div>
                           {feature.title}
+                          {index === 3 && (
+                            <>
+                              <Badge className="ml-2 bg-green-100 text-green-800">
+                                새 기능
+                              </Badge>
+                              <Button className="absolute right-0">
+                                팀 스페이스 바로가기
+                              </Button>
+                            </>
+                          )}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-muted-foreground mb-4">
                           {feature.description}
                         </p>
+                        {index === 0 && (
+                          <div className="bg-muted/50 p-2 rounded-lg">
+                            <code className="text-sm">
+                              #프로젝트 #개발 <br />
+                              <br />
+                              # 할 일 목록 <br />
+                              - [ ] API 설계 <br />
+                              - [x] 데이터베이스 스키마 작성 <br />
+                              - [ ] 프론트엔드 구현 <br />
+                              <br />
+                              @내일 10시 코드 리뷰하기. <br />
+                              @다음주 월요일 배포 준비하기.
+                              <br />
+                            </code>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              마크다운과 Mermaid 문법을 완벽 지원합니다.
+                            </p>
+                          </div>
+                        )}
                         {index === 1 && (
-                          <div className="bg-muted/50 p-4 rounded-lg">
-                            <p className="text-sm font-medium mb-2">예시:</p>
+                          <div className="bg-muted/50 p-2 rounded-lg">
                             <code className="text-sm">
                               #프로젝트 #중요 #개발
                             </code>
@@ -295,8 +440,7 @@ graph TD;
                           </div>
                         )}
                         {index === 2 && (
-                          <div className="bg-muted/50 p-4 rounded-lg">
-                            <p className="text-sm font-medium mb-2">예시:</p>
+                          <div className="bg-muted/50 p-2 rounded-lg">
                             <code className="text-sm">
                               @내일 2시 회의 참석하기.
                             </code>
@@ -617,10 +761,7 @@ graph TD;
                           </a>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
-                          <a
-                            href="https://www.buymeacoffee.com/qetqet910"
-                            target="_blank"
-                          >
+                          <a href="https://coff.ee/qetqet910" target="_blank">
                             Buy Me a Coffee
                           </a>
                         </Button>
