@@ -53,7 +53,7 @@ usePlan 관한 것 삭제 O
 마이페이지 O
 설정페이지 구현 O
 도움말 페이지 구현 O
-`Ctrl N, S, /, T, B, D` O
+`Ctrl N, S, /, T, B, D, ESC ` O
 
 도움말 페이지에 있는 부가 기능들 구현 O
 설정, 마이페이지 기능 구현 O
@@ -63,6 +63,7 @@ usePlan 관한 것 삭제 O
 콘솔 에러 해결
 타임라인 수정후 노트 시간대 해결
 myPage Todo 구현
+타임라인 CreateAt이 reminderTime으로 바뀐듯
 
 포인트 컬러 Korean Traditional Color로 바꾸기
 리마인더 기능 구현

@@ -94,7 +94,7 @@ export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('notes');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const { isDarkMode, isDeepDarkMode, toggleTheme } = useThemeStore();
+  const { isDarkMode, isDeepDarkMode, toggleTheme, setTheme } = useThemeStore();
   const { notes, addNote, updateNote, updateNoteOnly, deleteNote } = useNotes();
   const { session, isAuthenticated, isLoginLoading, checkSession } =
     useAuthStore();
@@ -106,6 +106,10 @@ export const Dashboard: React.FC = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const editorRef = useRef<{ save: () => void } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isToggleTheme, setisToggleTheme] = useState(false);
+
+  const [isActiveTab, setIsActiveTab] = useState(0);
+  const activeTabs = ['notes', 'reminder', 'calendar', 'timeline'];
 
   checkNotificationPermission();
 
@@ -206,10 +210,26 @@ export const Dashboard: React.FC = () => {
           }
           break;
 
+        case '?':
+          if (!isCtrlCmd) {
+            e.preventDefault();
+            navigate('/dashboard/help');
+          }
+          break;
+
         case 't':
           if (!isCtrlCmd) {
             e.preventDefault();
-            toggleTheme();
+            setisToggleTheme((prev) => !prev);
+            setTheme(isToggleTheme ? 'dark' : 'light');
+          }
+          break;
+
+        case 'Tab':
+          if (!isCtrlCmd) {
+            e.preventDefault();
+            setIsActiveTab((prev) => (prev + 1) % activeTabs.length);
+            setActiveTab(activeTabs[isActiveTab]);
           }
           break;
 
@@ -226,6 +246,13 @@ export const Dashboard: React.FC = () => {
             setIsDeleteDialogOpen(true);
           }
           break;
+
+        case 'Delete':
+          if (!isCtrlCmd && selectedNote) {
+            e.preventDefault();
+            setIsDeleteDialogOpen(true);
+          }
+          break;
       }
     },
     [
@@ -233,6 +260,7 @@ export const Dashboard: React.FC = () => {
       selectedNote,
       handleCreateNote,
       toggleTheme,
+      setTheme,
       deleteNote,
       navigate,
     ],

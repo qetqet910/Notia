@@ -123,6 +123,8 @@ export const MyPage: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') ?? 'profile';
+  const [isActiveTab, setIsActiveTab] = useState(0);
+  const activeTabs = ['profile', 'activity', 'settings'];
 
   const fetchReminders = useCallback(async (userId: string) => {
     // 실제 Supabase 연동 코드 예시
@@ -143,6 +145,50 @@ export const MyPage: React.FC = () => {
       fetchReminders(user.id);
     }
   }, [user?.id, fetchReminders]);
+
+  const handleKeyboardShortcuts = useCallback(
+    (e: KeyboardEvent) => {
+      const isCtrlCmd = e.ctrlKey || e.metaKey;
+      const target = e.target as HTMLElement;
+
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
+      ) {
+        if (!(isCtrlCmd && e.key === 's')) {
+          return;
+        }
+      }
+
+      switch (e.key) {
+        case 'Escape':
+          if (!isCtrlCmd) {
+            e.preventDefault();
+            handleBackUrl();
+          }
+          break;
+
+        case 'Tab':
+          if (!isCtrlCmd) {
+            e.preventDefault();
+            setIsActiveTab((prev) => {
+              (prev + 1) % activeTabs.length;
+              console.log(isActiveTab);
+            });
+            handleTabChange(activeTabs[isActiveTab]);
+          }
+          break;
+      }
+    },
+    [navigate],
+  );
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    return () =>
+      document.removeEventListener('keydown', handleKeyboardShortcuts);
+  }, [handleKeyboardShortcuts]);
 
   const handleTabChange = useCallback(
     (newTab: string) => {

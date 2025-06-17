@@ -102,11 +102,13 @@ export const HelpPage: React.FC = () => {
 
   const shortcuts = [
     { key: 'Ctrl + S', description: '노트 저장' },
-    { key: 'N', description: '새 노트 생성' },
-    { key: 'D', description: '노트 삭제' },
-    { key: '/', description: '도움말 열기' },
-    { key: 'T', description: '다크 모드 토글' },
+    { key: 'Tab', description: '탭 전환' },
+    { key: 'T', description: '테마 전환' },
+    { key: 'N', description: '노트 생성' },
+    { key: 'D or Del', description: '노트 삭제' },
+    { key: '/ or ?', description: '도움말 열기' },
     { key: 'B', description: '사이드바 토글' },
+    { key: 'ESC or Bsc', description: '메인 화면' },
   ];
 
   const examples = [
