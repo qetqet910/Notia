@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { subDays, isSameDay } from 'date-fns';
 import { useThemeStore } from '@/stores/themeStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -178,7 +179,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     const today = startOfDay(now);
     const tomorrow = startOfDay(addDays(now, 1));
     const dayAfterTomorrow = startOfDay(addDays(now, 2));
-    const threeDaysLater = startOfDay(addDays(now, 3)); // 모레 다음날까지
+    const threeDaysLater = startOfDay(addDays(now, 3));
 
     let filtered = internalReminders.filter((reminder) => {
       const reminderDate = startOfDay(reminder.reminderTime);
@@ -188,12 +189,13 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
           return (
             !reminder.completed &&
             reminderDate >= today &&
-            reminderDate < threeDaysLater // 모레까지 포함
+            reminderDate < threeDaysLater &&
+            reminder.reminderTime >= now // 현재 시간 이후만
           );
         case 'upcoming':
-          return !reminder.completed && reminderDate >= threeDaysLater; // 모레 다음날부터
+          return !reminder.completed && reminderDate >= threeDaysLater;
         case 'overdue':
-          return !reminder.completed && reminderDate < today;
+          return !reminder.completed && reminder.reminderTime < now; // 시간까지 비교
         case 'completed':
           return reminder.completed;
         default:
@@ -211,7 +213,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
   // 시간대별 그룹화 (recent 탭용)
   const groupedRecentReminders = useMemo(() => {
     if (activeFilter !== 'recent')
-      return { today: [], tomorrow: [], dayAfter: [] };
+      return { today: [], tomorrow: [], dayAfter: [], overdue: [] };
 
     const now = new Date();
     const today = startOfDay(now);
@@ -221,27 +223,19 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     const todayReminders: InternalReminder[] = [];
     const tomorrowReminders: InternalReminder[] = [];
     const dayAfterReminders: InternalReminder[] = [];
+    const overdueReminders: InternalReminder[] = [];
 
     filteredReminders.forEach((reminder) => {
       const reminderDate = startOfDay(reminder.reminderTime);
+      const isOverdue = reminder.reminderTime < now;
 
-      if (
-        isWithinInterval(reminderDate, { start: today, end: endOfDay(today) })
-      ) {
+      if (isOverdue) {
+        overdueReminders.push(reminder);
+      } else if (isSameDay(reminderDate, today)) {
         todayReminders.push(reminder);
-      } else if (
-        isWithinInterval(reminderDate, {
-          start: tomorrow,
-          end: endOfDay(tomorrow),
-        })
-      ) {
+      } else if (isSameDay(reminderDate, tomorrow)) {
         tomorrowReminders.push(reminder);
-      } else if (
-        isWithinInterval(reminderDate, {
-          start: dayAfter,
-          end: endOfDay(dayAfter),
-        })
-      ) {
+      } else if (isSameDay(reminderDate, dayAfter)) {
         dayAfterReminders.push(reminder);
       }
     });
@@ -250,6 +244,43 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
       today: todayReminders,
       tomorrow: tomorrowReminders,
       dayAfter: dayAfterReminders,
+      overdue: overdueReminders,
+    };
+  }, [filteredReminders, activeFilter]);
+
+  const groupedOverdueReminders = useMemo(() => {
+    if (activeFilter !== 'overdue')
+      return { today: [], yesterday: [], dayBeforeYesterday: [], older: [] };
+
+    const now = new Date();
+    const today = startOfDay(now);
+    const yesterday = startOfDay(subDays(now, 1));
+    const dayBeforeYesterday = startOfDay(subDays(now, 2));
+
+    const todayOverdue: InternalReminder[] = [];
+    const yesterdayOverdue: InternalReminder[] = [];
+    const dayBeforeYesterdayOverdue: InternalReminder[] = [];
+    const olderOverdue: InternalReminder[] = [];
+
+    filteredReminders.forEach((reminder) => {
+      const reminderDate = startOfDay(reminder.reminderTime);
+
+      if (isSameDay(reminderDate, today)) {
+        todayOverdue.push(reminder);
+      } else if (isSameDay(reminderDate, yesterday)) {
+        yesterdayOverdue.push(reminder);
+      } else if (isSameDay(reminderDate, dayBeforeYesterday)) {
+        dayBeforeYesterdayOverdue.push(reminder);
+      } else {
+        olderOverdue.push(reminder);
+      }
+    });
+
+    return {
+      today: todayOverdue,
+      yesterday: yesterdayOverdue,
+      dayBeforeYesterday: dayBeforeYesterdayOverdue,
+      older: olderOverdue,
     };
   }, [filteredReminders, activeFilter]);
 
@@ -304,7 +335,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
       <div className="mb-6">
         <div className="flex items-center mb-3 px-1">
           {icon}
-          <h3 className="text-sm font-medium ml-2 text-gray-600">{title}</h3>
+          <h3 className="text-sm font-m edium ml-2 text-gray-600">{title}</h3>
           <Badge variant="secondary" className="ml-2 text-xs px-1.5 py-0.5">
             {reminders.length}
           </Badge>
@@ -319,10 +350,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
   // 리마인더 카드 렌더링 (개선된 버전)
   const renderReminderCard = (reminder: InternalReminder) => {
     const now = new Date();
-    const isOverdue =
-      reminder.reminderTime < now &&
-      !isToday(reminder.reminderTime) &&
-      !reminder.completed;
+    const isOverdue = !reminder.completed && reminder.reminderTime < now; // 현재 시간보다 과거면 지연
 
     return (
       <Card
@@ -506,7 +534,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
         >
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overdue" className="text-xs">
-              이전
+              지연
             </TabsTrigger>
             <TabsTrigger value="recent" className="text-xs">
               최근
@@ -573,11 +601,28 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                 <Calendar className="h-4 w-4 text-gray-600" />,
               )
             ) : activeFilter === 'overdue' ? (
-              renderReminderGroup(
-                '기한이 지난 항목',
-                filteredReminders,
-                <AlertCircle className="h-4 w-4 text-red-500" />,
-              )
+              <>
+                {renderReminderGroup(
+                  '오늘 (지연)',
+                  groupedOverdueReminders.today,
+                  <AlertCircle className="h-4 w-4 text-red-500" />,
+                )}
+                {renderReminderGroup(
+                  '어제',
+                  groupedOverdueReminders.yesterday,
+                  <AlertCircle className="h-4 w-4 text-orange-500" />,
+                )}
+                {renderReminderGroup(
+                  '엊그제',
+                  groupedOverdueReminders.dayBeforeYesterday,
+                  <AlertCircle className="h-4 w-4 text-yellow-500" />,
+                )}
+                {renderReminderGroup(
+                  '그 이전',
+                  groupedOverdueReminders.older,
+                  <AlertCircle className="h-4 w-4 text-gray-500" />,
+                )}
+              </>
             ) : (
               renderReminderGroup(
                 '완료된 항목',

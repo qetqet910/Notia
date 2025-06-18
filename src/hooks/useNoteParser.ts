@@ -129,22 +129,29 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
   return undefined;
 };
 
-export const useNoteParser = (content: string, existingReminders: ExistingReminder[] = []) => {
+export const useNoteParser = (
+  content: string,
+  existingReminders: ExistingReminder[] = [],
+) => {
   return useMemo(() => {
-    const tags: ParsedTag[] = [];
     const reminders: ParsedReminder[] = [];
 
     // 기존 리마인더를 텍스트로 매핑
-    const existingByText = new Map(
-      existingReminders.map(r => [r.text, r])
-    );
+    const existingByText = new Map(existingReminders.map((r) => [r.text, r]));
 
     // 1. 해시태그 파싱
     const hashtagRegex = /#([^\s#@]+)/g;
+    const uniqueTags = new Set<string>();
     let match;
+
     while ((match = hashtagRegex.exec(content)) !== null) {
-      tags.push({ text: match[1], originalText: match[0] });
+      uniqueTags.add(match[1]);
     }
+
+    const tags: ParsedTag[] = Array.from(uniqueTags).map((text) => ({
+      text,
+      originalText: `#${text}`,
+    }));
 
     // 2. 리마인더 파싱
     const reminderRegex = /@([^@#\n]+?)\./g;
@@ -174,8 +181,8 @@ export const useNoteParser = (content: string, existingReminders: ExistingRemind
       if (timeText && reminderText) {
         // ✅ 기존 리마인더가 있으면 그 날짜 사용, 없으면 새로 파싱
         const existingReminder = existingByText.get(reminderText);
-        const parsedDate = existingReminder 
-          ? existingReminder.date 
+        const parsedDate = existingReminder
+          ? existingReminder.date
           : parseTimeExpression(timeText);
 
         reminders.push({

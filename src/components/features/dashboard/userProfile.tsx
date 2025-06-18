@@ -1,4 +1,11 @@
-import { User, Settings, LogOut, Loader2, Monitor } from 'lucide-react';
+import {
+  User,
+  Settings,
+  LogOut,
+  Loader2,
+  Monitor,
+  Activity,
+} from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -101,18 +108,30 @@ export function UserProfile() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
+          className="cursor-pointer"
           onClick={() => navigate('/dashboard/myPage?tab=profile')}
         >
           <User className="mr-2 h-4 w-4" />
           <span>마이페이지</span>
         </DropdownMenuItem>
         <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => navigate('/dashboard/myPage?tab=activity')}
+        >
+          <Activity className="mr-2 h-4 w-4" />
+          <span>활동</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="cursor-pointer"
           onClick={() => navigate('/dashboard/myPage?tab=settings')}
         >
           <Settings className="mr-2 h-4 w-4" />
           <span>설정</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/dashboard/help')}>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => navigate('/dashboard/help')}
+        >
           <Monitor className="mr-2 h-4 w-4" />
           <span>도움말</span>
         </DropdownMenuItem>
@@ -122,7 +141,11 @@ export function UserProfile() {
           <ThemeToggle />
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} disabled={isLogoutLoading}>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={handleSignOut}
+          disabled={isLogoutLoading}
+        >
           {isLogoutLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
