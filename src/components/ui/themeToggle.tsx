@@ -35,7 +35,7 @@ const ThemeToggle = React.forwardRef<HTMLDivElement, ThemeToggleProps>(
               theme === 'dark' && 'font-medium',
             )}
           >
-            <MoonStar className="mr-2 h-4 w-4" />
+            <Moon className="mr-2 h-4 w-4" />
             <span>Dark</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
@@ -45,7 +45,7 @@ const ThemeToggle = React.forwardRef<HTMLDivElement, ThemeToggleProps>(
               theme === 'deepdark' && 'font-medium',
             )}
           >
-            <Moon className="mr-2 h-4 w-4" />
+            <MoonStar className="mr-2 h-4 w-4" />
             <span>Deep Dark</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem

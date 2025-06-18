@@ -1,6 +1,6 @@
 import type React from 'react';
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,9 +43,14 @@ import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
 
 export const HelpPage: React.FC = () => {
-  const { isDarkMode, isDeepDarkMode } = useThemeStore();
+  const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
   const [activeFeature, setActiveFeature] = useState<number | null>(null);
   const [animationStep, setAnimationStep] = useState(0);
+  const [isToggleTheme, setisToggleTheme] = useState(false);
+  const [isActiveTab, setIsActiveTab] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') ?? 'overview';
+  const activeTabs = ['overview', 'features', 'guide', 'shortcuts', 'faq'];
 
   const logoSrc = isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage;
   const navigate = useNavigate();
@@ -100,14 +105,80 @@ export const HelpPage: React.FC = () => {
     },
   ];
 
+  const handleTabChange = useCallback(
+    (newTab: string) => {
+      setSearchParams({ tab: newTab });
+    },
+    [setSearchParams],
+  );
+
+  const SIMPLE_SHORTCUTS = {
+    t: () => {
+      setisToggleTheme((prev) => !prev);
+      setTheme(isToggleTheme ? 'dark' : 'light');
+    },
+    Tab: () => {
+      setIsActiveTab((prev) => (prev + 1) % activeTabs.length);
+      handleTabChange(activeTabs[isActiveTab]);
+    },
+    b: () => setIsSidebarVisible((prev) => !prev),
+    m: () => navigate('/dashboard/myPage?tab=profile'),
+    ',': () => navigate('/dashboard/myPage?tab=activity'),
+    '<': () => navigate('/dashboard/myPage?tab=activity'),
+    '.': () => navigate('/dashboard/myPage?tab=settings'),
+    '>': () => navigate('/dashboard/myPage?tab=settings'),
+    Escape: () => navigate('/dashboard'),
+    Backspace: () => navigate('/dashboard'),
+  };
+
+  const handleKeyboardShortcuts = useCallback(
+    (e: KeyboardEvent) => {
+      const isCtrlCmd = e.ctrlKey || e.metaKey;
+      const target = e.target as HTMLElement;
+
+      // 입력 필드 체크
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
+      ) {
+        if (!(isCtrlCmd && e.key === 's')) return;
+      }
+
+      const handler = SIMPLE_SHORTCUTS[e.key as keyof typeof SIMPLE_SHORTCUTS];
+
+      if (handler) {
+        e.preventDefault();
+        handler(isCtrlCmd);
+      }
+    },
+    [
+      navigate,
+      setisToggleTheme,
+      setTheme,
+      isToggleTheme,
+      setIsActiveTab,
+      activeTabs,
+    ],
+  );
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    return () =>
+      document.removeEventListener('keydown', handleKeyboardShortcuts);
+  }, [handleKeyboardShortcuts]);
+
   const shortcuts = [
+    { key: 'N', description: '노트 생성' },
     { key: 'Ctrl + S', description: '노트 저장' },
+    { key: 'D or Del', description: '노트 삭제' },
     { key: 'Tab', description: '탭 전환' },
     { key: 'T', description: '테마 전환' },
-    { key: 'N', description: '노트 생성' },
-    { key: 'D or Del', description: '노트 삭제' },
-    { key: '/ or ?', description: '도움말 열기' },
     { key: 'B', description: '사이드바 토글' },
+    { key: 'M', description: '마이페이지 열기' },
+    { key: ', or <', description: '활동 열기' },
+    { key: '. or >', description: '설정 열기' },
+    { key: '/ or ?', description: '도움말 열기' },
     { key: 'ESC or Bsc', description: '메인 화면' },
   ];
 
@@ -177,7 +248,11 @@ graph TD;
         {/* 메인 콘텐츠 */}
         <ScrollArea className="flex-1">
           <div className="container mx-auto p-4 max-w-4xl">
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs
+              value={tab}
+              onValueChange={handleTabChange}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="overview">개요</TabsTrigger>
                 <TabsTrigger value="features">기능</TabsTrigger>
@@ -580,11 +655,11 @@ graph TD;
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {shortcuts.map((shortcut, index) => (
                         <div
                           key={index}
-                          className="flex justify-between items-center p-3 bg-muted/50 rounded-lg"
+                          className="flex justify-between items-center p-3 bg-muted/\20 rounded-lg"
                         >
                           <span className="text-sm">
                             {shortcut.description}

@@ -117,9 +117,10 @@ export const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, userProfile, signOut } = useAuthStore();
-  const { isDarkMode, isDeepDarkMode } = useThemeStore();
+  const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
   const { notes } = useNotes() as { notes: Note[] }; // 실제 Note 타입 적용
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [isToggleTheme, setisToggleTheme] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') ?? 'profile';
@@ -146,42 +147,56 @@ export const MyPage: React.FC = () => {
     }
   }, [user?.id, fetchReminders]);
 
+  const SIMPLE_SHORTCUTS = {
+    '/': () => navigate('/dashboard/help?tab=overview'),
+    '?': () => navigate('/dashboard/help?tab=overview'),
+    t: () => {
+      setisToggleTheme((prev) => !prev);
+      setTheme(isToggleTheme ? 'dark' : 'light');
+    },
+    Tab: () => {
+      setIsActiveTab((prev) => (prev + 1) % activeTabs.length);
+      handleTabChange(activeTabs[isActiveTab]);
+    },
+    b: () => setIsSidebarVisible((prev) => !prev),
+    m: () => navigate('/dashboard/myPage?tab=profile'),
+    ',': () => navigate('/dashboard/myPage?tab=activity'),
+    '<': () => navigate('/dashboard/myPage?tab=activity'),
+    '.': () => navigate('/dashboard/myPage?tab=settings'),
+    '>': () => navigate('/dashboard/myPage?tab=settings'),
+    Escape: () => navigate('/dashboard'),
+    Backspace: () => navigate('/dashboard'),
+  };
+
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
       const isCtrlCmd = e.ctrlKey || e.metaKey;
       const target = e.target as HTMLElement;
 
+      // 입력 필드 체크
       if (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.contentEditable === 'true'
       ) {
-        if (!(isCtrlCmd && e.key === 's')) {
-          return;
-        }
+        if (!(isCtrlCmd && e.key === 's')) return;
       }
 
-      switch (e.key) {
-        case 'Escape':
-          if (!isCtrlCmd) {
-            e.preventDefault();
-            handleBackUrl();
-          }
-          break;
+      const handler = SIMPLE_SHORTCUTS[e.key as keyof typeof SIMPLE_SHORTCUTS];
 
-        case 'Tab':
-          if (!isCtrlCmd) {
-            e.preventDefault();
-            setIsActiveTab((prev) => {
-              (prev + 1) % activeTabs.length;
-              console.log(isActiveTab);
-            });
-            handleTabChange(activeTabs[isActiveTab]);
-          }
-          break;
+      if (handler) {
+        e.preventDefault();
+        handler(isCtrlCmd);
       }
     },
-    [navigate],
+    [
+      navigate,
+      setisToggleTheme,
+      setTheme,
+      isToggleTheme,
+      setIsActiveTab,
+      activeTabs,
+    ],
   );
 
   useEffect(() => {
@@ -928,7 +943,7 @@ const SettingsTab = ({ user, handleLogout }) => {
     toast({
       title: '🔔 테스트 알림',
       description:
-        '알림이 이렇게 표시됩니다. 실제 알림은 설정에 따라 전송됩니다.',
+        '알림이 이렇게 표시됩니다. 브라우저 밖 알림도 표시되는지 확인해주세요. 만약, 보이지 않느다면 알림 설정을 허용해주세요.',
       duration: 5000,
     });
 

@@ -172,97 +172,71 @@ export const Dashboard: React.FC = () => {
     }
   }, [addNote]);
 
+  const SIMPLE_SHORTCUTS = {
+    n: () => handleCreateNote(),
+    s: (isCtrlCmd: boolean) => {
+      if (isCtrlCmd && isEditing && editorRef.current) {
+        editorRef.current.save();
+      }
+    },
+    '/': () => navigate('/dashboard/help?tab=overview'),
+    '?': () => navigate('/dashboard/help?tab=overview'),
+    t: () => {
+      setisToggleTheme((prev) => !prev);
+      setTheme(isToggleTheme ? 'dark' : 'light');
+    },
+    Tab: () => {
+      setIsActiveTab((prev) => {
+        const nextIndex = (prev + 1) % activeTabs.length;
+        setActiveTab(activeTabs[nextIndex]);
+        return nextIndex;
+      });
+    },
+    b: () => setIsSidebarVisible((prev) => !prev),
+    d: () => selectedNote && setIsDeleteDialogOpen(true),
+    Delete: () => selectedNote && setIsDeleteDialogOpen(true),
+    m: () => navigate('/dashboard/myPage?tab=profile'),
+    ',': () => navigate('/dashboard/myPage?tab=activity'),
+    '<': () => navigate('/dashboard/myPage?tab=activity'),
+    '.': () => navigate('/dashboard/myPage?tab=settings'),
+    '>': () => navigate('/dashboard/myPage?tab=settings'),
+  };
+
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
       const isCtrlCmd = e.ctrlKey || e.metaKey;
       const target = e.target as HTMLElement;
 
+      // 입력 필드 체크
       if (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.contentEditable === 'true'
       ) {
-        if (!(isCtrlCmd && e.key === 's')) {
-          return;
-        }
+        if (!(isCtrlCmd && e.key === 's')) return;
       }
 
-      // 단축키 처리
-      switch (e.key) {
-        case 'n':
-          e.preventDefault();
-          handleCreateNote();
-          break;
+      const handler = SIMPLE_SHORTCUTS[e.key as keyof typeof SIMPLE_SHORTCUTS];
 
-        case 's':
-          if (isCtrlCmd) {
-            e.preventDefault();
-            if (isEditing && editorRef.current) {
-              editorRef.current.save();
-            }
-          }
-          break;
-
-        case '/':
-          if (!isCtrlCmd) {
-            e.preventDefault();
-            navigate('/dashboard/help');
-          }
-          break;
-
-        case '?':
-          if (!isCtrlCmd) {
-            e.preventDefault();
-            navigate('/dashboard/help');
-          }
-          break;
-
-        case 't':
-          if (!isCtrlCmd) {
-            e.preventDefault();
-            setisToggleTheme((prev) => !prev);
-            setTheme(isToggleTheme ? 'dark' : 'light');
-          }
-          break;
-
-        case 'Tab':
-          if (!isCtrlCmd) {
-            e.preventDefault();
-            setIsActiveTab((prev) => (prev + 1) % activeTabs.length);
-            setActiveTab(activeTabs[isActiveTab]);
-          }
-          break;
-
-        case 'b':
-          if (!isCtrlCmd) {
-            e.preventDefault();
-            setIsSidebarVisible((prev) => !prev);
-          }
-          break;
-
-        case 'd':
-          if (!isCtrlCmd && selectedNote) {
-            e.preventDefault();
-            setIsDeleteDialogOpen(true);
-          }
-          break;
-
-        case 'Delete':
-          if (!isCtrlCmd && selectedNote) {
-            e.preventDefault();
-            setIsDeleteDialogOpen(true);
-          }
-          break;
+      if (handler) {
+        e.preventDefault();
+        handler(isCtrlCmd);
       }
     },
     [
-      isEditing,
-      selectedNote,
       handleCreateNote,
-      toggleTheme,
-      setTheme,
-      deleteNote,
       navigate,
+      isEditing,
+      editorRef,
+      setisToggleTheme,
+      setTheme,
+      isToggleTheme,
+      setIsActiveTab,
+      setActiveTab,
+      activeTabs,
+      setIsSidebarVisible,
+      selectedNote,
+      setIsDeleteDialogOpen,
     ],
   );
 
