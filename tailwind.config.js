@@ -52,6 +52,11 @@ module.exports = {
           foreground: 'hsl(var(--card-foreground))',
         },
       },
+      fontFamily: {
+        exqt: ['exqt', 'sans-serif'],
+        Ownglyph_ParkDaHyun: ['Ownglyph ParkDaHyun', 'sans-serif'],
+        SF_HambakSnow: ['SF Hambak Snow', 'sans-serif'],
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

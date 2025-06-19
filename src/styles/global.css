@@ -3,6 +3,34 @@
 @tailwind utilities;
 
 @layer base {
+  @font-face {
+    font-family: 'exqt';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2506-1@1.0/exqt.woff2')
+      format('woff2');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: 'Ownglyph_ParkDaHyun';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2')
+      format('woff2');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  @font-face {
+    font-family: 'SF_HambakSnow';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/SF_HambakSnow.woff')
+      format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  body {
+    font-family: 'exqt', sans-serif;
+  }
+
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -13,16 +41,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 158 60% 50%;
+    --primary: 175 36% 71%; /* 취람색 #68C7C1 */
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 0 0% 98%;
+    --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 175 36% 85%; /* 취람색 밝은 버전 */
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -30,13 +58,13 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 175 36% 71%; /* 취람색 */
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 222.2 47.4% 11.2%; /* slate-ish dark */
+    --background: 222.2 47.4% 11.2%;
     --foreground: 210 40% 98%;
 
     --card: 223 47% 14%;
@@ -45,24 +73,24 @@
     --popover: 222.2 47.4% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 158 60% 50%; /* Supabase green */
+    --primary: 175 36% 61%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 215 25% 25%;
+    --secondary: 223 47% 14%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 222.2 47.4% 13.2%;
+    --muted: 223 37% 12%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 158 40% 40%; /* Subtle green accent */
+    --accent: 202 28% 56%; /* 양람색 어두운 버전 */
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 65% 45%;
+    --destructive: 8 54% 47%; /* 장단색 어두운 버전 */
     --destructive-foreground: 210 40% 98%;
 
     --border: 218 20% 25%;
     --input: 218 20% 25%;
-    --ring: 158 60% 50%;
+    --ring: 225 42% 56%; /* 벽자색 어두운 버전 */
   }
 
   .deepdark {
@@ -72,19 +100,25 @@
     --card-foreground: 0 0% 90%;
     --popover: 222 47% 5%;
     --popover-foreground: 0 0% 90%;
-    --primary: 158 60% 50%;
-    --primary-foreground: 144.9 80.4% 10%;
+
+    --primary: 175 36% 45%;
+    --primary-foreground: 210 40% 98%;
+
     --secondary: 217 32.6% 12%;
     --secondary-foreground: 0 0% 98%;
+
     --muted: 222 47% 7%;
     --muted-foreground: 240 5% 54.9%;
-    --accent: 217 32.6% 12%;
+
+    --accent: 175 36% 25%;
     --accent-foreground: 0 0% 98%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
+
     --border: 217 32.6% 10%;
     --input: 217 32.6% 10%;
-    --ring: 142 51% 35%;
+    --ring: 175 36% 45%;
   }
 }
 
