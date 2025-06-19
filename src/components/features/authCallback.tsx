@@ -23,45 +23,13 @@ export const AuthCallback = () => {
 
         const user = data.session.user;
 
-        // 프로필 가져오기와 생성을 하나의 트랜잭션으로
-        const handleUserProfile = async () => {
-          try {
-            // 프로필 조회 + 없으면 생성 (단일 쿼리로)
-            const { data: profile, error: profileError } = await supabase.rpc(
-              'get_or_create_user_profile',
-              {
-                p_user_id: user.id,
-                p_display_name:
-                  user.user_metadata?.full_name ||
-                  user.user_metadata?.name ||
-                  user.email?.split('@')[0] ||
-                  '사용자',
-              },
-            );
-
-            if (profileError) {
-              console.error('프로필 처리 오류:', profileError);
-              return null;
-            }
-
-            return profile;
-          } catch (err) {
-            console.error('프로필 처리 오류:', err);
-            return null;
-          }
-        };
-
-        // 비동기 작업을 한 번에 처리
-        const userProfile = await handleUserProfile();
-
         // 상태 한 번에 업데이트
         useAuthStore.setState({
           user: user,
           session: data.session,
           isAuthenticated: true,
-          userProfile: userProfile,
           isLoginLoading: false,
-          isRegisterLoading: false
+          isRegisterLoading: false,
         });
 
         // 리다이렉트 대상 결정 (저장된 경로 또는 대시보드)
@@ -73,7 +41,10 @@ export const AuthCallback = () => {
         navigate(redirectTo, { replace: true });
       } catch (err) {
         console.error('Auth callback 처리 오류:', err);
-        useAuthStore.setState({ isLoginLoading: false, isRegisterLoading: false });
+        useAuthStore.setState({
+          isLoginLoading: false,
+          isRegisterLoading: false,
+        });
         navigate('/login');
       }
     };

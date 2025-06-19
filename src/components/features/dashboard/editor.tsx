@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import mermaid from 'mermaid';
@@ -162,6 +163,7 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
     const [content, setContent] = useState(note.content);
     const [isDirty, setIsDirty] = useState(false);
     const { tags, reminders: parsedReminders } = useNoteParser(content);
+    const navigate = useNavigate();
 
     useEffect(() => {
       setTitle(note.title);
@@ -299,6 +301,10 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
       setIsEditing(false); // 부모의 상태 변경
     };
 
+    const navigateHandler = () => {
+      navigate('/dashboard/help?tab=shortcuts');
+    };
+
     const formatDate = (date: Date): string => {
       const now = new Date();
       const isToday = date.toDateString() === now.toDateString();
@@ -357,23 +363,11 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
                   </div>
                   <h3 className="font-semibold mt-3">키보드 단축키</h3>
                   <div className="space-y-1 text-xs">
-                    <p>
-                      • <kbd>Ctrl+S</kbd> 저장
-                    </p>
-                    <p>
-                      • <kbd>N</kbd> 새 노트
-                    </p>
-                    <p>
-                      • <kbd>/</kbd> 도움말
-                    </p>
-                    <p>
-                      • <kbd>T</kbd> 테마 변경
-                    </p>
-                    <p>
-                      • <kbd>B</kbd> 사이드바
-                    </p>
-                    <p>
-                      • <kbd>D</kbd> 삭제
+                    <p
+                      className="cursor-pointer hover:underline hover:text-blue-500 transition-all .25s"
+                      onClick={navigateHandler}
+                    >
+                      • 단축키 도움말 바로가기
                     </p>
                   </div>
                 </div>

@@ -649,7 +649,7 @@ const Sidebar = ({
   }, [notes]);
 
   return (
-    <aside className="w-56 border-r border-border bg-muted p-4 hidden md:block overflow-y-auto">
+    <aside className="w-56 border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col">
       <nav className="flex flex-col gap-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
@@ -666,38 +666,42 @@ const Sidebar = ({
           );
         })}
       </nav>
-      <div className="mt-6">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2">
-          팀 스페이스
-        </h3>
-        {/* <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} /> */}
-      </div>
-      {popularTags.length > 0 && (
+      <div>
         <div className="mt-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
-            인기 태그
+            팀 스페이스
           </h3>
-          <div className="flex flex-col gap-1">
-            {popularTags.map(({ tag, count }) => (
-              <Button
-                key={tag}
-                variant="ghost"
-                size="sm"
-                className="justify-between text-xs"
-                onClick={() => {
-                  setActiveTab('notes');
-                  onTagSelect(tag);
-                }}
-              >
-                <span>#{tag}</span>
-                <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
-                  {count}
-                </span>
-              </Button>
-            ))}
-          </div>
+          <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
-      )}
+        {popularTags.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              인기 태그
+            </h3>
+            <div className="flex flex-col gap-1">
+              {popularTags.map(({ tag, count }) => (
+                <Button
+                  key={tag}
+                  variant="ghost"
+                  size="sm"
+                  className="justify-between text-xs"
+                  onClick={() => {
+                    setActiveTab('notes');
+                    onTagSelect(tag);
+                  }}
+                >
+                  <span>#{tag}</span>
+                  <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
+                    {count}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+        </div>
+      </div>
     </aside>
   );
 };

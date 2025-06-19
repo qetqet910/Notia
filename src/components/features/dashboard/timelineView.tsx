@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Clock, Calendar, Tag } from 'lucide-react';
+import {
+  FileText,
+  Clock,
+  Calendar,
+  Tag,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,8 +14,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const TimelineView = ({ notes, reminders, onOpenNote }) => {
   const [filter, setFilter] = useState('all'); // all, notes, reminders
   const [sortBy, setSortBy] = useState('date'); // date, title
+  const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
 
-  // 노트와 리마인더를 통합하여 타임라인 데이터 생성
+  const toggleDateGroup = (dateStr: string) => {
+    setCollapsedDates((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(dateStr)) {
+        newSet.delete(dateStr);
+      } else {
+        newSet.add(dateStr);
+      }
+      return newSet;
+    });
+  };
+
   const timelineData = useMemo(() => {
     const items = [];
 
@@ -19,7 +38,7 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
         type: 'note',
         title: note.title,
         content: note.content,
-        date: new Date(note.updated_at || note.created_at),
+        date: new Date(note.created_at || note.updated_at),
         tags: note.tags || [],
         noteId: note.id,
         originalData: note,
@@ -34,7 +53,7 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
         type: 'reminder',
         title: reminder.reminder_text,
         content: reminder.original_text,
-        date: new Date(reminder.reminder_time),
+        date: new Date(reminder.created_at), // reminder_time → created_at
         completed: reminder.completed,
         enabled: reminder.enabled,
         noteId: reminder.note_id,
@@ -232,11 +251,11 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
   };
 
   return (
-    <div className="p-6 h-full overflow-y-auto">
+    <div className="p-6 h-full overflow-y-auto custom-scrollbar">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">타임라인</h2>
-
+    
         <div className="flex items-center gap-4">
           {/* 필터 */}
           <Tabs value={filter} onValueChange={setFilter} className="w-auto">
@@ -309,19 +328,45 @@ const TimelineView = ({ notes, reminders, onOpenNote }) => {
       {/* 타임라인 */}
       <div className="space-y-8">
         {groupedData.length > 0 ? (
-          groupedData.map(([dateStr, items]) => (
-            <div key={dateStr}>
-              {/* 날짜 헤더 */}
-              <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-lg font-semibold">{formatDate(dateStr)}</h3>
-                <div className="flex-1 h-px bg-border" />
-                <Badge variant="outline">{items.length}개 항목</Badge>
-              </div>
+          groupedData.map(([dateStr, items]) => {
+            const isCollapsed = collapsedDates.has(dateStr);
 
-              {/* 해당 날짜의 아이템들 */}
-              <div className="space-y-0">{items.map(renderTimelineItem)}</div>
-            </div>
-          ))
+            return (
+              <div key={dateStr}>
+                {/* 날짜 헤더 - 클릭 가능 */}
+                <div
+                  className="flex items-center gap-3  cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
+                  onClick={() => toggleDateGroup(dateStr)}
+                >
+                  {/* 접기/펼치기 아이콘 */}
+                  {isCollapsed ? (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  )}
+
+                  <h3 className="text-lg font-semibold">
+                    {formatDate(dateStr)}
+                  </h3>
+                  <div className="flex-1 h-px bg-border" />
+                  <Badge variant="outline">{items.length}개 항목</Badge>
+                </div>
+
+                {/* 해당 날짜의 아이템들 - 애니메이션 적용 */}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    isCollapsed
+                      ? 'max-h-0 opacity-0'
+                      : 'max-h-[2000px] opacity-100'
+                  }`}
+                >
+                  <div className="space-y-0 pb-4">
+                    {items.map(renderTimelineItem)}
+                  </div>
+                </div>
+              </div>
+            );
+          })
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />

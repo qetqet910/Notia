@@ -21,8 +21,18 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
   const lastDayOfPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
   const monthNames = [
-    '1월', '2월', '3월', '4월', '5월', '6월',
-    '7월', '8월', '9월', '10월', '11월', '12월',
+    '1월',
+    '2월',
+    '3월',
+    '4월',
+    '5월',
+    '6월',
+    '7월',
+    '8월',
+    '9월',
+    '10월',
+    '11월',
+    '12월',
   ];
 
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -30,7 +40,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
   // 한국 공휴일 데이터
   const getKoreanHolidays = (year) => {
     const holidays = new Map();
-    
+
     // 고정 공휴일
     holidays.set(`${year}-01-01`, '신정');
     holidays.set(`${year}-03-01`, '삼일절');
@@ -40,7 +50,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
     holidays.set(`${year}-10-03`, '개천절');
     holidays.set(`${year}-10-09`, '한글날');
     holidays.set(`${year}-12-25`, '크리스마스');
-    
+
     // 2025년 기준 음력 공휴일 (실제로는 동적 계산 필요)
     if (year === 2025) {
       holidays.set('2025-01-28', '설날 전날');
@@ -51,7 +61,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       holidays.set('2025-10-06', '추석');
       holidays.set('2025-10-07', '추석 다음날');
     }
-    
+
     return holidays;
   };
 
@@ -59,13 +69,17 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
 
   // 날짜가 공휴일인지 확인
   const isHoliday = (date) => {
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dateStr = `${date.getFullYear()}-${String(
+      date.getMonth() + 1,
+    ).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return holidays.has(dateStr);
   };
 
   // 공휴일 이름 가져오기
   const getHolidayName = (date) => {
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dateStr = `${date.getFullYear()}-${String(
+      date.getMonth() + 1,
+    ).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return holidays.get(dateStr);
   };
 
@@ -74,12 +88,14 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const day = date.getDate();
-    
+
     return reminders.filter((reminder) => {
       const reminderDate = new Date(reminder.reminder_time);
-      return reminderDate.getFullYear() === year &&
-             reminderDate.getMonth() === month &&
-             reminderDate.getDate() === day;
+      return (
+        reminderDate.getFullYear() === year &&
+        reminderDate.getMonth() === month &&
+        reminderDate.getDate() === day
+      );
     });
   };
 
@@ -111,15 +127,21 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       const day = lastDayOfPrevMonth - i;
       const dayOfWeek = (startingDayOfWeek - 1 - i + 7) % 7;
-      
+
       cells.push(
         <div
           key={`prev-${day}`}
           className="h-24 p-1 text-muted-foreground bg-muted/30"
         >
-          <div className={`text-sm ${
-            dayOfWeek === 0 ? 'text-red-400' : dayOfWeek === 6 ? 'text-blue-400' : ''
-          }`}>
+          <div
+            className={`text-sm ${
+              dayOfWeek === 0
+                ? 'text-red-400'
+                : dayOfWeek === 6
+                ? 'text-blue-400'
+                : ''
+            }`}
+          >
             {day}
           </div>
         </div>,
@@ -131,7 +153,8 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       const cellDate = new Date(currentYear, currentMonth, day);
       const dayOfWeek = cellDate.getDay();
       const isToday = cellDate.toDateString() === today.toDateString();
-      const isSelected = selectedDate && cellDate.toDateString() === selectedDate.toDateString();
+      const isSelected =
+        selectedDate && cellDate.toDateString() === selectedDate.toDateString();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHolidayDate = isHoliday(cellDate);
       const holidayName = getHolidayName(cellDate);
@@ -140,7 +163,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       cells.push(
         <div
           key={day}
-          className={`h-28 p-1 border border-border cursor-pointer hover:bg-accent transition-colors ${
+          className={`h-32 p-1 border border-border cursor-pointer hover:bg-accent transition-colors ${
             isToday ? 'bg-primary/10 border-primary' : ''
           } ${isSelected ? 'bg-accent' : ''}`}
           onClick={() =>
@@ -152,21 +175,32 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
             )
           }
         >
-          <div className={`text-sm font-medium ${
-            isToday ? 'text-primary' : 
-            dayOfWeek === 0 || isHolidayDate ? 'text-red-500' : 
-            dayOfWeek === 6 ? 'text-blue-500' : ''
-          }`}>
+          <div
+            className={`text-sm font-medium ${
+              isToday
+                ? 'text-primary'
+                : dayOfWeek === 0 || isHolidayDate
+                ? 'text-red-500'
+                : dayOfWeek === 6
+                ? 'text-blue-500'
+                : ''
+            }`}
+          >
             {day}
           </div>
-          
+
           {/* 공휴일 표시 */}
           {isHolidayDate && (
-            <div className="text-xs text-red-500 font-medium truncate" title={holidayName}>
-              {holidayName.length > 6 ? `${holidayName.substring(0, 6)}...` : holidayName}
+            <div
+              className="text-xs text-red-500 font-medium truncate"
+              title={holidayName}
+            >
+              {holidayName.length > 6
+                ? `${holidayName.substring(0, 6)}...`
+                : holidayName}
             </div>
           )}
-          
+
           <div className="mt-1 space-y-1">
             {dayReminders.slice(0, isHolidayDate ? 1 : 2).map((reminder) => (
               <div
@@ -200,15 +234,21 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
     for (let day = 1; day <= remainingCells; day++) {
       const nextMonthDate = new Date(currentYear, currentMonth + 1, day);
       const dayOfWeek = nextMonthDate.getDay();
-      
+
       cells.push(
         <div
           key={`next-${day}`}
           className="h-24 p-1 text-muted-foreground bg-muted/30"
         >
-          <div className={`text-sm ${
-            dayOfWeek === 0 ? 'text-red-400' : dayOfWeek === 6 ? 'text-blue-400' : ''
-          }`}>
+          <div
+            className={`text-sm ${
+              dayOfWeek === 0
+                ? 'text-red-400'
+                : dayOfWeek === 6
+                ? 'text-blue-400'
+                : ''
+            }`}
+          >
             {day}
           </div>
         </div>,
@@ -223,7 +263,7 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
       {/* 캘린더 영역 */}
       <div className="flex-1 p-4">
         {/* 헤더 */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mt-4 mb-4 max-w-[1300px] mx-auto">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold">
               {currentYear}년 {monthNames[currentMonth]}
@@ -243,14 +283,16 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
         </div>
 
         {/* 요일 헤더 */}
-        <div className="grid grid-cols-7 mb-2">
+        <div className="grid grid-cols-7 mb-2 max-w-[1300px] mx-auto">
           {dayNames.map((day, index) => (
             <div
               key={day}
               className={`p-2 text-center font-medium ${
-                index === 0 ? 'text-red-500' : 
-                index === 6 ? 'text-blue-500' : 
-                'text-muted-foreground'
+                index === 0
+                  ? 'text-red-500'
+                  : index === 6
+                  ? 'text-blue-500'
+                  : 'text-muted-foreground'
               }`}
             >
               {day}
@@ -259,14 +301,14 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
         </div>
 
         {/* 캘린더 그리드 */}
-        <div className="grid grid-cols-7 border border-border">
+        <div className="grid grid-cols-7 border border-border max-w-[1300px] mx-auto">
           {renderCalendarCells()}
         </div>
       </div>
 
       {/* 사이드바 - 선택된 날짜의 상세 정보 */}
       <div
-        className={`border-l border-border bg-muted/30 transition-all duration-300 ease-in-out overflow-hidden ${
+        className={`border-l border-border bg-muted/30 transition-all duration-300 ease-in-out overflow-x-hidden overflow-y-scroll custom-scrollbar ${
           selectedDate ? 'w-80 opacity-100' : 'w-0 opacity-0'
         }`}
       >
@@ -305,10 +347,13 @@ const Calendar = ({ reminders, notes, onOpenNote }) => {
                           {reminder.completed ? '완료' : '대기중'}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(reminder.reminder_time).toLocaleTimeString('ko-KR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {new Date(reminder.reminder_time).toLocaleTimeString(
+                            'ko-KR',
+                            {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            },
+                          )}
                         </span>
                       </div>
 

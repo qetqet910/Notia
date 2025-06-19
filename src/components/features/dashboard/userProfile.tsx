@@ -29,7 +29,7 @@ export function UserProfile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { setTheme } = useThemeStore();
-
+  
   // 사용자 정보 상태 - 의존성 배열에 따라 업데이트되도록 useEffect 사용
   const [displayName, setDisplayName] = useState('사용자');
   const [initials, setInitials] = useState('사');
