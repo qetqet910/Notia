@@ -30,9 +30,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/useToast';
+import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { useNotes } from '@/hooks/useNotes';
+import { sendReminderNotification } from '@/utils/notification';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
-import { useNotes } from '@/hooks/useNotes';
 import { supabase } from '@/services/supabaseClient';
 import {
   User,
@@ -58,6 +60,13 @@ import {
   Loader2,
   Package,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
 
@@ -939,6 +948,27 @@ const SettingsTab = ({ user, handleLogout }) => {
   const [weeklyGoal, setWeeklyGoal] = useState('10');
   const [isSavingGoals, setIsSavingGoals] = useState(false);
 
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const { permission, requestPermission } = useNotificationPermission();
+
+  const handleReminderToggle = async (checked: boolean) => {
+    if (checked) {
+      if (permission === 'default') {
+        const result = await requestPermission();
+        if (result === 'denied') {
+          setReminderNotifications(false);
+          return;
+        }
+      } else if (permission === 'denied') {
+        setShowPermissionDialog(true);
+        setReminderNotifications(false);
+        return;
+      }
+    }
+
+    setReminderNotifications(checked);
+  };
+
   const handleTestNotification = useCallback(() => {
     toast({
       title: '🔔 테스트 알림',
@@ -947,10 +977,10 @@ const SettingsTab = ({ user, handleLogout }) => {
       duration: 5000,
     });
 
-    new Notification('테스트 알림', {
-      body: '알림이 정상적으로 작동합니다!',
-      icon: '/favicon.ico',
-    });
+    sendReminderNotification(
+      'TEST ALARM',
+      '테스트 알림입니다. 리마인더가 성공적으로 작동합니다.',
+    );
   }, [toast]);
 
   const handleSaveGoals = useCallback(async () => {
@@ -991,6 +1021,7 @@ const SettingsTab = ({ user, handleLogout }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/*           
           <SettingSwitchItem
             id="email-noti"
             label="이메일 알림"
@@ -998,13 +1029,57 @@ const SettingsTab = ({ user, handleLogout }) => {
             checked={emailNotifications}
             onCheckedChange={setEmailNotifications}
             icon={<Mail />}
-          />
+          /> */}
+          <Dialog
+            open={showPermissionDialog}
+            onOpenChange={setShowPermissionDialog}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>알림 권한 설정</DialogTitle>
+                <DialogDescription>
+                  브라우저에서 알림이 차단되어 있습니다. 리마인더 알림을
+                  받으려면 브라우저 설정을 변경해주세요.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="text-sm">
+                  <p className="font-medium mb-2">설정 방법:</p>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• Chrome: 주소창 왼쪽 자물쇠 → 알림 허용</li>
+                    <li>• Firefox: 주소창 왼쪽 방패 → 알림 허용</li>
+                    <li>• Safari: Safari 메뉴 → 설정 → 웹사이트 → 알림</li>
+                  </ul>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPermissionDialog(false)}
+                  >
+                    닫기
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowPermissionDialog(false);
+                      window.location.reload(); // 설정 후 새로고침
+                    }}
+                  >
+                    설정 완료
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <SettingSwitchItem
             id="reminder-noti"
             label="리마인더 알림"
-            description="리마인더 시간에 알림을 받습니다"
-            checked={reminderNotifications}
-            onCheckedChange={setReminderNotifications}
+            description={
+              permission === 'denied'
+                ? '브라우저 알림이 차단되어 있습니다'
+                : '리마인더 시간에 알림을 받습니다'
+            }
+            checked={reminderNotifications && permission === 'granted'}
+            onCheckedChange={handleReminderToggle}
             icon={<Calendar />}
           />
           <SettingSwitchItem

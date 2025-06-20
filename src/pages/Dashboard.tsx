@@ -336,7 +336,6 @@ export const Dashboard: React.FC = () => {
         .from('reminders')
         .update({ enabled, updated_at: new Date().toISOString() })
         .eq('id', reminderId);
-
       if (error) {
         console.error('Error toggling reminder:', error);
       } else {
