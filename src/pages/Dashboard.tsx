@@ -74,22 +74,6 @@ const EmptyNoteState = ({
   </div>
 );
 
-async function checkNotificationPermission() {
-  if ('Notification' in window) {
-    if (Notification.permission === 'default') {
-      try {
-        await Notification.requestPermission();
-      } catch (error) {
-        console.error('Notification permission request failed:', error);
-      }
-    } else if (Notification.permission === 'denied') {
-      console.warn('Notification permission denied');
-    }
-  } else {
-    console.warn('This browser does not support notifications');
-  }
-}
-
 export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('notes');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -110,8 +94,6 @@ export const Dashboard: React.FC = () => {
 
   const [isActiveTab, setIsActiveTab] = useState(0);
   const activeTabs = ['notes', 'reminder', 'calendar', 'timeline'];
-
-  checkNotificationPermission();
 
   // 반응형 처리
   useEffect(() => {
@@ -670,7 +652,7 @@ const Sidebar = ({
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             팀 스페이스
           </h3>
-          <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
+          {/* <TeampaceList activeTab={activeTab} setActiveTab={setActiveTab} /> */}
         </div>
         {popularTags.length > 0 && (
           <div className="mt-6">
@@ -698,8 +680,7 @@ const Sidebar = ({
             </div>
           </div>
         )}
-        <div>
-        </div>
+        <div></div>
       </div>
     </aside>
   );
