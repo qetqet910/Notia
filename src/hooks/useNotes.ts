@@ -3,6 +3,10 @@ import { Note, EditorReminder } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 import { fromZonedTime } from 'date-fns-tz';
+import {
+  createReminderNotifications,
+  cancelReminderNotifications,
+} from '@/utils/supabaseNotifications';
 
 // 한국 시간대 상수
 const KOREA_TIMEZONE = 'Asia/Seoul';
@@ -361,12 +365,22 @@ export const useNotes = () => {
         .from('reminders')
         .update({
           completed,
-          updated_at: getKoreaTimeAsUTC(), // 한국 시간대 기준으로 업데이트 시간 설정
+          updated_at: getKoreaTimeAsUTC(),
         })
         .eq('id', reminderId)
         .eq('owner_id', user.id);
 
       if (error) throw error;
+
+      // 완료 상태가 되면 관련된 스케줄된 알림을 취소
+      if (completed) {
+        await cancelReminderNotifications(reminderId);
+      } else {
+        // 완료 해제 시 다시 알림 스케줄링 (필요하다면)
+        // 이 부분은 리마인더 텍스트, 노트 제목 등 추가 정보가 필요하므로,
+        // 현재는 `reminder.tsx`에서만 `handleToggleReminder`를 통해 처리하는 것이 더 안전합니다.
+        // 여기서는 상태만 업데이트하고 알림 스케줄링은 ReminderView에 맡깁니다.
+      }
 
       // 로컬 상태 업데이트
       setNotes((prevNotes) =>

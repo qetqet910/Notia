@@ -9,9 +9,16 @@ import '@/styles/global.css';
  */
 async function initializePlatform(platformName: string): Promise<boolean> {
   try {
-    const module = await import(`./platforms/${platformName}/index.tsx`);
+    type PlatformModule = {
+      default: () => Promise<void>; // 또는 `() => void` 등 실제 반환 타입에 맞게
+    };
+
+    const module = (await import(
+      `./platforms/${platformName}/index.tsx`
+    )) as PlatformModule;
     const initPlatform = module.default;
     await initPlatform();
+
     console.log(`2️⃣ Platform : ¦¦¦${platformName}¦¦¦ Initialized Successfully`);
     return true;
   } catch (error) {

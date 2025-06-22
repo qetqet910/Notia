@@ -109,6 +109,23 @@ interface ActivityData {
   level: number;
 }
 
+interface UserProfileData {
+  id: number; // Or string, depending on your 'int4' mapping
+  user_id: string; // uuid
+  email: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProfileTabProps {
+  user: any; // Or your specific AuthUser type
+  userProfile: UserProfileData | null;
+  stats: any;
+  achievements: any;
+}
+
 // --- Progress 컴포넌트 대체 ---
 const CustomProgress = ({ value }: { value: number }) => {
   const progress = Math.max(0, Math.min(100, value || 0));
@@ -125,7 +142,6 @@ const CustomProgress = ({ value }: { value: number }) => {
 export const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, userProfile, signOut } = useAuthStore();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
   const { notes } = useNotes() as { notes: Note[] }; // 실제 Note 타입 적용
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -135,6 +151,29 @@ export const MyPage: React.FC = () => {
   const tab = searchParams.get('tab') ?? 'profile';
   const [isActiveTab, setIsActiveTab] = useState(0);
   const activeTabs = ['profile', 'activity', 'settings'];
+
+  const { user, signOut, userProfile } = useAuthStore(); // userProfile might be from authStore, but we want it from the DB
+  const [userProfileData, setUserProfileData] =
+    useState<UserProfileData | null>(null); // New state for DB profile
+
+  const fetchUserProfile = useCallback(async (userId: string) => {
+    const { data, error } = await supabase
+      .from('user_profile')
+      .select('*')
+      .eq('user_id', userId)
+      .single(); // Use .single() as each user has one profile
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      // Handle case where profile might not exist (e.g., first login)
+      if (error.code === 'PGRST116') {
+        // No rows found (specific to Supabase single())
+        console.log('No user profile found, user might be new.');
+        setUserProfileData(null); // Or initialize with default values if needed
+      }
+    } else if (data) {
+      setUserProfileData(data);
+    }
+  }, []);
 
   const fetchReminders = useCallback(async (userId: string) => {
     // 실제 Supabase 연동 코드 예시
@@ -153,8 +192,9 @@ export const MyPage: React.FC = () => {
   useEffect(() => {
     if (user?.id) {
       fetchReminders(user.id);
+      fetchUserProfile(user.id); // Fetch user profile
     }
-  }, [user?.id, fetchReminders]);
+  }, [user?.id, fetchReminders, fetchUserProfile]);
 
   const SIMPLE_SHORTCUTS = {
     '/': () => navigate('/dashboard/help?tab=overview'),
@@ -443,7 +483,7 @@ export const MyPage: React.FC = () => {
               <TabsContent value="profile">
                 <ProfileTab
                   user={user}
-                  userProfile={userProfile}
+                  userProfile={userProfileData}
                   stats={stats}
                   achievements={achievements}
                 />
@@ -467,15 +507,28 @@ export const MyPage: React.FC = () => {
 };
 
 // 프로필 탭
-const ProfileTab = ({ user, userProfile, stats, achievements }) => {
+const ProfileTab: React.FC<ProfileTabProps> = ({
+  user,
+  userProfile,
+  stats,
+  achievements,
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState(
-    userProfile?.raw_user_meta_data?.name || '',
+    userProfile?.display_name || user?.email || '',
   );
-  const [email, setEmail] = useState(user?.email || '');
+  const [email, setEmail] = useState(userProfile?.email || user?.email || ''); // Use userProfile.email if available, else user.email
+  const [avatarUrl, setAvatarUrl] = useState(userProfile?.avatar_url || ''); // New state for avatar URL
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update displayName and email when userProfile changes
+  useEffect(() => {
+    setDisplayName(userProfile?.display_name || user?.email || '');
+    setEmail(userProfile?.email || user?.email || '');
+    setAvatarUrl(userProfile?.avatar_url || '');
+  }, [userProfile, user?.email]);
 
   const getInitials = (name: string) =>
     name
@@ -488,35 +541,128 @@ const ProfileTab = ({ user, userProfile, stats, achievements }) => {
   const handleSaveProfile = useCallback(async () => {
     setIsSaving(true);
     try {
-      // TODO: 실제 프로필 업데이트 로직 구현
-      // 예: await updateProfile({ displayName, email });
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // 시뮬레이션
+      if (!user?.id) {
+        toast({
+          title: '저장 실패',
+          description: '사용자 정보를 찾을 수 없습니다.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Check if a profile already exists for this user_id
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('user_profile')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 means no rows found
+        throw fetchError;
+      }
+
+      let updateError = null;
+      if (existingProfile) {
+        // Update existing profile
+        const { error } = await supabase
+          .from('user_profile')
+          .update({
+            display_name: displayName,
+            email: email, // If you allow email update in user_profile
+            avatar_url: avatarUrl, // Include avatarUrl in the update
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
+        updateError = error;
+      } else {
+        // Insert new profile if it doesn't exist
+        const { error } = await supabase.from('user_profile').insert({
+          user_id: user.id,
+          display_name: displayName,
+          email: email,
+          avatar_url: avatarUrl,
+        });
+        updateError = error;
+      }
+
+      if (updateError) {
+        throw updateError;
+      }
+
       toast({
         title: '프로필 저장됨',
         description: '프로필 정보가 성공적으로 업데이트되었습니다.',
       });
       setIsEditing(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error saving profile:', error.message);
       toast({
         title: '저장 실패',
-        description: '프로필 저장 중 오류가 발생했습니다.',
+        description: `프로필 저장 중 오류가 발생했습니다: ${error.message}`,
         variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
     }
-  }, [displayName, email, toast]);
+  }, [displayName, email, avatarUrl, user?.id, toast]);
 
   const handleAvatarChange = () => fileInputRef.current?.click();
 
-  const onAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onAvatarFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // TODO: 실제 아바타 업로드 로직 구현
+    if (!file || !user?.id) {
       toast({
-        title: '사진 선택됨',
-        description: `${file.name} 파일이 선택되었습니다. 저장을 눌러주세요.`,
+        title: '파일 선택 실패',
+        description: '파일을 선택하거나 사용자 정보를 찾을 수 없습니다.',
+        variant: 'destructive',
       });
+      return;
+    }
+
+    setIsSaving(true); // Indicate saving because upload is part of saving profile
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}.${fileExt}`; // Use user ID for unique filename
+      const filePath = `public/${fileName}`; // Or simply `fileName` if your bucket is public
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars') // Replace 'avatars' with your actual Supabase Storage bucket name
+        .upload(filePath, file, {
+          upsert: true, // Overwrite if file with same name exists
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get the public URL of the uploaded file
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      if (publicUrlData) {
+        setAvatarUrl(publicUrlData.publicUrl); // Update the avatarUrl state
+        toast({
+          title: '사진 업로드 완료',
+          description:
+            '새로운 아바타가 성공적으로 업로드되었습니다. 저장을 눌러 적용하세요.',
+        });
+      } else {
+        throw new Error('Public URL not found after upload.');
+      }
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error.message);
+      toast({
+        title: '사진 업로드 실패',
+        description: `아바타 업로드 중 오류가 발생했습니다: ${error.message}`,
+        variant: 'destructive',
+      });
+      setAvatarUrl(userProfile?.avatar_url || ''); // Revert to previous avatar if upload fails
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -559,7 +705,7 @@ const ProfileTab = ({ user, userProfile, stats, achievements }) => {
           <div className="flex items-center space-x-4">
             <Avatar className="h-20 w-20">
               <AvatarImage
-                src={userProfile?.raw_user_meta_data?.avatar_url || ''}
+                src={avatarUrl || ''} // Use the avatarUrl state
               />
               <AvatarFallback className="text-lg">
                 {getInitials(displayName || email)}
