@@ -41,7 +41,7 @@ Dashboard.tsx의 setSelectedNote가 실시간 반영의 메인 왜그럴까
 에디터에서 리마인더 지우는 경우 삭제 로직 필요 O
 삭제할 때 ~~도 같이 삭제 O
 
-현재는 리마인더 내용/이름 변경 - 다른 리마인더로 인식, text로 uuid라서 - 혹시나 문제될 경우 바꾸는 걸로
+현재는 리마인더 내용/이름 변경 - 다른 리마인더로 인식, text로 uuid라서 - 문제될 경우 바꾸는 걸로
 
 에디터 마크다운 도입 O
 에디터 코드 하이라이터 도입 O
@@ -64,17 +64,17 @@ usePlan 관한 것 삭제 O
 폰트 적용하기 O
 뱃지, 잔디 추가하기 O
 
-리마인더 기능 구현
-myPage Todo 구현
-실시간 반영 구현
-코드 리팩토링 후 리뷰시간 갖기
----
+리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
+myPage Todo 구현 - userProfile Table 관련 구현중 - 원래 방식 userProfile import로 개선하기
 
-** Note type에서 create_at, createAt 중복 존재 매우 조심할것 **
+실시간 반영 구현
+Note type에서 create_at, createAt 중복 존재 해결하기
+코드 리팩토링 후 리뷰시간 갖기
+
+---
 
 팀스페이스 생성, 접근 레벨 설정
 웹앱, 모바일 환경 구현
-
 ```
 
 ====================================================================<br/>
