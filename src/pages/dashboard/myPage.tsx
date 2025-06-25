@@ -69,29 +69,7 @@ import {
 } from '@/components/ui/dialog';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-
-// --- 데이터 타입 정의 ---
-interface Reminder {
-  id: string;
-  note_id: string;
-  owner_id: string;
-  reminder_text: string;
-  reminder_time: string; // 'timestamptz'는 string으로 받습니다.
-  completed: boolean;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-  original_text?: string;
-}
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  reminders?: Reminder[];
-  createdAt: string; // ISO 8601 형식
-}
+import { Reminder, Note } from '@/types/index';
 
 interface Achievement {
   id: string;
@@ -152,28 +130,9 @@ export const MyPage: React.FC = () => {
   const [isActiveTab, setIsActiveTab] = useState(0);
   const activeTabs = ['profile', 'activity', 'settings'];
 
-  const { user, signOut, userProfile } = useAuthStore(); // userProfile might be from authStore, but we want it from the DB
+  const { user, signOut, fetchUserProfile } = useAuthStore(); // userProfile might be from authStore, but we want it from the DB
   const [userProfileData, setUserProfileData] =
     useState<UserProfileData | null>(null); // New state for DB profile
-
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_profile')
-      .select('*')
-      .eq('user_id', userId)
-      .single(); // Use .single() as each user has one profile
-    if (error) {
-      console.error('Error fetching user profile:', error);
-      // Handle case where profile might not exist (e.g., first login)
-      if (error.code === 'PGRST116') {
-        // No rows found (specific to Supabase single())
-        console.log('No user profile found, user might be new.');
-        setUserProfileData(null); // Or initialize with default values if needed
-      }
-    } else if (data) {
-      setUserProfileData(data);
-    }
-  }, []);
 
   const fetchReminders = useCallback(async (userId: string) => {
     // 실제 Supabase 연동 코드 예시
@@ -207,7 +166,6 @@ export const MyPage: React.FC = () => {
       setIsActiveTab((prev) => (prev + 1) % activeTabs.length);
       handleTabChange(activeTabs[isActiveTab]);
     },
-    b: () => setIsSidebarVisible((prev) => !prev),
     m: () => navigate('/dashboard/myPage?tab=profile'),
     ',': () => navigate('/dashboard/myPage?tab=activity'),
     '<': () => navigate('/dashboard/myPage?tab=activity'),
@@ -235,7 +193,7 @@ export const MyPage: React.FC = () => {
 
       if (handler) {
         e.preventDefault();
-        handler(isCtrlCmd);
+        handler();
       }
     },
     [
@@ -483,7 +441,6 @@ export const MyPage: React.FC = () => {
               <TabsContent value="profile">
                 <ProfileTab
                   user={user}
-                  userProfile={userProfileData}
                   stats={stats}
                   achievements={achievements}
                 />
@@ -509,16 +466,26 @@ export const MyPage: React.FC = () => {
 // 프로필 탭
 const ProfileTab: React.FC<ProfileTabProps> = ({
   user,
-  userProfile,
   stats,
   achievements,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const { userProfile } = useAuthStore();
+  const displayEmail = userProfile?.email
+    ? userProfile.email.startsWith('anon_')
+      ? '' // 익명 사용자일 경우 이메일을 표시하지 않음
+      : userProfile.email
+    : user?.email // userProfile에 이메일이 없으면 auth.user의 이메일 사용 (Fallback)
+    ? user.email.startsWith('anon_')
+      ? '' // 익명 사용자일 경우 이메일을 표시하지 않음
+      : user.email
+    : ''; // 둘 다 없으면 빈 문자열
+
   const [displayName, setDisplayName] = useState(
     userProfile?.display_name || user?.email || '',
   );
-  const [email, setEmail] = useState(userProfile?.email || user?.email || ''); // Use userProfile.email if available, else user.email
+  const [email, setEmail] = useState(displayEmail || user?.email || ''); // Use userProfile.email if available, else user.email
   const [avatarUrl, setAvatarUrl] = useState(userProfile?.avatar_url || ''); // New state for avatar URL
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -836,21 +803,25 @@ const ProfileTab: React.FC<ProfileTabProps> = ({
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatItem
+              icon={<Tag />}
               value={stats.streak}
               label="연속 일수"
               color="text-blue-500"
             />
             <StatItem
+              icon={<Tag />}
               value={stats.todayCompleted}
               label="오늘 완료"
               color="text-green-500"
             />
             <StatItem
+              icon={<Tag />}
               value={`${Math.round(stats.completionRate)}%`}
               label="완료율"
               color="text-purple-500"
             />
             <StatItem
+              icon={<Tag />}
               value={stats.weeklyAverage}
               label="주간 평균"
               color="text-orange-500"

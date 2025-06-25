@@ -16,8 +16,8 @@ export interface Note {
 
 export interface EditorReminder {
   id: string;
-  text: string; // reminderText (파싱된 할일 내용)
-  date: Date; // parsedDate (파싱된 시간)
+  text: string;
+  date: Date;
   completed: boolean;
   original_text: string;
 }
@@ -27,12 +27,23 @@ export interface Reminder {
   note_id: string;
   owner_id: string;
   reminder_text: string;
-  reminder_time: string; // ISO string
+  reminder_time: string;
   completed: boolean;
   enabled: boolean;
   created_at: string;
   updated_at: string;
-  original_text: string; // 원본 텍스트 리마인더 삭제 이슈
+  original_text: string
+}
+
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  display_name: string;
+  avatar_url?: string;
+  key?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Team {
