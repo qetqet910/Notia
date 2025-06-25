@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import type { UserProfile } from '@/types';
 import { generateRandomKey, formatKey } from '@/utils/keys';
 import { checkCreationLimit } from '@/utils/check';
 
@@ -9,7 +10,7 @@ interface AuthState {
   // 사용자 상태
   user: User | null;
   session: any | null;
-  userProfile: UserProfile | null;
+  userProfile: UserProfile | null; // 이제 userProfile은 커스텀 테이블의 데이터
   isAuthenticated: boolean;
 
   // 키 관련 상태
@@ -24,17 +25,6 @@ interface AuthState {
 
   // 오류 상태
   error: Error | null;
-}
-
-export interface UserProfile {
-  id: string;
-  raw_user_meta_data?: {
-    avatar_url?: string;
-    name?: string;
-    email_verified?: boolean;
-    provider_id?: string;
-    [key: string]: any; // 확장 가능
-  };
 }
 
 interface AuthStore extends AuthState {
@@ -54,13 +44,7 @@ interface AuthStore extends AuthState {
     user?: User | null;
     error?: Error | null;
   }>;
-  generateEmailKey: (email?: string) => Promise<boolean>;
-  generateAnonymousKey: () => Promise<{
-    success: boolean;
-    key: string;
-    formattedKey: string;
-    warning?: string;
-  }>;
+
   loginWithSocial: (provider: 'github' | 'google') => Promise<void>;
   signOut: () => Promise<{ success: boolean; error?: any }>;
 
@@ -77,7 +61,7 @@ interface AuthStore extends AuthState {
     clientIP: string,
   ) => Promise<{
     success: boolean;
-    userId?: User;
+    user?: User; // Edge Function에서 반환하는 user 객체
     error?: string;
     code?: string;
   }>;
@@ -87,7 +71,7 @@ interface AuthStore extends AuthState {
     clientIP: string,
   ) => Promise<{
     success: boolean;
-    userId?: User;
+    user?: User; // Edge Function에서 반환하는 user 객체
     error?: string;
     code?: string;
   }>;
@@ -122,8 +106,13 @@ export const useAuthStore = create<AuthStore>()(
           user: null,
           isAuthenticated: false,
           error: null,
+          userProfile: null, // userProfile도 초기화
         }),
       clearUserKey: () => set({ userKey: null }),
+
+      checkCreationLimit: async (clientIP: string) => {
+        return await checkCreationLimit(clientIP);
+      },
 
       checkSession: async () => {
         try {
@@ -142,12 +131,17 @@ export const useAuthStore = create<AuthStore>()(
               session,
               isAuthenticated: true,
             });
+            // 세션 확인 시에도 사용자 프로필을 가져오도록 추가
+            if (session.user) {
+              await get().fetchUserProfile(session.user.id);
+            }
             return true;
           } else {
             set({
               user: null,
               session: null,
               isAuthenticated: false,
+              userProfile: null, // 세션 없으면 프로필도 초기화
             });
             return false;
           }
@@ -162,38 +156,35 @@ export const useAuthStore = create<AuthStore>()(
 
       fetchUserProfile: async (userId: string) => {
         try {
-          // 1. 현재 로그인한 사용자 정보 가져오기
-          const {
-            data: { user: authUser },
-            error: userError,
-          } = await supabase.auth.getUser();
+          const currentUser = get().user; // 현재 user 상태를 가져옴
 
-          if (userError) {
-            console.error('인증 사용자 조회 오류:', userError);
-          } else if (authUser) {
-            console.log('인증된 사용자:', authUser);
-            // 메타데이터가 있다면 여기서 사용할 수 있음
-            const userData = {
-              ...authUser,
-              raw_user_meta_data: authUser.user_metadata, // 이름 일치시키기
-            };
-            set({ userProfile: userData });
-            return userData;
+          if (
+            currentUser &&
+            currentUser.app_metadata?.provider &&
+            currentUser.app_metadata.provider !== 'email' &&
+            !currentUser.email?.startsWith('anon_')
+          ) {
+            set({ userProfile: null });
+            return null; // 조회를 건너뛰고 일찍 종료
           }
 
-          // 2. 커스텀 사용자 테이블 조회
+          // 커스텀 사용자 테이블 조회
           const { data: profile, error } = await supabase
-            .from('users')
+            .from('users') // 'users' 테이블 이름 확인
             .select('*')
-            .eq('user_id', userId) // user_id 필드 사용
+            .eq('id', userId) // 사용자 테이블의 id 필드를 기준으로 조회
             .single();
 
           if (error) {
             console.error('프로필 조회 오류:', error);
-            return null;
+            // 프로필이 없는 경우 (No rows found)에도 에러를 throw하지 않고 null을 반환하도록 처리
+            // Supabase의 single() 쿼리에서 결과가 없을 때 발생하는 특정 오류 코드입니다.
+            if (error.code === 'PGRST116') {
+              set({ userProfile: null }); // userProfile을 null로 설정하여 프로필이 없음을 나타냄
+              return null;
+            }
+            throw error; // 다른 유형의 오류는 여전히 throw
           }
-
-          console.log('조회된 프로필 데이터:', profile);
 
           if (profile) {
             set({ userProfile: profile });
@@ -203,6 +194,7 @@ export const useAuthStore = create<AuthStore>()(
           return null;
         } catch (error) {
           console.error('프로필 조회 오류:', error);
+          set({ error: error as Error });
           return null;
         }
       },
@@ -241,59 +233,57 @@ export const useAuthStore = create<AuthStore>()(
 
       loginWithKey: async (key: string) => {
         try {
-          set({ isLoginLoading: true });
+          set({ isLoginLoading: true, error: null });
           const cleanKey = key.replace(/-/g, '').toUpperCase();
 
-          // 서버 응답 자세히 로깅
+          // Edge Function을 통해 키 검증 및 사용자 정보 가져오기
           const { data: keyCheckData, error: keyCheckError } =
             await supabase.functions.invoke('login_with_key', {
               body: { key: cleanKey },
             });
 
           // 키 검증 실패 시 즉시 오류 반환
-          if (keyCheckError || !keyCheckData || !keyCheckData.success) {
-            const errorMessage =
-              keyCheckError?.message ||
-              keyCheckData?.error ||
-              '유효하지 않은 키입니다.';
-            throw new Error(errorMessage);
+          if (keyCheckError) {
+            throw keyCheckError;
+          }
+          if (!keyCheckData || !keyCheckData.success) {
+            throw new Error(keyCheckData?.error || '유효하지 않은 키입니다.');
           }
 
-          // 기존 세션 정리
-          await supabase.auth.signOut();
-          console.log('기존 세션 정리 완료');
-
+          // Supabase auth.signInWithPassword를 사용하여 실제 로그인
           if (keyCheckData.email) {
-            // 이메일이 있는 경우 일반 로그인
-            console.log('이메일 계정 로그인 시도 시작');
             const { data, error } = await supabase.auth.signInWithPassword({
               email: keyCheckData.email,
-              password: cleanKey,
+              password: cleanKey, // 키를 비밀번호로 사용
             });
 
-            console.log('로그인 결과:', data);
-
             if (error) {
-              console.log('로그인 실패:', error.message);
-              console.error('CLIENT: SignIn Error:', error);
+              console.error('클라이언트: 로그인 실패:', error);
               throw error;
             }
 
-            // 상태 업데이트
-            set({
-              userKey: cleanKey,
-              formattedKey: cleanKey,
-              isAuthenticated: true,
-              isLoginLoading: false,
-              userProfile: keyCheckData.user?.user_metadata, // UserProfile에 대한 상태 업데이트 최적화 꼭 하기 **
-            });
-          }
+            if (data.user) {
+              set({
+                user: data.user,
+                session: data.session,
+                isAuthenticated: true,
+                userKey: cleanKey,
+                formattedKey: formatKey(cleanKey),
+              });
+              // 로그인 성공 후 사용자 프로필 가져오기
+              await get().fetchUserProfile(data.user.id);
+            }
 
-          return {
-            success: true,
-            message: '로그인 성공',
-          };
+            return {
+              success: true,
+              message: '로그인 성공',
+              user: data.user,
+            };
+          } else {
+            throw new Error('이메일 정보가 없습니다.');
+          }
         } catch (error) {
+          console.error('로그인 중 오류 발생:', error);
           set({ error: error as Error, isLoginLoading: false });
           return {
             success: false,
@@ -304,156 +294,7 @@ export const useAuthStore = create<AuthStore>()(
             error: error as Error,
           };
         } finally {
-        }
-      },
-
-      generateEmailKey: async (email?: string) => {
-        try {
-          set({ isRegisterLoading: true, error: null });
-
-          // 1. 이메일 유효성 검사 (선택 사항)
-          if (email) {
-            const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            if (!isValid) {
-              throw new Error('유효하지 않은 이메일 형식입니다.');
-            }
-          }
-
-          // 2. 랜덤 키 생성
-          const key = generateRandomKey(16);
-          const formattedKeyValue = formatKey(key);
-
-          // 3. 사용자 생성 (이메일이 있으면 이메일로, 없으면 익명)
-          let userData;
-
-          if (email) {
-            // 이메일로 가입된 사용자가 있는지 확인
-            const { data: existingUser } = await supabase
-              .from('users')
-              .select('id')
-              .eq('email', email)
-              .single();
-
-            if (existingUser) {
-              // 기존 사용자에게 키 연결
-              userData = { user: existingUser };
-            } else {
-              // 새 사용자 생성 (이메일 초대)
-              const { data, error } = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                  shouldCreateUser: true,
-                },
-              });
-
-              if (error) throw error;
-              userData = data;
-            }
-          } else {
-            // 익명 사용자 생성
-            const { data, error } = await supabase.auth.signInAnonymously();
-            if (error) throw error;
-            userData = data;
-          }
-
-          // 4. 키 저장 (통합 keys 테이블에)
-          const { error: insertError } = await supabase.from('keys').insert({
-            key: key,
-            type: email ? 'user' : 'anonymous',
-            user_id: userData.user?.id,
-            is_active: true,
-          });
-
-          if (insertError) {
-            console.error('키 저장 오류:', insertError);
-            throw insertError;
-          }
-
-          // 5. 상태 업데이트
-          set({
-            userKey: key,
-            formattedKey: formattedKeyValue,
-            user: userData.user,
-            isAuthenticated: true,
-            isRegisterLoading: false,
-          });
-
-          return true;
-        } catch (error) {
-          console.error('키 생성 및 저장 오류:', error);
-          set({
-            error: error as Error,
-            isRegisterLoading: false,
-          });
-          return false;
-        }
-      },
-
-      generateAnonymousKey: async () => {
-        try {
-          set({ isRegisterLoading: true, error: null });
-
-          // 1. 랜덤 키 생성
-          const key = generateRandomKey(16);
-          const formattedKeyValue = formatKey(key);
-
-          // 2. 사용자 생성 (익명 로그인)
-          const { data: authData, error: authError } =
-            await supabase.auth.signInAnonymously();
-
-          if (authError) {
-            throw authError;
-          }
-
-          // 3. 키 저장 (새로운 keys 테이블에)
-          const { error: insertError } = await supabase.from('keys').insert({
-            key: key,
-            type: 'anonymous',
-            user_id: authData.user?.id,
-            is_active: true,
-          });
-
-          if (insertError) {
-            console.error('키 저장 오류:', insertError);
-            throw insertError;
-          }
-
-          // 4. 상태 업데이트
-          set({
-            userKey: key,
-            formattedKey: formattedKeyValue,
-            user: authData.user,
-            isAuthenticated: true,
-            isRegisterLoading: false,
-          });
-
-          // 5. 성공 반환
-          return {
-            success: true,
-            key,
-            formattedKey: formattedKeyValue,
-          };
-        } catch (error) {
-          console.error('익명 키 생성 오류:', error);
-
-          // 오류 발생 시에도 키는 생성해서 클라이언트에 반환
-          const key = generateRandomKey(16);
-          const formattedKeyValue = formatKey(key);
-
-          set({
-            userKey: key,
-            formattedKey: formattedKeyValue,
-            error: error as Error,
-            isRegisterLoading: false,
-          });
-
-          return {
-            success: true, // 프론트엔드에서는 성공으로 처리
-            key,
-            formattedKey: formattedKeyValue,
-            warning:
-              '백엔드 저장 과정에서 오류가 발생했지만 키는 생성되었습니다.',
-          };
+          set({ isLoginLoading: false });
         }
       },
 
@@ -468,7 +309,9 @@ export const useAuthStore = create<AuthStore>()(
             provider,
             options: {
               redirectTo: `${window.location.origin}/auth/callback`,
-              scopes: provider === 'github' ? 'google' : 'email profile',
+              scopes: provider === 'google' ? 'email profile' : undefined,
+              // Google의 경우 'email profile' 스코프는 기본적으로 사용자 정보를 가져옴.
+              // GitHub의 경우 일반적으로 추가 스코프가 필요 없음.
             },
           });
 
@@ -476,8 +319,6 @@ export const useAuthStore = create<AuthStore>()(
             console.error(`${provider} 로그인 실패:`, error);
             throw error;
           }
-
-          console.log(`${provider} 로그인 시작됨`);
         } catch (error) {
           console.error(`${provider} 로그인 오류:`, error);
           set({ isLoginLoading: false, isRegisterLoading: false });
@@ -498,7 +339,9 @@ export const useAuthStore = create<AuthStore>()(
             session: null,
             isAuthenticated: false,
             isLogoutLoading: false,
-            // 키는 유지 (재로그인 가능하게)
+            userProfile: null, // 로그아웃 시 프로필도 초기화
+            userKey: null, // 키도 초기화 (다시 로그인해야 함)
+            formattedKey: null,
           });
 
           return { success: true };
@@ -514,32 +357,87 @@ export const useAuthStore = create<AuthStore>()(
         clientIP: string,
       ) => {
         key = key.replace(/-/g, '').toUpperCase();
-        set({ isRegisterLoading: true });
+        set({ isRegisterLoading: true, error: null });
 
-        const limitCheck = await checkCreationLimit(clientIP);
-        if (!limitCheck.allowed) {
+        const limitCheckResult = await checkCreationLimit(clientIP); // checkCreationLimit 함수 사용
+        if (!limitCheckResult.allowed) {
           set({ isRegisterLoading: false });
           return {
             success: false,
-            error: limitCheck.error,
+            error: limitCheckResult.error,
             code: 'RATE_LIMITED',
           };
         }
 
         try {
-          const { data, error } = await supabase.functions.invoke(
-            'create_anonymous_user',
-            {
+          // Edge Function 호출
+          const { data, error: edgeFunctionError } =
+            await supabase.functions.invoke('create_anonymous_user', {
               body: { key },
-            },
-          );
+            });
 
-          if (error) throw error;
+          // Edge Function 자체에서 발생한 오류 처리
+          if (edgeFunctionError) {
+            console.error('Edge Function 호출 오류:', edgeFunctionError);
+            // 호출 오류 발생 시 명시적인 에러 객체 반환
+            return {
+              success: false,
+              error:
+                edgeFunctionError.message ||
+                'Edge Function 호출 중 알 수 없는 오류가 발생했습니다.',
+              code: 'EDGE_FUNCTION_INVOKE_ERROR',
+            };
+          }
 
-          return { success: true, userId: data.userId };
+          // data가 null 또는 undefined인지 먼저 확인
+          if (data === null || data === undefined) {
+            console.warn(
+              'Edge Function이 유효한 응답을 반환하지 않았습니다 (data is null/undefined).',
+            );
+            return {
+              success: false,
+              error: 'Edge Function에서 유효한 응답을 받지 못했습니다.',
+              code: 'EMPTY_EDGE_FUNCTION_RESPONSE',
+            };
+          }
+
+          // 이제 data.success에 안전하게 접근
+          if (data.success === false) {
+            console.warn('Edge Function 응답이 성공이 아님:', data);
+            return {
+              success: false,
+              error: data.error || '서버 응답이 올바르지 않습니다.',
+              code: data.code || 'SERVER_ERROR',
+            };
+          }
+
+          // 성공적으로 user가 생성되었다면 authStore 상태 업데이트 및 프로필 가져오기
+          if (data.user) {
+            set({
+              user: data.user,
+              session: data.session || null, // 세션이 없을 수 있으므로 null 처리
+              userKey: key,
+              formattedKey: formatKey(key),
+            });
+            await get().fetchUserProfile(data.user.id);
+            return { success: true, user: data.user };
+          } else {
+            return {
+              success: false,
+              error: '사용자 정보가 반환되지 않았습니다.',
+              code: 'NO_USER_DATA',
+            };
+          }
         } catch (error) {
-          console.error('Edge Function 호출 오류:', error);
-          return { success: false, error: error as Error };
+          console.error('익명 사용자 생성 중 오류:', error);
+          return {
+            success: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : '알 수 없는 오류가 발생했습니다.',
+            code: 'UNEXPECTED_ERROR',
+          };
         } finally {
           set({ isRegisterLoading: false });
         }
@@ -552,54 +450,51 @@ export const useAuthStore = create<AuthStore>()(
       ) => {
         try {
           key = key.replace(/-/g, '').toUpperCase();
-          set({ isRegisterLoading: true });
+          set({ isRegisterLoading: true, error: null });
 
-          const limitCheck = await checkCreationLimit(clientIP);
-          if (!limitCheck.allowed) {
+          const limitCheckResult = await checkCreationLimit(clientIP); // checkCreationLimit 함수 사용
+          if (!limitCheckResult.allowed) {
             set({ isRegisterLoading: false });
             return {
               success: false,
-              error: limitCheck.error,
+              error: limitCheckResult.error,
               code: 'RATE_LIMITED',
             };
           }
 
           // Supabase Edge Function 호출
-          const { data, error } = await supabase.functions.invoke(
-            'create_email_user',
-            {
+          const { data, error: edgeFunctionError } =
+            await supabase.functions.invoke('create_email_user', {
               body: { email, key },
-            },
-          );
+            });
 
-          // 응답 디버깅
-          console.log('Edge Function 응답:', { data, error });
-
-          // 에러 처리
-          if (error) {
-            console.error('Edge Function 호출 오류:', error);
-
-            // 오류 상태 코드 확인 (409는 이미 등록된 이메일)
-            if (
-              error.message &&
-              error.message.toLowerCase().includes('already')
-            ) {
-              return {
-                success: false,
-                error: '이미 등록된 이메일입니다.',
-                code: 'EMAIL_EXISTS',
-              };
-            }
-
+          // Edge Function 자체에서 발생한 오류 처리
+          if (edgeFunctionError) {
+            console.error('Edge Function 호출 오류:', edgeFunctionError);
+            // 호출 오류 발생 시 명시적인 에러 객체 반환
             return {
               success: false,
-              error: error.message || '알 수 없는 오류가 발생했습니다.',
-              code: 'EDGE_FUNCTION_ERROR',
+              error:
+                edgeFunctionError.message ||
+                'Edge Function 호출 중 알 수 없는 오류가 발생했습니다.',
+              code: 'EDGE_FUNCTION_INVOKE_ERROR',
             };
           }
 
-          // data가 null이거나 success가 false인 경우 확인
-          if (!data || data.success === false) {
+          // data가 null 또는 undefined인지 먼저 확인
+          if (data === null || data === undefined) {
+            console.warn(
+              'Edge Function이 유효한 응답을 반환하지 않았습니다 (data is null/undefined).',
+            );
+            return {
+              success: false,
+              error: 'Edge Function에서 유효한 응답을 받지 못했습니다.',
+              code: 'EMPTY_EDGE_FUNCTION_RESPONSE',
+            };
+          }
+
+          // 이제 data.success에 안전하게 접근
+          if (data.success === false) {
             console.warn('Edge Function 응답이 성공이 아님:', data);
 
             // data가 있지만 success가 false인 경우
@@ -618,12 +513,32 @@ export const useAuthStore = create<AuthStore>()(
             };
           }
 
-          return { ...data, success: true };
+          // 성공적으로 user가 생성되었다면 authStore 상태 업데이트 및 프로필 가져오기
+          // Edge Function이 user 객체를 직접 반환하므로 이를 사용
+          if (data.user) {
+            set({
+              user: data.user,
+              session: data.session || null, // 세션이 없을 수 있으므로 null 처리
+              userKey: key,
+              formattedKey: formatKey(key),
+            });
+            await get().fetchUserProfile(data.user.id);
+            return { success: true, user: data.user };
+          } else {
+            return {
+              success: false,
+              error: '사용자 정보가 반환되지 않았습니다.',
+              code: 'NO_USER_DATA',
+            };
+          }
         } catch (error) {
-          console.error('Edge Function 호출 예외:', error);
+          console.error('이메일 사용자 생성 중 오류:', error);
           return {
             success: false,
-            error: error.message || '알 수 없는 오류가 발생했습니다.',
+            error:
+              error instanceof Error
+                ? error.message
+                : '알 수 없는 오류가 발생했습니다.',
             code: 'UNEXPECTED_ERROR',
           };
         } finally {
@@ -632,7 +547,22 @@ export const useAuthStore = create<AuthStore>()(
       },
     }),
     {
-      name: 'stateStorage',
+      name: 'auth-storage', // localstorage에 저장될 때 사용될 이름
+      partialize: (state) => ({
+        userKey: state.userKey,
+        formattedKey: state.formattedKey,
+        // user와 session은 보안상 localstorage에 직접 저장하지 않거나 신중하게 다뤄야 함
+        // 여기서는 session check 시 다시 가져오도록 함
+      }),
+      // user와 session은 hydration 시 다시 로드하도록 처리
+      onRehydrateStorage: (state) => {
+        return (state) => {
+          if (state) {
+            // 세션 복원 로직 호출
+            state.restoreSession();
+          }
+        };
+      },
     },
   ),
 );

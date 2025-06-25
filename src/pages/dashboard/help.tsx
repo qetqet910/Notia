@@ -121,7 +121,6 @@ export const HelpPage: React.FC = () => {
       setIsActiveTab((prev) => (prev + 1) % activeTabs.length);
       handleTabChange(activeTabs[isActiveTab]);
     },
-    b: () => setIsSidebarVisible((prev) => !prev),
     m: () => navigate('/dashboard/myPage?tab=profile'),
     ',': () => navigate('/dashboard/myPage?tab=activity'),
     '<': () => navigate('/dashboard/myPage?tab=activity'),
@@ -149,7 +148,7 @@ export const HelpPage: React.FC = () => {
 
       if (handler) {
         e.preventDefault();
-        handler(isCtrlCmd);
+        handler();
       }
     },
     [

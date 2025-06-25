@@ -66,6 +66,9 @@ usePlan 관한 것 삭제 O
 
 리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
 myPage Todo 구현 - userProfile Table 관련 구현중 - 원래 방식 userProfile import로 개선하기
+이거 하려고 Login, Create Table부터 다 바꾸는 중 시빨
+Auth 계정이면 프로필 설정 불가 추가
+MYpage anon 이메일 display 작업중
 
 실시간 반영 구현
 Note type에서 create_at, createAt 중복 존재 해결하기

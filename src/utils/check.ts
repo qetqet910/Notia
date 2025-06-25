@@ -23,8 +23,11 @@ export const checkCreationLimit = async (
 
     return { allowed: true };
   } catch (error) {
-    console.error('생성 제한 확인 오류:', error);
     // 오류 발생해도 생성은 허용 (보안보다 사용성 우선)
-    return { allowed: true };
+    console.error('생성 제한 확인 오류:', error);
+    return {
+      allowed: false,
+      error: (error as Error).message || 'Unknown error',
+    };
   }
 };
