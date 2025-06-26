@@ -35,7 +35,6 @@ export interface Reminder {
   original_text: string
 }
 
-
 export interface UserProfile {
   id: string;
   email: string;
@@ -44,6 +43,22 @@ export interface UserProfile {
   key?: string;
   created_at?: string;
   updated_at?: string;
+}
+// myPage Types
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  unlocked: boolean;
+  unlockedAt?: Date;
+}
+
+export interface ActivityData {
+  date: string;
+  count: number;
+  level: number;
 }
 
 export interface Team {
