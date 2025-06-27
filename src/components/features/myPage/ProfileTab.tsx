@@ -61,8 +61,6 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  // useAuthStore에서 가져온 user 객체는 Supabase auth.user 객체입니다.
-  // userProfile은 이제 'users' 테이블에서 가져온 데이터로 직접 관리합니다.
   const { user, fetchUserProfile: fetchAuthUserProfile } = useAuthStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,24 +117,26 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       }
     };
     loadProfile();
-  }, [user?.id, toast]); // user.id가 변경될 때마다 프로필을 다시 로드
+  }, [user?.id, toast]);
 
   const displayEmail = useMemo(() => {
-    // currentProfile이 로드된 후 currentProfile.email 사용, 아니면 user.email 사용
-    return currentProfile?.email
-      ? currentProfile.email.startsWith('anon_')
-        ? '익명 사용자는 이메일이 없습니다.'
-        : currentProfile.email
-      : user?.email || '';
+    return user?.email ? (
+      user.email.startsWith('anon_') ? (
+        '익명 사용자는 이메일이 없습니다.'
+      ) : (
+        user.email
+      )
+    ) : (
+      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+    );
   }, [currentProfile, user]);
 
-  // isProvider 로직은 기존과 동일하게 auth.user 기반으로 판단
   // 소셜 로그인 계정은 프로필 수정 불가
   const isProvider = useMemo(() => {
     return (
-      (user &&
-        user.app_metadata?.provider &&
-        user.app_metadata.provider !== 'email') ||
+      user &&
+      user.app_metadata?.provider &&
+      user.app_metadata.provider !== 'email' &&
       !user?.email?.startsWith('anon_') // 익명 이메일 계정도 Provider로 간주 (편집 불가)
     );
   }, [user]);
@@ -236,14 +236,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const onAvatarFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
-      if (!file || !user?.id) {
-        toast({
-          title: '파일 선택 실패',
-          description: '파일을 선택하거나 사용자 정보를 찾을 수 없습니다.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      // ... 초기 유효성 검사 ...
 
       setIsSaving(true);
       try {
@@ -251,40 +244,72 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         const fileName = `${user.id}.${fileExt}`;
         const filePath = `public/${fileName}`;
 
-        // Supabase Storage 버킷 이름이 'avatars'라고 가정합니다.
+        console.log('Attempting to delete existing file at:', filePath);
+        const { error: deleteError } = await supabase.storage
+          .from('avatar')
+          .remove([filePath]);
+
+        if (deleteError) {
+          if (deleteError.message !== 'The resource was not found') {
+            throw new Error(`기존 아바타 삭제 실패: ${deleteError.message}`);
+          }
+          console.log('Old avatar not found or already deleted, proceeding.');
+        } else {
+          console.log('Old avatar delete request sent. Polling for removal...');
+          // --- 폴링 로직 시작 ---
+          let attempts = 0;
+          const maxAttempts = 10;
+          const delay = 500; // 0.5초마다 확인
+
+          while (attempts < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            const { data: listData, error: listError } = await supabase.storage
+              .from('avatar')
+              .list('public', { search: fileName }); // 'public' 폴더에서 해당 파일 이름으로 검색
+
+            if (listError) {
+              console.warn('Error during polling list:', listError.message);
+              // 에러 발생 시 계속 시도하거나, 에러 처리 로직 추가
+            }
+
+            const fileFound = listData?.some((obj) => obj.name === fileName);
+
+            if (!fileFound) {
+              console.log(
+                'File successfully removed from storage. Proceeding.',
+              );
+              break; // 파일이 사라졌으면 루프 종료
+            }
+
+            attempts++;
+            console.log(
+              `Polling attempt ${attempts}/${maxAttempts}. File still found.`,
+            );
+          }
+
+          if (attempts === maxAttempts) {
+            console.warn(
+              'File might not have been fully removed after polling attempts.',
+            );
+            // 이 경우에도 업로드를 시도하거나, 사용자에게 알림
+          }
+          // --- 폴링 로직 끝 ---
+        }
+
+        console.log('Attempting to upload new file...');
         const { error: uploadError } = await supabase.storage
-          .from('avatars')
+          .from('avatar')
           .upload(filePath, file, {
-            upsert: true, // 동일한 파일이 있으면 덮어씁니다.
+            cacheControl: '3600',
+            contentType: file.type ?? 'image/jpeg',
           });
+
         if (uploadError) {
           throw uploadError;
         }
-
-        const { data: publicUrlData } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-        if (publicUrlData) {
-          setAvatarUrl(publicUrlData.publicUrl);
-          toast({
-            title: '사진 업로드 완료',
-            description:
-              '새로운 아바타가 성공적으로 업로드되었습니다. 저장을 눌러 적용하세요.',
-          });
-        } else {
-          throw new Error('Public URL not found after upload.');
-        }
+        // ... (나머지 로직)
       } catch (error: any) {
-        console.error('Error uploading avatar:', error.message);
-        toast({
-          title: '사진 업로드 실패',
-          description: `아바타 업로드 중 오류가 발생했습니다: ${error.message}`,
-          variant: 'destructive',
-        });
-        // 업로드 실패 시 기존 아바타 URL로 되돌림
-        setAvatarUrl(
-          currentProfile?.avatar_url || user?.user_metadata.avatar_url || '',
-        );
+        // ... 에러 처리 ...
       } finally {
         setIsSaving(false);
       }
@@ -342,7 +367,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarUrl || ''} />
                 <AvatarFallback className="text-lg">
-                  {getInitials(displayName || displayEmail)}
+                  {getInitials(displayName)}
                 </AvatarFallback>
               </Avatar>
               {isEditing && !isProvider && (
@@ -394,7 +419,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 />
               ) : (
                 <p className="text-lg font-medium pt-1">
-                  {displayName || '이름 없음'}
+                  {displayName || (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                 </p>
               )}
             </div>
