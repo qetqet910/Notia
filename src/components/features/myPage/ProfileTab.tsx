@@ -65,28 +65,28 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 'users' 테이블에서 가져올 실제 사용자 프로필 데이터를 위한 상태
   const [currentProfile, setCurrentProfile] = useState<UserProfileData | null>(
     null,
   );
 
   // 입력 필드 상태는 currentProfile에서 초기화
   const [displayName, setDisplayName] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+  // 임시 아바타 URL 상태 (미리보기용)
+  const [tempAvatarUrl, setTempAvatarUrl] = useState('');
+  // DB에 저장된 실제 아바타 URL (취소 시 복원용)
+  const [dbAvatarUrl, setDbAvatarUrl] = useState('');
 
   // 컴포넌트 마운트 시 또는 user 변경 시 프로필 데이터 로드
   useEffect(() => {
     const loadProfile = async () => {
       if (user?.id) {
-        // 'users' 테이블에서 현재 로그인한 user의 id와 일치하는 프로필을 가져옴
         const { data, error } = await supabase
-          .from('users') // 'user_profile' 대신 'users' 테이블 사용
+          .from('users')
           .select('*')
-          .eq('id', user.id) // 'user_id' 대신 'id' 사용
+          .eq('id', user.id)
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          // PGRST116: No rows found
           console.error(
             'Error fetching user profile from "users" table:',
             error.message,
@@ -101,19 +101,23 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           setDisplayName(
             data.display_name || user.user_metadata.name || '사용자',
           );
-          setAvatarUrl(data.avatar_url || user.user_metadata.avatar_url || '');
+          setTempAvatarUrl(
+            data.avatar_url || user.user_metadata.avatar_url || '',
+          ); // 초기 미리보기 URL
+          setDbAvatarUrl(
+            data.avatar_url || user.user_metadata.avatar_url || '',
+          ); // 초기 DB URL
         } else {
-          // 'users' 테이블에 프로필이 없는 경우, auth.user의 메타데이터를 사용하고
-          // 새로운 프로필 생성을 준비 (handleSaveProfile에서 처리)
-          setCurrentProfile(null); // 'users' 테이블에 아직 프로필이 없음을 나타냄
+          setCurrentProfile(null);
           setDisplayName(user.user_metadata.name || '사용자');
-          setAvatarUrl(user.user_metadata.avatar_url || '');
+          setTempAvatarUrl(user.user_metadata.avatar_url || '');
+          setDbAvatarUrl(user.user_metadata.avatar_url || '');
         }
       } else {
-        // user가 없는 경우 상태 초기화
         setCurrentProfile(null);
         setDisplayName('사용자');
-        setAvatarUrl('');
+        setTempAvatarUrl('');
+        setDbAvatarUrl('');
       }
     };
     loadProfile();
@@ -131,13 +135,12 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     );
   }, [currentProfile, user]);
 
-  // 소셜 로그인 계정은 프로필 수정 불가
   const isProvider = useMemo(() => {
     return (
       user &&
       user.app_metadata?.provider &&
       user.app_metadata.provider !== 'email' &&
-      !user?.email?.startsWith('anon_') // 익명 이메일 계정도 Provider로 간주 (편집 불가)
+      !user?.email?.startsWith('anon_')
     );
   }, [user]);
 
@@ -152,6 +155,80 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     [],
   );
 
+  // 아바타 파일 선택 핸들러: 파일 업로드 및 미리보기 URL 설정
+  const onAvatarFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: '업로드 실패',
+          description: '이미지 파일만 업로드 가능합니다.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (file.size >= 10485760) {
+        // 10MB 제한
+        toast({
+          title: '업로드 실패',
+          description: '파일 크기가 너무 큽니다. 10MB 이하로 업로드해주세요.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        const fileExt = file.name.split('.').pop();
+        // 1. 고유한 파일 이름 생성 (user.id + 타임스탬프) - 임시 파일용
+        const timestamp = new Date().getTime();
+        const newFileName = `${user.id}-${timestamp}.${fileExt}`;
+        const newFilePath = `public/${newFileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatar')
+          .upload(newFilePath, file, {
+            cacheControl: '3600', // 1시간 캐시
+            contentType: file.type,
+            // upsert: true 제거! (항상 새로운 파일로 업로드)
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // 2. 업로드 성공 시 임시 URL 생성 및 미리보기 상태 업데이트
+        const { data } = supabase.storage
+          .from('avatar')
+          .getPublicUrl(newFilePath);
+
+        const uploadedTempUrl = data.publicUrl;
+
+        setTempAvatarUrl(uploadedTempUrl); // 미리보기 URL만 업데이트
+
+        toast({
+          title: '사진 업로드 완료',
+          description:
+            '새로운 아바타가 미리보기로 업로드되었습니다. 저장을 눌러 적용하세요.',
+        });
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        toast({
+          title: '사진 업로드 실패',
+          description: '업로드를 실패하였습니다, ' + error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [user?.id, toast, setTempAvatarUrl],
+  );
+
+  // 저장 버튼 핸들러: DB 업데이트 및 기존 파일 삭제
   const handleSaveProfile = useCallback(async () => {
     setIsSaving(true);
     try {
@@ -164,29 +241,72 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         return;
       }
 
+      // 1. 기존 아바타 이미지 삭제 (새로운 URL이 다르다면)
+      // handleSaveProfile 함수 내부, 기존 아바타 이미지 삭제 로직 부분
+
+// 1. 기존 아바타 이미지 삭제 (새로운 URL이 다르다면)
+if (dbAvatarUrl && dbAvatarUrl !== tempAvatarUrl) {
+  console.log('DB Avatar URL before deletion attempt:', dbAvatarUrl); 
+  try {
+    // URL에서 '/storage/v1/object/public/버킷명/' 부분을 제거하여 실제 파일 경로만 추출
+    // 정규식을 사용하는 것이 가장 견고합니다.
+    const urlPattern = /^https?:\/\/[^/]+\/storage\/v1\/object\/public\/avatar\/(.*)$/;
+    const match = dbAvatarUrl.match(urlPattern);
+
+    let oldFilePathToDelete: string | null = null;
+    if (match && match[1]) {
+      oldFilePathToDelete = match[1]; //
+      console.log('Calculated old file path to delete:', oldFilePathToDelete); // 계산된 삭제 경로 확인
+
+      const { error: deleteError } = await supabase.storage
+        .from('avatar')
+        .remove([oldFilePathToDelete]); // 추출한 경로를 직접 사용
+
+      if (deleteError) {
+        if (deleteError.message !== 'The resource was not found') {
+          console.error('*** ERROR: Failed to delete old avatar:', deleteError.message, deleteError);
+          toast({
+            title: '기존 사진 삭제 실패',
+            description: `이전 프로필 사진 삭제 중 오류 발생: ${deleteError.message}`,
+            variant: 'destructive',
+          });
+        } else {
+          console.log('Old avatar not found (already deleted or never existed).');
+        }
+      } else {
+        console.log('Old DB avatar successfully deleted.');
+      }
+      await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 대기
+    } else {
+      console.warn('Could not parse old avatar URL for deletion:', dbAvatarUrl);
+    }
+  } catch (error) {
+    console.error("Error processing old DB avatar URL for deletion:", error);
+  }
+} else {
+  console.log('No old avatar to delete or URL is the same.');
+}
+
+      // 2. 사용자 프로필 DB 업데이트
       let updateError = null;
       if (currentProfile) {
-        // 기존 프로필이 있으면 업데이트
         const { error } = await supabase
-          .from('users') // 'users' 테이블 업데이트
+          .from('users')
           .update({
             display_name: displayName,
-            avatar_url: avatarUrl,
+            avatar_url: tempAvatarUrl, // 미리보기 URL을 최종 저장
             updated_at: new Date().toISOString(),
           })
-          .eq('id', user.id); // user_id 대신 id 필드 사용
+          .eq('id', user.id);
         updateError = error;
       } else {
-        // 프로필이 없으면 새로 생성 (insert)
         const { error } = await supabase.from('users').insert({
-          id: user.id, // Supabase Auth user ID를 id로 사용
+          id: user.id,
           display_name: displayName,
-          email: displayEmail, // 생성 시 이메일도 저장
-          avatar_url: avatarUrl,
+          email: displayEmail,
+          avatar_url: tempAvatarUrl, // 미리보기 URL을 최종 저장
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          // 'key' 필드는 필요에 따라 여기에 추가하거나 기본값을 설정
-          // key: 'some_default_key',
         });
         updateError = error;
       }
@@ -195,7 +315,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         throw updateError;
       }
 
-      // 성공적으로 저장 후 currentProfile 상태 업데이트
+      // 성공적으로 저장 후 currentProfile 및 dbAvatarUrl 상태 업데이트
       const { data: updatedData, error: fetchUpdatedError } = await supabase
         .from('users')
         .select('*')
@@ -204,20 +324,21 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
 
       if (fetchUpdatedError) {
         console.error(
-          'Error fetching updated profile:',
+          'Error fetching updated profile after save:',
           fetchUpdatedError.message,
         );
       } else if (updatedData) {
         setCurrentProfile(updatedData);
+        setDbAvatarUrl(updatedData.avatar_url); // DB에 저장된 최종 URL로 업데이트
       }
 
       toast({
         title: '프로필 저장됨',
         description: '프로필 정보가 성공적으로 업데이트되었습니다.',
       });
-      setIsEditing(false);
+      setIsEditing(false); // 편집 모드 종료
     } catch (error: any) {
-      console.error('Error saving profile:', error.message);
+      console.error('Overall error saving profile:', error); // 전체 오류 로깅
       toast({
         title: '저장 실패',
         description: `프로필 저장 중 오류가 발생했습니다: ${error.message}`,
@@ -226,100 +347,29 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [displayName, avatarUrl, user?.id, displayEmail, currentProfile, toast]);
+  }, [
+    displayName,
+    tempAvatarUrl,
+    user?.id,
+    user?.email,
+    currentProfile,
+    toast,
+    dbAvatarUrl,
+  ]);
+
+  // 취소 버튼 핸들러: 변경 사항 롤백
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false); // 편집 모드 종료
+    // 원래 프로필 값으로 되돌림
+    setDisplayName(
+      currentProfile?.display_name || user?.user_metadata.name || '사용자',
+    );
+    setTempAvatarUrl(dbAvatarUrl); // 미리보기 URL을 DB 저장된 URL로 되돌림
+  }, [currentProfile, user, dbAvatarUrl]);
 
   const handleAvatarChange = useCallback(
-    () => fileInputRef.current?.click(),
-    [],
-  );
-
-  const onAvatarFileChange = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      // ... 초기 유효성 검사 ...
-
-      setIsSaving(true);
-      try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}.${fileExt}`;
-        const filePath = `public/${fileName}`;
-
-        console.log('Attempting to delete existing file at:', filePath);
-        const { error: deleteError } = await supabase.storage
-          .from('avatar')
-          .remove([filePath]);
-
-        if (deleteError) {
-          if (deleteError.message !== 'The resource was not found') {
-            throw new Error(`기존 아바타 삭제 실패: ${deleteError.message}`);
-          }
-          console.log('Old avatar not found or already deleted, proceeding.');
-        } else {
-          console.log('Old avatar delete request sent. Polling for removal...');
-          // --- 폴링 로직 시작 ---
-          let attempts = 0;
-          const maxAttempts = 10;
-          const delay = 500; // 0.5초마다 확인
-
-          while (attempts < maxAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, delay));
-            const { data: listData, error: listError } = await supabase.storage
-              .from('avatar')
-              .list('public', { search: fileName }); // 'public' 폴더에서 해당 파일 이름으로 검색
-
-            if (listError) {
-              console.warn('Error during polling list:', listError.message);
-              // 에러 발생 시 계속 시도하거나, 에러 처리 로직 추가
-            }
-
-            const fileFound = listData?.some((obj) => obj.name === fileName);
-
-            if (!fileFound) {
-              console.log(
-                'File successfully removed from storage. Proceeding.',
-              );
-              break; // 파일이 사라졌으면 루프 종료
-            }
-
-            attempts++;
-            console.log(
-              `Polling attempt ${attempts}/${maxAttempts}. File still found.`,
-            );
-          }
-
-          if (attempts === maxAttempts) {
-            console.warn(
-              'File might not have been fully removed after polling attempts.',
-            );
-            // 이 경우에도 업로드를 시도하거나, 사용자에게 알림
-          }
-          // --- 폴링 로직 끝 ---
-        }
-
-        console.log('Attempting to upload new file...');
-        const { error: uploadError } = await supabase.storage
-          .from('avatar')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            contentType: file.type ?? 'image/jpeg',
-          });
-
-        if (uploadError) {
-          throw uploadError;
-        }
-        // ... (나머지 로직)
-      } catch (error: any) {
-        // ... 에러 처리 ...
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [
-      user?.id,
-      currentProfile?.avatar_url,
-      user?.user_metadata.avatar_url,
-      toast,
-    ],
+    () => isEditing && fileInputRef.current?.click(), // 편집 모드일 때만 클릭 가능
+    [isEditing],
   );
 
   return (
@@ -339,7 +389,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               <>
                 <Button
                   variant="outline"
-                  onClick={() => setIsEditing(false)}
+                  onClick={handleCancelEdit} // 취소 버튼에 handleCancelEdit 연결
                   disabled={isSaving}
                 >
                   취소
@@ -365,7 +415,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           <div className="flex items-center space-x-4">
             <div className="relative">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarUrl || ''} />
+                <AvatarImage src={tempAvatarUrl || ''} />{' '}
+                {/* tempAvatarUrl 사용 */}
                 <AvatarFallback className="text-lg">
                   {getInitials(displayName)}
                 </AvatarFallback>
@@ -401,7 +452,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               </div>
               {isEditing && !isProvider && (
                 <p className="text-sm text-muted-foreground">
-                  JPG, PNG 파일. 2MB 이하.
+                  사진 파일. 10MB 이하.
                 </p>
               )}
             </div>
@@ -416,6 +467,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="이름을 입력하세요"
+                  disabled={isSaving}
                 />
               ) : (
                 <p className="text-lg font-medium pt-1">

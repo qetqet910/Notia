@@ -65,19 +65,22 @@ usePlan 관한 것 삭제 O
 뱃지, 잔디 추가하기 O
 
 리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
+
 myPage Todo 구현 - userProfile Table 관련 구현중 - 원래 방식 userProfile import로 개선하기 - O
-이거 하려고 Login, Create Table부터 다 바꾸는 중 시빨
+이거 하려고 Login, Create Table부터 다 바꾸는 중 O
 Auth 계정이면 프로필 설정 불가 추가 O
 MYpage anon 이메일 display 작업중 O
 MyPage 최적화, 리팩토링, 컴포넌트 분리 - 1440줄은 힘들다 O
-프사 업로드 시발 개빡이다
+파일 전송 메인 에러 - Supabase Global Header application/json 으로 되어있었다 매우 조심할것 - 프사 완벽 구현 O
 
-실시간 반영 구현
+실시간 반영 구현 - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중
 Note type에서 create_at, createAt 중복 존재 해결하기
+타임라인 시간대별로 리마인더로 바꾸기
 코드 리팩토링 후 리뷰시간 갖기
 
 ---
 
+Supabase Realtime Subscriptions Func팀 스페이스에 활용
 팀스페이스 생성, 접근 레벨 설정
 웹앱, 모바일 환경 구현
 ```
