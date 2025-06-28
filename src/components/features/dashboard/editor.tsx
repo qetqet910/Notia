@@ -55,6 +55,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface EditorProps {
+  ref: any; // TODO: 타입 정의 하기
   note: Note;
   onSave: (note: Note) => void;
   onDelete: (id: string) => void;

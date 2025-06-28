@@ -21,12 +21,7 @@ export const supabase = createClient<Database>(
       flowType: 'pkce',
       storage: localStorage,
     },
-    global: {
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    },
+    global: {},
   },
 );
 

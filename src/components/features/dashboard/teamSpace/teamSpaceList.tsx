@@ -17,42 +17,42 @@ export const TeamSpaceList = ({
   const { user } = useAuthStore();
 
   // 사용자의 팀 목록 가져오기
-  useEffect(() => {
-    const fetchTeams = async () => {
-      if (!user) return;
+  // useEffect(() => {
+  //   const fetchTeams = async () => {
+  //     if (!user) return;
 
-      try {
-        setIsLoading(true);
+  //     try {
+  //       setIsLoading(true);
 
-        // 사용자가 속한 그룹 가져오기
-        const { data, error } = await supabase
-          .from('group_members')
-          .select(
-            `
-            group_id,
-            user_id
-          `,
-          )
-          .eq('user_id', user.id);
+  //       // 사용자가 속한 그룹 가져오기
+  //       const { data, error } = await supabase
+  //         .from('group_members')
+  //         .select(
+  //           `
+  //           group_id,
+  //           user_id
+  //         `,
+  //         )
+  //         .eq('user_id', user.id);
 
-        if (error) throw error;
+  //       if (error) throw error;
 
-        // 데이터 형식 변환
-        const formattedTeams = data.map((item) => ({
-          id: item.user_groups?.id,
-          name: item.user_groups?.name,
-        }));
+  //       // 데이터 형식 변환
+  //       const formattedTeams = data.map((item) => ({
+  //         id: item.user_groups?.id,
+  //         name: item.user_groups?.name,
+  //       }));
 
-        setTeams(formattedTeams);
-      } catch (err) {
-        console.error('팀 로드 중 오류 발생:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  //       setTeams(formattedTeams);
+  //     } catch (err) {
+  //       console.error('팀 로드 중 오류 발생:', err);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
 
-    fetchTeams();
-  }, [user]);
+  //   fetchTeams();
+  // }, [user]);
 
   // 새 팀 생성 다이얼로그 상태
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
@@ -60,9 +60,7 @@ export const TeamSpaceList = ({
   return (
     <div className="space-y-1">
       {isLoading ? (
-        <div className="flex items-center justify-center py-2">
-          <div className="animate-spin h-4 w-4 border-2 border-primary rounded-full border-t-transparent"></div>
-        </div>
+        <div className="flex items-center justify-center py-2">출시 예정</div>
       ) : (
         <>
           {teams.map((team) => (

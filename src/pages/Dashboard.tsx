@@ -17,6 +17,7 @@ import Calendar from '@/components/features/dashboard/calendar';
 import TimelineView from '@/components/features/dashboard/timelineView';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
+import { useNoteStore } from '@/stores/dataStore';
 import { useNotes } from '@/hooks/useNotes';
 import { supabase } from '@/services/supabaseClient';
 import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
@@ -91,9 +92,22 @@ export const Dashboard: React.FC = () => {
   const editorRef = useRef<{ save: () => void } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isToggleTheme, setisToggleTheme] = useState(false);
-
+  const { fetchNotes, subscribeToChanges, unsubscribe } = useNoteStore();
   const [isActiveTab, setIsActiveTab] = useState(0);
   const activeTabs = ['notes', 'reminder', 'calendar', 'timeline'];
+
+  useEffect(() => {
+    // 사용자가 로그인했을 때만 데이터를 가져오고 구독을 시작합니다.
+    if (isAuthenticated) {
+      fetchNotes(); // 초기 데이터 로드
+      subscribeToChanges(); // 실시간 구독 시작
+    }
+
+    // 컴포넌트가 언마운트되거나, 사용자가 로그아웃할 때 구독을 해지합니다.
+    return () => {
+      unsubscribe();
+    };
+  }, [isAuthenticated, fetchNotes, subscribeToChanges, unsubscribe]);
 
   // 반응형 처리
   useEffect(() => {
@@ -525,8 +539,8 @@ export const Dashboard: React.FC = () => {
       case 'calendar':
         return (
           <Calendar
-            reminders={reminders}
             notes={notes}
+            reminders={reminders}
             onOpenNote={(noteId) => {
               const noteToOpen =
                 notes.find((note) => note.id === noteId) || null;
@@ -652,7 +666,7 @@ const Sidebar = ({
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             팀 스페이스
           </h3>
-          {/* <TeampaceList activeTab={activeTab} setActiveTab={setActiveTab} /> */}
+          <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
         {popularTags.length > 0 && (
           <div className="mt-6">

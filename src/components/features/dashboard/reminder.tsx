@@ -1,11 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  format,
-  isSameDay,
-  addDays,
-  startOfDay,
-  subDays,
-} from 'date-fns';
+import { format, isSameDay, addDays, startOfDay, subDays } from 'date-fns';
 import {
   Bell,
   Calendar,
@@ -25,13 +19,14 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { useThemeStore } from '@/stores/themeStore';
+import { useNoteStore } from '@/stores/dataStore';
+import { useAuthStore } from '@/stores/authStore'; // useAuthStore 임포트
 import { Note, Reminder } from '@/types';
 import {
   createReminderNotifications,
   cancelReminderNotifications,
   deleteReminderNotifications,
 } from '@/utils/supabaseNotifications'; // 새로 만든 유틸 함수 임포트
-import { useAuthStore } from '@/stores/authStore'; // useAuthStore 임포트
 
 interface InternalReminder {
   id: string;
@@ -54,7 +49,7 @@ interface ReminderViewProps {
 }
 
 export const ReminderView: React.FC<ReminderViewProps> = ({
-  notes,
+  // notes,
   reminders,
   onToggleReminder,
   onMarkCompleted,
@@ -70,6 +65,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     InternalReminder[]
   >([]);
   const [globalNotifications, setGlobalNotifications] = useState(true);
+  const notes = useNoteStore((state) => state.notes);
 
   // Notes를 Map으로 변환 (빠른 검색용)
   const notesMap = useMemo(() => {
@@ -275,9 +271,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     }
 
     setInternalReminders((prev) =>
-      prev.map((r) =>
-        r.id === reminderId ? { ...r, enabled } : r,
-      ),
+      prev.map((r) => (r.id === reminderId ? { ...r, enabled } : r)),
     );
   };
 
@@ -428,7 +422,10 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
                   }`}
                 >
                   <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  <span>{format(reminder.reminderTime, 'yyyy.MM.dd p')}</span> {/* 날짜 형식 변경 */}
+                  <span>
+                    {format(reminder.reminderTime, 'yyyy.MM.dd p')}
+                  </span>{' '}
+                  {/* 날짜 형식 변경 */}
                   {isOverdue && (
                     <Badge
                       variant="destructive"
@@ -473,35 +470,34 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     // 전역 알림이 꺼지면 모든 활성화된 리마인더의 알림도 취소
     // 전역 알림이 켜지면 모든 활성화된 리마인더의 알림을 다시 스케줄
     if (!user?.id) {
-        console.warn("사용자 ID가 없어 전역 알림 토글에 실패했습니다.");
-        return;
+      console.warn('사용자 ID가 없어 전역 알림 토글에 실패했습니다.');
+      return;
     }
 
     for (const reminder of internalReminders) {
-        if (!reminder.completed) {
-            if (enabled) {
-                await createReminderNotifications(
-                    user.id,
-                    reminder.noteId,
-                    reminder.id,
-                    reminder.reminderText,
-                    reminder.noteTitle,
-                    new Date(reminder.reminderTime)
-                );
-            } else {
-                await cancelReminderNotifications(reminder.id);
-            }
+      if (!reminder.completed) {
+        if (enabled) {
+          await createReminderNotifications(
+            user.id,
+            reminder.noteId,
+            reminder.id,
+            reminder.reminderText,
+            reminder.noteTitle,
+            new Date(reminder.reminderTime),
+          );
+        } else {
+          await cancelReminderNotifications(reminder.id);
         }
+      }
     }
 
     setInternalReminders((prev) =>
-        prev.map((reminder) => ({
-            ...reminder,
-            enabled: reminder.completed ? reminder.enabled : enabled,
-        }))
+      prev.map((reminder) => ({
+        ...reminder,
+        enabled: reminder.completed ? reminder.enabled : enabled,
+      })),
     );
   };
-
 
   return (
     <div
