@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { useThemeStore } from '@/stores/themeStore';
-import { useNoteStore } from '@/stores/dataStore';
+import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore'; // useAuthStore 임포트
 import { Note, Reminder } from '@/types';
 import {
@@ -65,7 +65,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     InternalReminder[]
   >([]);
   const [globalNotifications, setGlobalNotifications] = useState(true);
-  const notes = useNoteStore((state) => state.notes);
+  const notes = useDataStore((state) => state.notes);
 
   // Notes를 Map으로 변환 (빠른 검색용)
   const notesMap = useMemo(() => {
