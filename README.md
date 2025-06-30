@@ -74,7 +74,7 @@ MyPage 최적화, 리팩토링, 컴포넌트 분리 - 1440줄은 힘들다 O
 파일 전송 메인 에러 - Supabase Global Header application/json 으로 되어있었다 매우 조심할것 - 프사 완벽 구현 O
 
 실시간 반영 구현 - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중 - 기존 구조 유지, 각 구조의 용이성을 살린 상태로 구현 O
-useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기
+useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기 - Note 적용 완료, 단축키 복구 및 Reminder까지 적용하기
 Note type에서 create_at, createAt 중복 존재 해결하기
 타임라인 시간대별로 리마인더로 바꾸기
 코드 리팩토링 후 리뷰시간 갖기
