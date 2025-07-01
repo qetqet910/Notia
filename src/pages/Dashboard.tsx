@@ -81,6 +81,7 @@ export const Dashboard: React.FC = () => {
     updateNote,
     deleteNote,
     toggleReminderComplete,
+    toggleReminderEnabled
   } = useNotes();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
 
@@ -93,6 +94,10 @@ export const Dashboard: React.FC = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  // 단축키
+  const [isToggleTheme, setIsToggleTheme] = useState(false);
+  const [isActiveTab, setIsActiveTab] = useState(0);
+  const activeTabs = ['notes', 'reminder', 'calendar', 'timeline'];
 
   const editorRef = useRef<{ save: () => void } | null>(null);
 
@@ -198,27 +203,16 @@ export const Dashboard: React.FC = () => {
 
   const handleToggleReminderComplete = useCallback(
     async (reminderId: string, completed: boolean) => {
-      // useNotes에 있는 전용 함수 사용
       await toggleReminderComplete(reminderId, completed);
-      // 상태는 dataStore의 실시간 구독에 의해 자동으로 업데이트됩니다.
     },
     [toggleReminderComplete],
   );
 
   const handleToggleReminderEnable = useCallback(
     async (reminderId: string, enabled: boolean) => {
-      const targetNote = notes.find((n) =>
-        (n.reminders || []).some((r) => r.id === reminderId),
-      );
-      if (!targetNote) return;
-
-      const updatedReminders = (targetNote.reminders || []).map((r) =>
-        r.id === reminderId ? { ...r, enabled } : r,
-      );
-
-      await updateNote({ ...targetNote, reminders: updatedReminders });
+      await toggleReminderEnabled(reminderId, enabled);
     },
-    [notes, updateNote],
+    [toggleReminderEnabled],
   );
 
   const handleDeleteReminder = useCallback(
@@ -255,12 +249,71 @@ export const Dashboard: React.FC = () => {
     [notes, updateNote],
   );
 
+  const SIMPLE_SHORTCUTS = {
+    n: () => handleCreateNote(),
+    s: (isCtrlCmd: boolean) => {
+      if (isCtrlCmd && isEditing && editorRef.current) {
+        editorRef.current.save();
+      }
+    },
+    '/': () => navigate('/dashboard/help?tab=overview'),
+    '?': () => navigate('/dashboard/help?tab=overview'),
+    t: () => {
+      setIsToggleTheme((prev) => !prev);
+      setTheme(isToggleTheme ? 'dark' : 'light');
+    },
+    Tab: () => {
+      setIsActiveTab((prev) => {
+        const nextIndex = (prev + 1) % activeTabs.length;
+        setActiveTab(activeTabs[nextIndex]);
+        return nextIndex;
+      });
+    },
+    b: () => setIsSidebarVisible((prev) => !prev),
+    d: () => selectedNote && setIsDeleteDialogOpen(true),
+    Delete: () => selectedNote && setIsDeleteDialogOpen(true),
+    m: () => navigate('/dashboard/myPage?tab=profile'),
+    ',': () => navigate('/dashboard/myPage?tab=activity'),
+    '<': () => navigate('/dashboard/myPage?tab=activity'),
+    '.': () => navigate('/dashboard/myPage?tab=settings'),
+    '>': () => navigate('/dashboard/myPage?tab=settings'),
+  };
+
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
-      // ... (단축키 로직은 변경 없음, 필요한 경우 context에 따라 수정)
+      const isCtrlCmd = e.ctrlKey || e.metaKey;
+      const target = e.target as HTMLElement;
+
+      // 입력 필드 체크
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
+      ) {
+        if (!(isCtrlCmd && e.key === 's')) return;
+      }
+
+      const handler = SIMPLE_SHORTCUTS[e.key as keyof typeof SIMPLE_SHORTCUTS];
+
+      if (handler) {
+        e.preventDefault();
+        handler(isCtrlCmd);
+      }
     },
     [
-      /* ... 의존성 배열 ... */
+      handleCreateNote,
+      navigate,
+      isEditing,
+      editorRef,
+      setIsToggleTheme,
+      setTheme,
+      isToggleTheme,
+      setIsActiveTab,
+      setActiveTab,
+      activeTabs,
+      setIsSidebarVisible,
+      selectedNote,
+      setIsDeleteDialogOpen,
     ],
   );
 

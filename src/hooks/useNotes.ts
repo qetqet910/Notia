@@ -311,6 +311,37 @@ export const useNotes = () => {
     [user],
   );
 
+  // 리마인더 완료 상태 토글
+  const toggleReminderEnabled = useCallback(
+    async (reminderId: string, enabled: boolean) => {
+      if (!user) return false;
+
+      try {
+        const { error } = await supabase
+          .from('reminders')
+          .update({ enabled })
+          .eq('id', reminderId);
+        if (error) throw error;
+
+        // 완료 상태가 되면 관련된 스케줄된 알림을 취소
+        if (enabled) {
+          await cancelReminderNotifications(reminderId);
+        } else {
+          // 완료 해제 시 다시 알림 스케줄링 (필요하다면)
+          // 이 부분은 리마인더 텍스트, 노트 제목 등 추가 정보가 필요하므로,
+          // 현재는 `reminder.tsx`에서만 `handleToggleReminder`를 통해 처리하는 것이 더 안전합니다.
+          // 여기서는 상태만 업데이트하고 알림 스케줄링은 ReminderView에 맡깁니다.
+        }
+
+        return true;
+      } catch (err) {
+        console.error('리마인더 상태 업데이트 중 오류 발생:', err);
+        return false;
+      }
+    },
+    [user],
+  );
+
   // 팀 노트 관련 함수들 TODO: 기능구현하기
   const fetchTeamNotes = useCallback(
     async (teamId: string) => {
@@ -518,6 +549,7 @@ export const useNotes = () => {
     updateNote,
     deleteNote,
     toggleReminderComplete,
+    toggleReminderEnabled,
     getNotesByTag,
     getNotesByDate,
     getAllTags,

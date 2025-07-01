@@ -45,7 +45,6 @@ export const useDataStore = create<DataState>((set, get) => ({
               date: new Date(r.reminder_time),
             })) || [],
         }));
-
         set({ notes: formattedNotes });
       } catch (err) {
         console.error('Initialize Error:', err);

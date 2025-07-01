@@ -43,8 +43,11 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
     // 1. 이벤트(리마인더)를 날짜별로 그룹화
     const eventMap = new Map<string, CalendarEvent[]>();
     notes.forEach((note) => {
-      (note.reminders || []).forEach((reminder) => {
-        const dateString = format(reminder.date, 'yyyy-MM-dd');
+      (note.reminders || []).forEach((reminder: any) => {
+        const dateString = format(
+          new Date(reminder.reminder_time),
+          'yyyy-MM-dd',
+        );
         const enrichedReminder: CalendarEvent = { ...reminder, note };
 
         if (!eventMap.has(dateString)) {
@@ -146,7 +149,7 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
             )}
 
             <div className="mt-1 space-y-1 overflow-hidden">
-              {dayEvents.slice(0, holidayName ? 1 : 2).map((event) => (
+              {dayEvents.slice(0, holidayName ? 1 : 2).map((event: any) => (
                 <div
                   key={event.id}
                   className={`text-xs p-1 rounded truncate ${
@@ -154,10 +157,10 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
                       ? 'bg-muted text-muted-foreground line-through'
                       : 'bg-primary/20 text-primary-foreground'
                   }`}
-                  title={event.text}
+                  title={event.reminder_text}
                 >
                   <Clock className="w-3 h-3 inline mr-1" />
-                  {event.text}
+                  {event.reminder_text}
                 </div>
               ))}
               {dayEvents.length > (holidayName ? 1 : 2) && (
@@ -173,7 +176,7 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
     }
     return (
       <>
-        <div className="grid grid-cols-7 mb-2 max-w-[1300px] mx-auto">
+        <div className="grid grid-cols-7 mb-2 max-w-[1200px] mx-auto">
           {dayNames.map((dayName, index) => (
             <div
               key={dayName}
@@ -189,7 +192,7 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 border border-border max-w-[1300px] mx-auto">
+        <div className="grid grid-cols-7 border border-border max-w-[1200px] mx-auto">
           {cells}
         </div>
       </>
@@ -202,8 +205,8 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
 
   return (
     <div className="flex h-full">
-      <div className="flex-1 p-4 overflow-auto">
-        <div className="flex items-center justify-between mt-4 mb-4 max-w-[1300px] mx-auto">
+      <div className="flex-1 p-4 overflow-auto custom-scrollbar">
+        <div className="flex items-center justify-between mt-4 mb-4 max-w-[1200px] mx-auto">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold">
               {format(currentDate, 'yyyy년 MMMM', { locale: ko })}
@@ -244,7 +247,7 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
 
             {selectedDateEvents.length > 0 ? (
               <div className="space-y-3">
-                {selectedDateEvents.map((event) => (
+                {selectedDateEvents.map((event: any) => (
                   <div
                     key={event.id}
                     className={`p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
@@ -261,7 +264,9 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
                         {event.completed ? '완료' : '대기'}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {format(event.date, 'p', { locale: ko })}
+                        {format(new Date(event.reminder_time), 'p', {
+                          locale: ko,
+                        })}
                       </span>
                     </div>
                     <p
@@ -269,7 +274,7 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
                         event.completed ? 'line-through' : ''
                       }`}
                     >
-                      {event.text}
+                      {event.reminder_text}
                     </p>
                     <div className="flex items-center text-xs text-muted-foreground">
                       <FileText className="w-3 h-3 mr-1" />
