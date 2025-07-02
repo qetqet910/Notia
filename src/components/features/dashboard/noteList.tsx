@@ -20,14 +20,16 @@ export const NoteList: React.FC<NoteListProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredNotes = notes.filter(
-    (note) =>
-      note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      note.tags.some((tag) =>
-        tag.toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
-  );
+  const filteredNotes = notes
+    .filter(
+      (note) =>
+        note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (note.tags || []).some((tag) =>
+          tag.toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
+    )
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); // ✅ 최신순 정렬 추가
 
   // Get a preview of the content (first 60 characters)
   const getContentPreview = (content: string) => {
@@ -71,14 +73,14 @@ export const NoteList: React.FC<NoteListProps> = ({
 
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex flex-wrap gap-1">
-                    {note.tags.slice(0, 2).map((tag) => (
+                    {(note.tags || []).slice(0, 2).map((tag) => (
                       <Badge key={tag} variant="outline" className="text-xs">
                         {tag}
                       </Badge>
                     ))}
-                    {note.tags.length > 2 && (
+                    {(note.tags || []).length > 2 && (
                       <Badge variant="outline" className="text-xs">
-                        +{note.tags.length - 2}
+                        +{(note.tags || []).length - 2}
                       </Badge>
                     )}
                   </div>

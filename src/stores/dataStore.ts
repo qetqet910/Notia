@@ -1,19 +1,58 @@
 import { create } from 'zustand';
 import { supabase } from '@/services/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Note } from '@/types';
+import type { Note, Reminder } from '@/types';
 
 interface DataState {
   notes: Note[];
   isInitialized: boolean;
   initialize: (userId: string) => Promise<void>;
   unsubscribeAll: () => void;
+  updateNoteState: (updatedNote: Note) => void;
+  updateReminderState: (reminderId: string, updates: Partial<Reminder>) => void;
+  addNoteState: (newNote: Note) => void;
+  removeNoteState: (noteId: string) => void;
 }
+
+let refetchTimer: NodeJS.Timeout;
 
 export const useDataStore = create<DataState>((set, get) => ({
   notes: [],
   isInitialized: false,
   channels: [], // 내부용 채널 관리
+
+  // 낙관적 UI 관련
+
+  updateNoteState: (updatedNote: Note) => {
+    set((state) => ({
+      notes: state.notes.map((note) =>
+        note.id === updatedNote.id ? updatedNote : note,
+      ),
+    }));
+  },
+
+  updateReminderState: (reminderId, updates) => {
+    set((state) => ({
+      notes: state.notes.map((note) => ({
+        ...note,
+        reminders: (note.reminders || []).map((r: any) =>
+          r.id === reminderId ? { ...r, ...updates } : r,
+        ),
+      })),
+    }));
+  },
+
+  addNoteState: (newNote) => {
+    set((state) => ({
+      notes: [newNote, ...state.notes],
+    }));
+  },
+
+  removeNoteState: (noteId) => {
+    set((state) => ({
+      notes: state.notes.filter((note) => note.id !== noteId),
+    }));
+  },
 
   /**
    * 사용자와 관련된 모든 데이터를 가져오고 실시간 구독을 시작합니다.
@@ -56,12 +95,14 @@ export const useDataStore = create<DataState>((set, get) => ({
       get().unsubscribeAll(); // 기존 구독 해지
 
       const handleChange = (payload: any) => {
-        console.log(
-          'Realtime change detected, refetching all data...',
-          payload,
-        );
-        // 어떤 변경이든 데이터를 전부 다시 가져오는 것이 가장 안정적입니다.
-        fetchDataAndSubscribe();
+        console.log('Realtime change detected, debouncing refetch...', payload);
+
+        // ✅ 2. 기존 타이머를 취소하고 새로운 타이머를 설정합니다.
+        clearTimeout(refetchTimer);
+        refetchTimer = setTimeout(() => {
+          console.log('Executing debounced refetch.');
+          fetchDataAndSubscribe();
+        }, 300); // 300ms 지연 후 데이터 요청
       };
 
       // 사용자가 접근할 수 있는 모든 테이블의 변경을 감지합니다.
