@@ -212,10 +212,17 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     if (!user?.id) return;
     setGlobalNotifications(enabled);
 
-    for (const reminder of reminders) {
-      if (reminder.enabled && !reminder.completed) {
+    // 처리해야 할 모든 비동기 작업을 배열에 담습니다.
+    const updatePromises = reminders
+      .filter((r) => !r.completed) // 완료되지 않은 리마인더만 대상으로 합니다.
+      .map((reminder) => {
+        // 데이터베이스의 개별 알람 상태(enabled)를 전체 설정에 맞춰 업데이트합니다.
+        // 이 함수는 내부에 낙관적 업데이트가 포함되어 있어 UI의 개별 스위치도 즉시 변경됩니다.
+        onToggleEnable(reminder.id, enabled);
+
+        // OS 알림을 스케줄링하거나 취소합니다.
         if (enabled) {
-          await createReminderNotifications(
+          return createReminderNotifications(
             user.id,
             reminder.noteId,
             reminder.id,
@@ -224,9 +231,16 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
             new Date(reminder.reminder_time),
           );
         } else {
-          await cancelReminderNotifications(reminder.id);
+          return cancelReminderNotifications(reminder.id);
         }
-      }
+      });
+
+    try {
+      // 모든 작업을 병렬로 한 번에 처리하여 성능을 최적화합니다.
+      await Promise.all(updatePromises);
+      console.log('전체 리마인더 알람 상태가 동기화되었습니다.');
+    } catch (error) {
+      console.error('전체 리마인더 알람 상태 동기화 중 오류 발생:', error);
     }
   };
 

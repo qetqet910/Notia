@@ -11,7 +11,7 @@ export interface Note {
   updated_at: string;
   createdAt: Date;
   updatedAt: Date;
-  reminders?: EditorReminder[]; // Editor 호환성을 위해
+  reminders?: EditorReminder[];
 }
 
 export interface EditorReminder {
@@ -32,7 +32,7 @@ export interface Reminder {
   enabled: boolean;
   created_at: string;
   updated_at: string;
-  original_text: string
+  original_text: string;
 }
 
 export interface UserProfile {
@@ -44,7 +44,7 @@ export interface UserProfile {
   created_at?: string;
   updated_at?: string;
 }
-// myPage Types
+
 export interface Achievement {
   id: string;
   title: string;

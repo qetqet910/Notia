@@ -35,8 +35,6 @@ editor regex 바꾸고 reminder crawling 실패중 해결 O
 최근 리마인더에 내일, 모레 따로 구분하기 O
 에디터 리마인더 카드 가로 스크롤로 shadow, fadein, transition O
 
-Dashboard.tsx의 setSelectedNote가 실시간 반영의 메인 왜그럴까
-
 리마인더 완료 후 똑같은 내용의 노트 수정 시 다시 원상태로 돌아감, 리마인더 @1시간 이라면 수정할 때 기준 1시간으로 바뀜 - 이게 수정할 때도 다 지우고 수정하는 방식이라 그게 아니라 따로 처리를 해야할듯 - 성능 개선과 로직개선 필요 O
 에디터에서 리마인더 지우는 경우 삭제 로직 필요 O
 삭제할 때 ~~도 같이 삭제 O
@@ -64,26 +62,35 @@ usePlan 관한 것 삭제 O
 폰트 적용하기 O
 뱃지, 잔디 추가하기 O
 
-리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
-
 myPage Todo 구현 - userProfile Table 관련 구현중 - 원래 방식 userProfile import로 개선하기 - O
 이거 하려고 Login, Create Table부터 다 바꾸는 중 O
 Auth 계정이면 프로필 설정 불가 추가 O
 MYpage anon 이메일 display 작업중 O
 MyPage 최적화, 리팩토링, 컴포넌트 분리 - 1440줄은 힘들다 O
 파일 전송 메인 에러 - Supabase Global Header application/json 으로 되어있었다 매우 조심할것 - 프사 완벽 구현 O
-
-실시간 반영 구현 - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중 - 기존 구조 유지, 각 구조의 용이성을 살린 상태로 구현 O
-useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기 - Note 적용 완료, 단축키 복구 및 Reminder까지 적용하기 - O - 잘못된 훅과 여러 문제들 해결 / *Dashboard 구독 후 Props 넘겨주기 vs 각 컴포넌트에서 import 선택하기*, Supabase RLS Clear
-Note type에서 create_at, createAt 중복 존재 해결하기
+실시간 반영 구현 O - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중
+ - 기존 구조 유지, 각 구조의 용이성을 살린 상태로 구현 O
+useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기 - Note 적용 완료, 단축키 복구 및 Reminder까지 적용하기 - O
 타임라인 시간대별로 리마인더로 바꾸기
-코드 리팩토링 후 리뷰시간 갖기
+리마인더 완료탭 다른 탭으로 바꾸기
+리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
 
----
+각종 에러 해결
+각종 사용성 증대
+배포 준비
+배포
+배포환경 테스트
+
+코드 리뷰, 리팩토링
+
+Supabase RLS 최적화, Issue 해결, Lighthouse 개선
+
+---v 1.3.2
 
 Supabase Realtime Subscriptions Func팀 스페이스에 활용
 팀스페이스 생성, 접근 레벨 설정
 웹앱, 모바일 환경 구현
+
 ```
 
 ====================================================================<br/>

@@ -80,8 +80,9 @@ export const Dashboard: React.FC = () => {
     addNote,
     updateNote,
     deleteNote,
-    toggleReminderComplete,
-    toggleReminderEnabled
+    toggleReminderEnabled,
+    updateReminderCompletion,
+    updateReminderEnabled,
   } = useNotes();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
 
@@ -104,12 +105,34 @@ export const Dashboard: React.FC = () => {
   // --- 데이터 파생 (Derived State) ---
   const allReminders = useMemo(() => {
     return notes.flatMap((note) =>
-      (note.reminders || []).map((reminder) => ({
-        ...reminder,
-        noteId: note.id,
-        noteTitle: note.title,
-        noteOwnerId: note.owner_id,
-      })),
+      (note.reminders || []).map((reminder: any) => {
+        // EnrichedReminder 타입이 요구하는 noteContent를 미리 생성합니다.
+        const plainContent =
+          note.content?.replace(/<[^>]*>/g, '').substring(0, 100) || '';
+
+        // ✅ ReminderView가 요구하는 EnrichedReminder 형태로 객체를 가공합니다.
+        return {
+          // 1. Reminder 타입에 필요한 기본 속성들
+          id: reminder.id,
+          note_id: note.id,
+          owner_id: note.owner_id,
+          reminder_text: reminder.text || reminder.reminder_text, // `text`와 `reminder_text` 모두 호환
+          reminder_time: (reminder.date
+            ? new Date(reminder.date)
+            : new Date(reminder.reminder_time)
+          ).toISOString(),
+          completed: reminder.completed,
+          enabled: reminder.enabled ?? true, // 기본값 설정
+          created_at: reminder.created_at || new Date().toISOString(),
+          updated_at: reminder.updated_at || new Date().toISOString(),
+          original_text: reminder.original_text,
+
+          // 2. EnrichedReminder 타입에 추가로 필요한 속성들
+          noteId: note.id,
+          noteTitle: note.title,
+          noteContent: plainContent,
+        };
+      }),
     );
   }, [notes]);
 
@@ -142,7 +165,7 @@ export const Dashboard: React.FC = () => {
 
   // 선택된 노트가 notes 배열에서 삭제되면 선택 해제
   useEffect(() => {
-    if (selectedNote && !notes.find((n) => n.id === selectedNote.id)) {
+    if (selectedNote && !notes.find((note) => note.id === selectedNote.id)) {
       setSelectedNote(null);
       setIsEditing(false);
     }
@@ -170,14 +193,9 @@ export const Dashboard: React.FC = () => {
       updatedAt: new Date(),
       reminders: [],
     };
-    // addNote는 이제 Note | null 타입을 반환하므로 타입 단언이 필요 없습니다.
     const newNote = await addNote(newNoteData);
     if (newNote) {
-      // dataStore가 상태를 업데이트하고 useNotes 훅이 최신 노트를 받으면,
-      // 아래 로직은 해당 노트를 선택하게 됩니다.
-      // 실시간 반영이므로 즉시 리스트에 나타납니다.
       setSelectedNote(newNote);
-      setActiveTab('notes');
       setIsEditing(true); // 새 노트는 바로 편집 모드로
     }
   }, [addNote, session?.user?.id]);
@@ -199,20 +217,6 @@ export const Dashboard: React.FC = () => {
       return success;
     },
     [updateNote],
-  );
-
-  const handleToggleReminderComplete = useCallback(
-    async (reminderId: string, completed: boolean) => {
-      await toggleReminderComplete(reminderId, completed);
-    },
-    [toggleReminderComplete],
-  );
-
-  const handleToggleReminderEnable = useCallback(
-    async (reminderId: string, enabled: boolean) => {
-      await toggleReminderEnabled(reminderId, enabled);
-    },
-    [toggleReminderEnabled],
   );
 
   const handleDeleteReminder = useCallback(
@@ -356,9 +360,14 @@ export const Dashboard: React.FC = () => {
                 <AlertDialogFooter>
                   <AlertDialogCancel>취소</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() =>
-                      selectedNote && handleDeleteNote(selectedNote.id)
-                    }
+                    onClick={() => {
+                      if (selectedNote) {
+                        // ✅ deleteNote 호출만 하고, UI 상태 변경은 useEffect에 맡깁니다.
+                        deleteNote(selectedNote.id);
+                      }
+                      // 팝업은 무조건 닫습니다.
+                      setIsDeleteDialogOpen(false);
+                    }}
                   >
                     삭제
                   </AlertDialogAction>
@@ -418,9 +427,10 @@ export const Dashboard: React.FC = () => {
         return (
           <ReminderView
             reminders={allReminders}
-            onToggleComplete={handleToggleReminderComplete} // 이전 리팩토링에서 이미 정의됨
-            onToggleEnable={handleToggleReminderEnable} // 새로 추가
-            onDelete={handleDeleteReminder} // 새로 추가
+            // ✅ props를 새로운 함수로 교체합니다.
+            onToggleComplete={updateReminderCompletion}
+            onToggleEnable={updateReminderEnabled}
+            onDelete={handleDeleteReminder} // 삭제는 기존 로직 유지
             onOpenNote={(noteId) => {
               const noteToOpen =
                 notes.find((note) => note.id === noteId) || null;

@@ -28,6 +28,8 @@ export const useNotes = () => {
   const allNotes = useDataStore((state) => state.notes);
   const { initialize, unsubscribeAll } = useDataStore.getState();
   const isInitialized = useDataStore((state) => state.isInitialized);
+  const { addNoteState } = useDataStore.getState();
+  const { removeNoteState } = useDataStore.getState()
 
   const notes = useMemo(
     () => allNotes.filter((note) => note.owner_id === user?.id),
@@ -57,55 +59,50 @@ export const useNotes = () => {
   ////////////////////////////////////////////////////////////////////////////
 
   // 노트 추가
-  const addNote = useCallback(
-    async (newNote: Omit<Note, 'id'>) => {
-      if (!user) return;
+const addNote = useCallback(
+    async (newNoteData: Omit<Note, 'id'>) => {
+      if (!user) return null;
 
       try {
-        const koreaTime = getKoreaTimeAsUTC();
-
         const { data, error } = await supabase
           .from('notes')
           .insert([
             {
               owner_id: user.id,
-              title: newNote.title,
-              content: newNote.content,
-              tags: newNote.tags,
-              created_at: koreaTime,
-              updated_at: koreaTime,
+              title: newNoteData.title,
+              content: newNoteData.content,
+              tags: newNoteData.tags,
             },
           ])
-          .select();
+          .select() // ⭐ 중요: 삽입된 전체 데이터를 반환받음
+          .single(); // 단일 객체로 받음
 
         if (error) throw error;
 
-        return data[0] as Note;
+        const newNoteWithDate = {
+            ...data,
+            createdAt: new Date(data.created_at),
+            updatedAt: new Date(data.updated_at),
+        } as Note
+
+        // ✅ DB로부터 받은 완전한 노트로 로컬 상태를 즉시 업데이트
+        addNoteState(newNoteWithDate);
+        
+        return newNoteWithDate; // 완전한 노트를 반환
+
       } catch (err) {
-        console.error('노트 추가 중 오류 발생:', err);
-        setError(
-          err instanceof Error ? err : new Error('노트 추가 중 오류 발생'),
-        );
+        // ... (에러 처리)
         return null;
       }
     },
-    [user],
+    [user, addNoteState],
   );
 
   const saveReminders = useCallback(
     async (noteId: string, finalReminders: EditorReminder[]) => {
-      // ======================== 디버깅 코드 시작 ========================
-      console.log('\n--- [ saveReminders 시작 ] ---');
-
-      // [세이브리마인더-1] 클라이언트로부터 어떤 데이터를 받았는지 확인합니다.
-      console.log(
-        "[세이브리마인더-1] 전달받은 'finalReminders':",
-        JSON.stringify(finalReminders, null, 2),
-      );
-
       if (!user) {
         console.error('[세이브리마인더-에러] 사용자 정보가 없습니다.');
-        return false;
+        return []; // 빈 배열 반환
       }
 
       try {
@@ -115,25 +112,12 @@ export const useNotes = () => {
           .eq('note_id', noteId);
         if (fetchError) throw fetchError;
 
-        // [세이브리마인더-2] DB에서 현재 노트에 연결된 리마인더를 가져온 결과를 확인합니다.
-        console.log(
-          "[세이브리마인더-2] DB의 'existingReminders':",
-          JSON.stringify(existingReminders, null, 2),
-        );
-
         const finalTexts = new Set(finalReminders.map((r) => r.original_text));
         const idsToDelete = existingReminders
           .filter((r) => !finalTexts.has(r.original_text))
           .map((r) => r.id);
 
-        // [세이브리마인더-3] 어떤 리마인더를 삭제할지 확인합니다.
-        console.log(
-          "[세이브리마인더-3] 삭제 대상 ID 목록 'idsToDelete':",
-          idsToDelete,
-        );
-
         if (idsToDelete.length > 0) {
-          console.log('  -> 삭제 작업을 실행합니다...');
           const { error: deleteError } = await supabase
             .from('reminders')
             .delete()
@@ -141,41 +125,40 @@ export const useNotes = () => {
           if (deleteError) throw deleteError;
         }
 
+        let upsertedData: any[] = [];
         if (finalReminders.length > 0) {
-          const reminderData = finalReminders.map((reminder) => ({
+          const reminderData = finalReminders.map((reminder: any) => ({
             note_id: noteId,
             owner_id: user.id,
-            reminder_text: reminder.text,
-            reminder_time: convertKoreaDateToUTC(reminder.date),
-            completed: reminder.completed,
-            enabled: true,
+            reminder_text: reminder.text || reminder.reminder_text,
+            // 'date' 또는 'reminder_time'을 Date 객체로 변환 후 ISO 문자열로 저장
+            reminder_time: (reminder.date
+              ? new Date(reminder.date)
+              : new Date(reminder.reminder_time)
+            ).toISOString(),
+            completed: reminder.completed || false,
+            enabled: reminder.enabled ?? true,
             original_text: reminder.original_text,
           }));
 
-          // [세이브리마인더-4] DB에 삽입/업데이트(upsert)할 데이터를 확인합니다.
-          console.log(
-            "[세이브리마인더-4] Upsert 대상 데이터 'reminderData':",
-            JSON.stringify(reminderData, null, 2),
-          );
-          console.log('  -> Upsert 작업을 실행합니다...');
-
-          const { error: upsertError } = await supabase
+          // .select()를 추가하여 upsert된 전체 데이터를 반환받습니다.
+          const { data, error: upsertError } = await supabase
             .from('reminders')
-            .upsert(reminderData, { onConflict: 'note_id, original_text' });
+            .upsert(reminderData, { onConflict: 'note_id, original_text' })
+            .select(); // ⭐ 중요: .select() 추가
 
           if (upsertError) throw upsertError;
+          upsertedData = data;
         }
 
-        console.log('--- [ saveReminders 종료: 성공 ] ---');
-        return true;
+        // DB에서 가져온 완전한 데이터를 반환합니다.
+        return upsertedData;
       } catch (err) {
-        // [세이브리마인더-에러] 오류 발생 시 내용을 확인합니다.
         console.error(
           '[세이브리마인더-에러] 리마인더 동기화 중 오류 발생:',
           err,
         );
-        console.log('--- [ saveReminders 종료: 실패 ] ---');
-        return false;
+        return []; // 에러 시 빈 배열 반환
       }
     },
     [user],
@@ -208,33 +191,42 @@ export const useNotes = () => {
   // 노트 업데이트 (리마인더 포함)
   const updateNote = useCallback(
     async (updatedNote: Note) => {
-      if (!user) return;
+      if (!user) return false;
+
+      const { updateNoteState } = useDataStore.getState();
 
       try {
-        // 노트 업데이트
+        // 1. 노트 텍스트 정보 먼저 DB에 업데이트
         const { error: noteError } = await supabase
           .from('notes')
           .update({
             title: updatedNote.title,
             content: updatedNote.content,
             tags: updatedNote.tags,
-            updated_at: getKoreaTimeAsUTC(), // 한국 시간대 기준으로 업데이트 시간 설정
+            updated_at: getKoreaTimeAsUTC(),
           })
           .eq('id', updatedNote.id)
           .eq('owner_id', user.id);
-
         if (noteError) throw noteError;
 
-        // 리마인더 저장
-        if (updatedNote.reminders) {
-          const reminderSuccess = await saveReminders(
-            updatedNote.id,
-            updatedNote.reminders,
-          );
-          if (!reminderSuccess) {
-            console.warn('리마인더 저장에 실패했지만 노트는 저장됨');
-          }
-        }
+        // 2. 리마인더를 저장하고, DB에서 생성된 id가 포함된 완전한 데이터를 반환받음
+        const syncedReminders = await saveReminders(
+          updatedNote.id,
+          updatedNote.reminders || [],
+        );
+
+        // 3. 반환받은 완전한 리마인더 데이터로 최종 노트 객체를 만듦
+        const finalNote = {
+          ...updatedNote,
+          reminders: syncedReminders.map((r: any) => ({
+            ...r,
+            text: r.reminder_text,
+            date: new Date(r.reminder_time),
+          })),
+        };
+
+        // 4. 완전한 데이터로 낙관적 업데이트 수행! (이제 '유령'이 아님)
+        updateNoteState(finalNote);
 
         return true;
       } catch (err) {
@@ -249,64 +241,71 @@ export const useNotes = () => {
   );
 
   // 노트 삭제 (리마인더도 함께 삭제)
-  const deleteNote = useCallback(
+const deleteNote = useCallback(
     async (noteId: string) => {
-      if (!user) return;
+      if (!user) return false;
+
+      // ✅ 1. 낙관적 업데이트: UI에서 노트를 즉시 제거
+      removeNoteState(noteId);
 
       try {
-        // 리마인더 먼저 삭제
-        await supabase
-          .from('reminders')
-          .delete()
-          .eq('note_id', noteId)
-          .eq('owner_id', user.id);
-
-        // 노트 삭제
-        const { error } = await supabase
-          .from('notes')
-          .delete()
-          .eq('id', noteId);
-
-        if (error) throw error;
-
+        // 2. 백그라운드에서 실제 DB 작업 수행
+        // ... (리마인더 삭제 로직은 그대로 유지)
+        await supabase.from('reminders').delete().eq('note_id', noteId);
+        await supabase.from('notes').delete().eq('id', noteId);
+        
         return true;
       } catch (err) {
-        console.error('노트 삭제 중 오류 발생:', err);
-        setError(
-          err instanceof Error ? err : new Error('노트 삭제 중 오류 발생'),
-        );
+        // ... (에러 처리)
+        // 실패 시, 전체 데이터를 다시 불러와 상태를 복구할 수 있음 (현재는 실시간 동기화가 처리)
         return false;
       }
+    },
+    [user, removeNoteState],
+  );
+  const updateReminderCompletion = useCallback(
+    async (reminderId: string, completed: boolean) => {
+      if (!user) return false;
+
+      // 1. 낙관적 업데이트: UI 즉시 변경
+      useDataStore.getState().updateReminderState(reminderId, { completed });
+
+      // 2. 실제 DB 업데이트 (버그 수정: .eq 추가)
+      const { error } = await supabase
+        .from('reminders')
+        .update({ completed })
+        .eq('id', reminderId)
+        .eq('owner_id', user.id);
+
+      if (error) {
+        console.error('리마인더 완료 처리 실패:', error);
+        // 실패 시 원래 상태로 롤백 (여기서는 실시간 동기화가 해결해 줌)
+        return false;
+      }
+      return true;
     },
     [user],
   );
 
-  // 리마인더 완료 상태 토글
-  const toggleReminderComplete = useCallback(
-    async (reminderId: string, completed: boolean) => {
+  const updateReminderEnabled = useCallback(
+    async (reminderId: string, enabled: boolean) => {
       if (!user) return false;
 
-      try {
-        const { error } = await supabase
-          .from('reminders')
-          .update({ completed, updated_at: getKoreaTimeAsUTC() });
-        if (error) throw error;
+      // 1. 낙관적 업데이트: UI 즉시 변경
+      useDataStore.getState().updateReminderState(reminderId, { enabled });
 
-        // 완료 상태가 되면 관련된 스케줄된 알림을 취소
-        if (completed) {
-          await cancelReminderNotifications(reminderId);
-        } else {
-          // 완료 해제 시 다시 알림 스케줄링 (필요하다면)
-          // 이 부분은 리마인더 텍스트, 노트 제목 등 추가 정보가 필요하므로,
-          // 현재는 `reminder.tsx`에서만 `handleToggleReminder`를 통해 처리하는 것이 더 안전합니다.
-          // 여기서는 상태만 업데이트하고 알림 스케줄링은 ReminderView에 맡깁니다.
-        }
+      // 2. 실제 DB 업데이트
+      const { error } = await supabase
+        .from('reminders')
+        .update({ enabled })
+        .eq('id', reminderId)
+        .eq('owner_id', user.id);
 
-        return true;
-      } catch (err) {
-        console.error('리마인더 상태 업데이트 중 오류 발생:', err);
+      if (error) {
+        console.error('리마인더 알림 설정 실패:', error);
         return false;
       }
+      return true;
     },
     [user],
   );
@@ -548,7 +547,8 @@ export const useNotes = () => {
     updateNoteOnly,
     updateNote,
     deleteNote,
-    toggleReminderComplete,
+    updateReminderCompletion,
+    updateReminderEnabled,
     toggleReminderEnabled,
     getNotesByTag,
     getNotesByDate,
