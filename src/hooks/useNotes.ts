@@ -56,11 +56,9 @@ export const useNotes = () => {
     };
   }, [user, initialize, unsubscribeAll, isInitialized]);
 
-  ////////////////////////////////////////////////////////////////////////////
-
   // 노트 추가
 const addNote = useCallback(
-    async (newNoteData: Omit<Note, 'id'>) => {
+    async (newNoteData: Pick<Note, 'title' | 'content' | 'tags'>) => {
       if (!user) return null;
 
       try {
