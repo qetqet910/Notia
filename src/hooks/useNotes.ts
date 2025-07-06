@@ -23,13 +23,28 @@ const convertKoreaDateToUTC = (date: Date): string => {
   return fromZonedTime(date, KOREA_TIMEZONE).toISOString();
 };
 
+const getStartOfToday = () => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return now;
+};
+
+const getStartOfWeek = () => {
+  const now = new Date();
+  const day = now.getDay(); // 0 (일요일) - 6 (토요일)
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // 월요일을 시작으로 설정
+  const startOfWeek = new Date(now.setDate(diff));
+  startOfWeek.setHours(0, 0, 0, 0);
+  return startOfWeek;
+};
+
 export const useNotes = () => {
   const { user } = useAuthStore();
   const allNotes = useDataStore((state) => state.notes);
   const { initialize, unsubscribeAll } = useDataStore.getState();
   const isInitialized = useDataStore((state) => state.isInitialized);
   const { addNoteState } = useDataStore.getState();
-  const { removeNoteState } = useDataStore.getState()
+  const { removeNoteState } = useDataStore.getState();
 
   const notes = useMemo(
     () => allNotes.filter((note) => note.owner_id === user?.id),
@@ -56,8 +71,74 @@ export const useNotes = () => {
     };
   }, [user, initialize, unsubscribeAll, isInitialized]);
 
+  const goalStats = useMemo(() => {
+    if (!user || !notes) {
+      return {
+        weeklyNote: { current: 0, goal: 10, percentage: 0 },
+        weeklyReminder: { current: 0, goal: 5, percentage: 0 },
+      };
+    }
+
+    const noteGoal = user.user_metadata?.weekly_note_goal ?? 10;
+    const reminderGoal = user.user_metadata?.weekly_reminder_goal ?? 5;
+
+    const startOfWeek = getStartOfWeek();
+
+    // 1. 주간 노트 작성 수
+    const notesThisWeek = notes.filter(
+      (note) => new Date(note.created_at) >= startOfWeek,
+    ).length;
+
+    // 2. 주간 리마인더 완료 수 (⭐️ completed_at 기준으로 변경)
+    const remindersCompletedThisWeek = notes.reduce((count, note) => {
+      return (note.reminders || []).map(
+        (reminder: any) =>
+          reminder.completed_at &&
+          new Date(reminder.completed_at) >= startOfWeek,
+      ).length;
+    }, 0);
+
+    return {
+      weeklyNote: {
+        current: notesThisWeek,
+        goal: noteGoal,
+        percentage:
+          noteGoal > 0
+            ? Math.min(100, Math.round((notesThisWeek / noteGoal) * 100))
+            : 0,
+      },
+      weeklyReminder: {
+        current: remindersCompletedThisWeek,
+        goal: reminderGoal,
+        percentage:
+          reminderGoal > 0
+            ? Math.min(
+                100,
+                Math.round((remindersCompletedThisWeek / reminderGoal) * 100),
+              )
+            : 0,
+      },
+    };
+  }, [notes, user]);
+
+  const updateUserGoals = useCallback(
+    async (goals: { dailyGoal: number; weeklyGoal: number }) => {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          daily_goal: goals.dailyGoal,
+          weekly_goal: goals.weeklyGoal,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    [],
+  );
+
   // 노트 추가
-const addNote = useCallback(
+  const addNote = useCallback(
     async (newNoteData: Pick<Note, 'title' | 'content' | 'tags'>) => {
       if (!user) return null;
 
@@ -78,16 +159,15 @@ const addNote = useCallback(
         if (error) throw error;
 
         const newNoteWithDate = {
-            ...data,
-            createdAt: new Date(data.created_at),
-            updatedAt: new Date(data.updated_at),
-        } as Note
+          ...data,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+        } as Note;
 
         // ✅ DB로부터 받은 완전한 노트로 로컬 상태를 즉시 업데이트
         addNoteState(newNoteWithDate);
-        
-        return newNoteWithDate; // 완전한 노트를 반환
 
+        return newNoteWithDate; // 완전한 노트를 반환
       } catch (err) {
         // ... (에러 처리)
         return null;
@@ -239,7 +319,7 @@ const addNote = useCallback(
   );
 
   // 노트 삭제 (리마인더도 함께 삭제)
-const deleteNote = useCallback(
+  const deleteNote = useCallback(
     async (noteId: string) => {
       if (!user) return false;
 
@@ -251,7 +331,7 @@ const deleteNote = useCallback(
         // ... (리마인더 삭제 로직은 그대로 유지)
         await supabase.from('reminders').delete().eq('note_id', noteId);
         await supabase.from('notes').delete().eq('id', noteId);
-        
+
         return true;
       } catch (err) {
         // ... (에러 처리)
@@ -541,6 +621,8 @@ const deleteNote = useCallback(
     notes,
     loading,
     error,
+    goalStats,
+    updateUserGoals,
     addNote,
     updateNoteOnly,
     updateNote,

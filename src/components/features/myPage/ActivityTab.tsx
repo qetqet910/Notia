@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { FileText, Calendar, Tag, TrendingUp, CheckCircle } from 'lucide-react';
 import { Reminder } from '@/types/index';
-import { CustomProgress } from '@/components/ui/myPage/CustomProgress';
 import { StatItem } from '@/components/ui/myPage/StatItem';
 import { ActivityData } from '@/types/index';
+
+import { useNotes } from '@/hooks/useNotes';
+import { CustomProgress } from '@/components/ui/myPage/CustomProgress';
 
 interface ActivityTabProps {
   stats: {
@@ -24,44 +26,7 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
   activityData,
   reminders,
 }) => {
-  const completionRates = useMemo(() => {
-    if (!reminders || reminders.length === 0) {
-      return { weekly: 0, monthly: 0 };
-    }
-
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(
-      now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1),
-    ); // 월요일 시작
-    weekStart.setHours(0, 0, 0, 0);
-
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const weeklyReminders = reminders.filter(
-      (r) => r.reminder_time && new Date(r.reminder_time) >= weekStart,
-    );
-    const monthlyReminders = reminders.filter(
-      (r) => r.reminder_time && new Date(r.reminder_time) >= monthStart,
-    );
-
-    const weeklyCompleted = weeklyReminders.filter((r) => r.completed).length;
-    const monthlyCompleted = monthlyReminders.filter((r) => r.completed).length;
-
-    const weeklyRate =
-      weeklyReminders.length > 0
-        ? (weeklyCompleted / weeklyReminders.length) * 100
-        : 0;
-    const monthlyRate =
-      monthlyReminders.length > 0
-        ? (monthlyCompleted / monthlyReminders.length) * 100
-        : 0;
-
-    return {
-      weekly: Math.round(weeklyRate),
-      monthly: Math.round(monthlyRate),
-    };
-  }, [reminders]);
+  const { goalStats } = useNotes();
 
   const getLevelColor = useCallback((level: number) => {
     const colors = [
@@ -236,37 +201,37 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
 
       <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
         <CardHeader>
-          <CardTitle>완료율 분석</CardTitle>
+          <CardTitle>목표 달성률 분석</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {/* 주간 노트 작성 목표 */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium">이번 주 완료율</span>
+                <span className="text-sm font-medium">주간 노트 작성</span>
                 <span className="text-sm font-bold">
-                  {completionRates.weekly}%
+                  {goalStats.weeklyNote.percentage}%
+                  <span className="text-muted-foreground ml-1">
+                    ({goalStats.weeklyNote.current}/{goalStats.weeklyNote.goal})
+                  </span>
                 </span>
               </div>
-              <CustomProgress value={completionRates.weekly} />
+              <CustomProgress value={goalStats.weeklyNote.percentage} />
             </div>
+
+            {/* 주간 리마인더 완료 목표 */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium">이번 달 완료율</span>
+                <span className="text-sm font-medium">주간 리마인더 완료</span>
                 <span className="text-sm font-bold">
-                  {completionRates.monthly}%
+                  {goalStats.weeklyReminder.percentage}%
+                  <span className="text-muted-foreground ml-1">
+                    ({goalStats.weeklyReminder.current}/
+                    {goalStats.weeklyReminder.goal})
+                  </span>
                 </span>
               </div>
-              <CustomProgress value={completionRates.monthly} />
-            </div>
-            <Separator />
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium">전체 완료율</span>
-                <span className="text-sm font-bold">
-                  {Math.round(stats.completionRate)}%
-                </span>
-              </div>
-              <CustomProgress value={stats.completionRate} />
+              <CustomProgress value={goalStats.weeklyReminder.percentage} />
             </div>
           </div>
         </CardContent>
