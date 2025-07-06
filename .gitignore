@@ -12,6 +12,7 @@ lerna-debug.log*
 .env.local
 .env.development
 .env.production
+.gemini
 
 # 빌드 및 출력 파일
 out/

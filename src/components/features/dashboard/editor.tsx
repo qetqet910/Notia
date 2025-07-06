@@ -1,12 +1,11 @@
 import React, {
   useState,
   useEffect,
-  useMemo,
-  useRef,
   forwardRef,
   useImperativeHandle,
+  useCallback,
+  useRef,
 } from 'react';
-import { supabase } from '@/services/supabaseClient';
 import { useNoteParser } from '@/hooks/useNoteParser';
 import { useToast } from '@/hooks/useToast';
 import {
@@ -28,7 +27,6 @@ import {
   Calendar,
   Tag,
   Clock,
-  CheckCircle,
   HelpCircle,
   Edit3,
   Eye,
@@ -39,36 +37,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Note, EditorReminder } from '@/types';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface EditorProps {
-  ref: any; // TODO: 타입 정의 하기
   note: Note;
   onSave: (note: Note) => void;
-  onDelete: (id: string) => void;
-  isEditing: boolean; // ⭐️ 부모로부터 상태를 받음
-  setIsEditing: (isEditing: boolean) => void; // ⭐️ 부모의 상태를 제어
-}
-
-interface ParsedTag {
-  text: string;
-  type: 'tag' | 'reminder';
-  originalText: string;
-  parsedDate?: Date;
-  reminderText?: string;
+  onDeleteRequest: () => void;
+  isEditing: boolean;
+  onEnterEditMode: () => void;
+  onCancelEdit: () => void;
 }
 
 interface EditorRef {
@@ -157,14 +136,19 @@ const MermaidComponent = ({
   return <div ref={ref} className="mermaid-container" />;
 };
 
-export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
-  (props, ref) => {
-    const { note, onSave, onDelete, isEditing, setIsEditing } = props;
+export const Editor = forwardRef<EditorRef, EditorProps>(
+  (
+    { note, onSave, onDeleteRequest, isEditing, onEnterEditMode, onCancelEdit },
+    ref,
+  ) => {
     const [title, setTitle] = useState(note.title);
     const [content, setContent] = useState(note.content);
     const [isDirty, setIsDirty] = useState(false);
-    const { tags, reminders: parsedReminders } = useNoteParser(content);
+    const { toast } = useToast();
     const navigate = useNavigate();
+
+    const { tags: parsedTags, reminders: parsedReminders } =
+      useNoteParser(content);
 
     useEffect(() => {
       setTitle(note.title);
@@ -172,159 +156,86 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
       setIsDirty(false);
     }, [note]);
 
-    const reminders = useMemo(() => {
-      if (!note.reminders?.length) return parsedReminders;
-
-      const existingByText = new Map(note.reminders.map((r) => [r.text, r]));
-
-      return parsedReminders.map((parsed) => {
-        const existing = existingByText.get(parsed.reminderText);
+    const handleSave = useCallback(() => {
+      const extractedTags = parsedTags.map((tag) => tag.text);
+      const existingRemindersMap = new Map(
+        (note.reminders || []).map((r: any) => [
+          r.original_text || `@${r.text || r.reminder_text}.`,
+          r,
+        ]),
+      );
+      const finalReminders: EditorReminder[] = parsedReminders.map((parsed) => {
+        const existing = existingRemindersMap.get(parsed.originalText);
         if (existing) {
           return {
-            ...parsed,
-            parsedDate: existing.date, // 기존 날짜 유지
+            id: existing.id,
+            text: parsed.reminderText!,
+            date: existing.date,
+            completed: existing.completed,
+            original_text: parsed.originalText,
           };
         }
-        return parsed;
+        return {
+          id: '',
+          text: parsed.reminderText!,
+          date: parsed.parsedDate!,
+          completed: false,
+          original_text: parsed.originalText,
+        };
       });
-    }, [content, note.reminders]);
 
-    const handleSave = async () => {
-      console.clear();
-      console.log('--- [ handleSave 시작 ] ---');
+      const noteToSave: Note = {
+        ...note,
+        title,
+        content,
+        tags: extractedTags,
+        reminders: finalReminders,
+        updatedAt: new Date(),
+      };
 
-      try {
-        // ✅ 최신 노트 데이터를 DB에서 직접 가져오기
-        const { data: freshNoteData, error } = await supabase
-          .from('notes')
-          .select(
-            `
-        *,
-        reminders (
-          id,
-          reminder_text,
-          reminder_time,
-          completed,
-          enabled,
-          created_at,
-          updated_at
-        )
-      `,
-          )
-          .eq('id', note.id)
-          .single();
+      onSave(noteToSave);
+      setIsDirty(false);
+      onCancelEdit();
+      toast({
+        title: '저장 완료',
+        description: '노트가 성공적으로 저장되었습니다.',
+      });
+    }, [
+      note,
+      title,
+      content,
+      parsedTags,
+      parsedReminders,
+      onSave,
+      onCancelEdit,
+      toast,
+    ]);
 
-        if (error) throw error;
-
-        // ✅ 최신 리마인더 데이터 포맷팅
-        const freshReminders =
-          freshNoteData.reminders?.map((reminder: any) => ({
-            id: reminder.id,
-            text: reminder.reminder_text,
-            date: new Date(reminder.reminder_time),
-            completed: reminder.completed,
-            original_text: `@${reminder.reminder_text}.`, // 추정값 - 실제 저장된 형식 확인 필요
-          })) || [];
-
-        console.log(
-          '[핸들세이브-최신] 최신 리마인더 데이터:',
-          JSON.stringify(freshReminders, null, 2),
-        );
-
-        const extractedTags = tags.map((tag) => tag.text);
-        const currentParsedReminders = reminders
-          .filter((r) => r.parsedDate && r.reminderText)
-          .map((r) => ({
-            id: '',
-            note_id: note.id,
-            text: r.reminderText!,
-            date: r.parsedDate!,
-            completed: false,
-            original_text: r.originalText,
-          }));
-
-        // ✅ 최신 리마인더로 매칭
-        const existingByText = new Map(freshReminders.map((r) => [r.text, r]));
-
-        const finalReminders = currentParsedReminders.map((currentReminder) => {
-          const existingReminder = existingByText.get(currentReminder.text);
-          console.log(`매칭 시도: "${currentReminder.text}"`);
-
-          if (existingReminder) {
-            console.log(
-              `✅ 최신 데이터에서 매칭! completed: ${existingReminder.completed}`,
-            );
-            return {
-              ...currentReminder,
-              id: existingReminder.id,
-              completed: existingReminder.completed,
-              date: existingReminder.date, // ⚠️ 기존 날짜 유지
-            };
-          } else {
-            console.log('❌ 새 리마인더');
-            return currentReminder; // 새 리마인더만 새 날짜 사용
-          }
-        });
-
-        console.log(
-          '최종 결과:',
-          finalReminders.map((r) => ({ text: r.text, completed: r.completed })),
-        );
-
-        onSave({
-          ...note,
-          title,
-          content,
-          tags: extractedTags,
-          reminders: finalReminders,
-          updatedAt: new Date(),
-        });
-
-        setIsDirty(false);
-        setIsEditing(false);
-      } catch (err) {
-        console.error('최신 데이터 가져오기 실패:', err);
-      }
-    };
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        save: handleSave,
-      }),
-      [handleSave],
-    );
+    useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
     const handleCancel = () => {
       setTitle(note.title);
       setContent(note.content);
       setIsDirty(false);
-      setIsEditing(false); // 부모의 상태 변경
+      onCancelEdit();
     };
 
-    const navigateHandler = () => {
-      navigate('/dashboard/help?tab=shortcuts');
-    };
+    const navigateHandler = () => navigate('/dashboard/help?tab=shortcuts');
 
     const formatDate = (date: Date): string => {
+      if (!date || !(date instanceof Date)) return '날짜 정보 없음';
       const now = new Date();
       const isToday = date.toDateString() === now.toDateString();
       const isTomorrow =
         date.toDateString() ===
         new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
-
       const timeString = `${date.getHours().toString().padStart(2, '0')}:${date
         .getMinutes()
         .toString()
         .padStart(2, '0')}`;
-
-      if (isToday) {
-        return `오늘 ${timeString}`;
-      } else if (isTomorrow) {
-        return `내일 ${timeString}`;
-      } else {
-        return `${date.getMonth() + 1}/${date.getDate()} ${timeString}`;
-      }
+      if (isToday) return `오늘 ${timeString}`;
+      if (isTomorrow) return `내일 ${timeString}`;
+      return `${date.getMonth() + 1}/${date.getDate()} ${timeString}`;
     };
 
     return (
@@ -337,7 +248,6 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
             ) : (
               <h2 className="text-lg font-semibold">미리보기</h2>
             )}
-
             {/* 정보 아이콘 및 팝오버 */}
             <Popover>
               <PopoverTrigger asChild>
@@ -375,46 +285,27 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
               </PopoverContent>
             </Popover>
           </div>
-
           <div className="flex gap-2">
             {!isEditing ? (
               <>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 text-destructive hover:bg-destructive/10">
-                      <Trash2 className="h-4 w-4 mr-1" /> 삭제
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        정말로 삭제하시겠습니까?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        이 작업은 되돌릴 수 없습니다. 노트가 영구적으로
-                        삭제됩니다.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>취소</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => onDelete(note.id)}>
-                        삭제
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
                 <Button
-                  variant="default"
+                  variant="destructive"
                   size="sm"
-                  onClick={() => setIsEditing(true)}
+                  onClick={onDeleteRequest}
                 >
-                  <Edit3 className="h-4 w-4 mr-1" /> 수정
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  삭제
+                </Button>
+                <Button variant="default" size="sm" onClick={onEnterEditMode}>
+                  <Edit3 className="h-4 w-4 mr-1" />
+                  수정
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" size="sm" onClick={handleCancel}>
-                  <X className="h-4 w-4 mr-1" /> 취소
+                  <X className="h-4 w-4 mr-1" />
+                  취소
                 </Button>
                 <Button
                   variant="default"
@@ -422,7 +313,8 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
                   onClick={handleSave}
                   disabled={!isDirty}
                 >
-                  <Save className="h-4 w-4 mr-1" /> 저장
+                  <Save className="h-4 w-4 mr-1" />
+                  저장
                 </Button>
               </>
             )}
@@ -451,20 +343,20 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
         )}
 
         {/* Tags and Reminders */}
-        {(tags.length > 0 || reminders.length > 0) && (
+        {(parsedTags.length > 0 || parsedReminders.length > 0) && (
           <div
             className={`border-b border-border bg-muted/30 transition-all duration-300 ease-in-out ${
               isEditing ? 'p-2' : 'p-4'
             }`}
           >
-            {tags.length > 0 && (
+            {parsedTags.length > 0 && (
               <div className={`mb-3 ${isEditing ? 'pl-5' : ''}`}>
                 <div className="flex items-center mb-2">
                   <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
                   <span className="text-sm font-medium">태그</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag, index) => (
+                  {parsedTags.map((tag, index) => (
                     <Badge key={index} variant="secondary">
                       #{tag.text}
                     </Badge>
@@ -473,7 +365,7 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
               </div>
             )}
 
-            {reminders.length > 0 && (
+            {parsedReminders.length > 0 && (
               <div className={`mt-3 ${isEditing ? 'pl-5' : ''}`}>
                 <div className="flex items-center mb-2">
                   <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -492,7 +384,7 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
                     });
                   }}
                 >
-                  {reminders.map((reminder, index) => (
+                  {parsedReminders.map((reminder, index) => (
                     <div
                       key={index}
                       className="flex-shrink-0 flex items-center gap-2 p-2 bg-background rounded-lg border border-border min-w-fit"
@@ -547,14 +439,14 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
                       setIsDirty(true);
                     }}
                     placeholder="
-  내용을 입력하세요...
-
-  #프로젝트 #중요
-
-  @내일 2시 팀 미팅 참석하기.
-  @1시간 코드 리뷰 완료하기.
-  @10시 양치질하기.
-  @2025-05-25 프로젝트 마감."
+          내용을 입력하세요...
+        
+          #프로젝트 #중요
+        
+          @내일 2시 팀 미팅 참석하기.
+          @1시간 코드 리뷰 완료하기.
+          @10시 양치질하기.
+          @2025-05-25 프로젝트 마감."
                     className="w-full h-full flex-1 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-sm font-mono custom-scrollbar px-2"
                     style={{ height: 'calc(100vh - 400px)' }}
                   />
@@ -754,7 +646,7 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
                     ),
                     blockquote: ({ children, ...props }) => (
                       <blockquote
-                        className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-4 bg-muted/30 py-2 rounded-r-lg"
+                        className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-4 bg-muted/30 py-2 rounded-r-lg transition-all duration-300"
                         {...props}
                       >
                         {children}
@@ -807,7 +699,7 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
                     ),
                     table: ({ children, ...props }) => (
                       <table
-                        className="border-collapse border border-border mb-4 w-full"
+                        className="border-collapse border border-border mb-4 w-full transition-all duration-300"
                         {...props}
                       >
                         {children}
@@ -815,7 +707,7 @@ export const Editor: React.FC<EditorProps> = forwardRef<EditorRef, EditorProps>(
                     ),
                     th: ({ children, ...props }) => (
                       <th
-                        className="border border-border px-4 py-3 bg-muted font-semibold text-left"
+                        className="border border-border px-4 py-3 bg-muted font-semibold text-left transition-all duration-300"
                         {...props}
                       >
                         {children}

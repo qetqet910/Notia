@@ -68,11 +68,11 @@ Auth 계정이면 프로필 설정 불가 추가 O
 MYpage anon 이메일 display 작업중 O
 MyPage 최적화, 리팩토링, 컴포넌트 분리 - 1440줄은 힘들다 O
 파일 전송 메인 에러 - Supabase Global Header application/json 으로 되어있었다 매우 조심할것 - 프사 완벽 구현 O
-실시간 반영 구현 O - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중
+실시간 반영 구현 O - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중 O
  - 기존 구조 유지, 각 구조의 용이성을 살린 상태로 구현 O
 useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기 - Note 적용 완료, 단축키 복구 및 Reminder까지 적용하기 - O
-타임라인 시간대별로 리마인더로 바꾸기
-리마인더 완료탭 다른 탭으로 바꾸기
+TODO 구현 
+
 리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
 
 각종 에러 해결
@@ -80,8 +80,6 @@ useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기 - Note 적용
 배포 준비
 배포
 배포환경 테스트
-
-코드 리뷰, 리팩토링
 
 Supabase RLS 최적화, Issue 해결, Lighthouse 개선
 

@@ -29,7 +29,7 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note, Reminder } from '@/types';
+import { Note } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +41,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-// 상수 분리
 const NAV_ITEMS = [
   { id: 'notes', label: '노트', icon: List },
   { id: 'reminder', label: '리마인더', icon: Clock },
@@ -49,14 +48,12 @@ const NAV_ITEMS = [
   { id: 'timeline', label: '타임라인', icon: List },
 ];
 
-// 로딩 스피너 컴포넌트
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
   </div>
 );
 
-// 빈 노트 상태 컴포넌트
 const EmptyNoteState = ({
   handleCreateNote,
 }: {
@@ -72,233 +69,186 @@ const EmptyNoteState = ({
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { session, isAuthenticated, isLoginLoading, checkSession } =
-    useAuthStore();
+  const { session, checkSession } = useAuthStore();
   const {
     notes,
     loading: isNotesLoading,
     addNote,
     updateNote,
     deleteNote,
-    toggleReminderEnabled,
     updateReminderCompletion,
     updateReminderEnabled,
   } = useNotes();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
-
-  // --- UI 상태 관리 ---
-  const [activeTab, setActiveTab] = useState('notes');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState('notes');
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  // 단축키
-  const [isToggleTheme, setIsToggleTheme] = useState(false);
-  const [isActiveTab, setIsActiveTab] = useState(0);
-  const activeTabs = ['notes', 'reminder', 'calendar', 'timeline'];
 
   const editorRef = useRef<{ save: () => void } | null>(null);
+  const newlyCreatedNoteId = useRef<string | null>(null);
 
-  // --- 데이터 파생 (Derived State) ---
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isActiveTab, setIsActiveTab] = useState(0);
+  const activeTabs = useMemo(
+    () => ['notes', 'reminder', 'calendar', 'timeline'],
+    [],
+  );
+
   const allReminders = useMemo(() => {
     return notes.flatMap((note) =>
-      (note.reminders || []).map((reminder: any) => {
-        // EnrichedReminder 타입이 요구하는 noteContent를 미리 생성합니다.
-        const plainContent =
-          note.content?.replace(/<[^>]*>/g, '').substring(0, 100) || '';
-
-        // ✅ ReminderView가 요구하는 EnrichedReminder 형태로 객체를 가공합니다.
-        return {
-          // 1. Reminder 타입에 필요한 기본 속성들
-          id: reminder.id,
-          note_id: note.id,
-          owner_id: note.owner_id,
-          reminder_text: reminder.text || reminder.reminder_text, // `text`와 `reminder_text` 모두 호환
-          reminder_time: (reminder.date
-            ? new Date(reminder.date)
-            : new Date(reminder.reminder_time)
-          ).toISOString(),
-          completed: reminder.completed,
-          enabled: reminder.enabled ?? true, // 기본값 설정
-          created_at: reminder.created_at || new Date().toISOString(),
-          updated_at: reminder.updated_at || new Date().toISOString(),
-          original_text: reminder.original_text,
-
-          // 2. EnrichedReminder 타입에 추가로 필요한 속성들
-          noteId: note.id,
-          noteTitle: note.title,
-          noteContent: plainContent,
-        };
-      }),
+      (note.reminders || []).map((reminder: any) => ({
+        id: reminder.id,
+        note_id: note.id,
+        owner_id: note.owner_id,
+        reminder_text: reminder.text || reminder.reminder_text,
+        reminder_time: (reminder.date
+          ? new Date(reminder.date)
+          : new Date(reminder.reminder_time)
+        ).toISOString(),
+        completed: reminder.completed,
+        enabled: reminder.enabled ?? true,
+        created_at: reminder.created_at || new Date().toISOString(),
+        updated_at: reminder.updated_at || new Date().toISOString(),
+        original_text: reminder.original_text,
+        noteId: note.id,
+        noteTitle: note.title,
+        noteContent:
+          note.content?.replace(/<[^>]*>/g, '').substring(0, 100) || '',
+      })),
     );
   }, [notes]);
 
   // --- useEffects ---
 
-  // 반응형 처리
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // 인증 상태 확인
   useEffect(() => {
     const initializeAuth = async () => {
-      setIsAuthLoading(true);
-      try {
-        const isAuth = await checkSession();
-        if (!isAuth) {
-          navigate('/login');
-        }
-      } catch (err) {
-        navigate('/login');
-      } finally {
-        setIsAuthLoading(false);
-      }
+      const isAuth = await checkSession();
+      if (!isAuth) navigate('/login');
     };
     initializeAuth();
   }, [navigate, checkSession]);
 
-  // 선택된 노트가 notes 배열에서 삭제되면 선택 해제
   useEffect(() => {
-    if (selectedNote && !notes.find((note) => note.id === selectedNote.id)) {
+    if (selectedNote && !notes.some((note) => note.id === selectedNote.id)) {
       setSelectedNote(null);
       setIsEditing(false);
     }
   }, [notes, selectedNote]);
 
-  // --- 핸들러 함수 ---
+  useEffect(() => {
+    if (selectedNote && selectedNote.id === newlyCreatedNoteId.current) {
+      setTimeout(() => {
+        setIsEditing(true);
+        newlyCreatedNoteId.current = null;
+      }, 50); // 짧은 딜레이로 안정성 확보
+    }
+  }, [selectedNote]);
+
+  // --- 핸들러 함수들 ---
 
   const handleSelectNote = (note: Note) => {
     setSelectedNote(note);
-    setIsEditing(false); // 항상 보기 모드로 시작
+    setIsEditing(false);
   };
+
+  const handleEnterEditMode = useCallback(() => {
+    setTimeout(() => setIsEditing(true), 0);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditing(false);
+  }, []);
 
   const handleCreateNote = useCallback(async () => {
     if (!session?.user?.id) return;
-
-    const newNoteData = {
+    const newNote = await addNote({
       title: '새로운 노트',
       content: '',
       tags: [],
-      owner_id: session.user.id,
-      is_public: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      reminders: [],
-    };
-    const newNote = await addNote(newNoteData);
+    });
     if (newNote) {
+      newlyCreatedNoteId.current = newNote.id;
       setSelectedNote(newNote);
-      setIsEditing(true); // 새 노트는 바로 편집 모드로
+      setActiveTab('notes');
     }
   }, [addNote, session?.user?.id]);
 
-  const handleDeleteNote = useCallback(
-    async (noteId: string) => {
-      await deleteNote(noteId);
-      setSelectedNote(null);
-      setIsEditing(false);
-      setIsDeleteDialogOpen(false);
-    },
-    [deleteNote],
-  );
-
   const handleUpdateNote = useCallback(
     async (noteToUpdate: Note) => {
-      const success = await updateNote(noteToUpdate);
-      // 성공 여부에 따라 추가 작업 (e.g., toast)
-      return success;
+      await updateNote(noteToUpdate);
     },
     [updateNote],
   );
 
+  const handleConfirmDelete = useCallback(async () => {
+    if (!selectedNote) return;
+    await deleteNote(selectedNote.id);
+    setIsDeleteDialogOpen(false);
+  }, [deleteNote, selectedNote]);
+
   const handleDeleteReminder = useCallback(
     async (reminderId: string) => {
       const targetNote = notes.find((n) =>
-        (n.reminders || []).some((r) => r.id === reminderId),
+        (n.reminders || []).some((r: any) => r.id === reminderId),
       );
       if (!targetNote) return;
-
-      // 노트 내용에서 리마인더 텍스트 제거 (선택적)
-      // 이 로직은 앱의 기획에 따라 유지하거나 제거할 수 있습니다.
-      const reminderToDelete = (targetNote.reminders || []).find(
-        (r) => r.id === reminderId,
-      );
-      let updatedContent = targetNote.content;
-      if (reminderToDelete?.original_text) {
-        const regex = new RegExp(
-          `(~~)?${reminderToDelete.original_text}(~~)?`,
-          'g',
-        );
-        updatedContent = updatedContent.replace(regex, '');
-      }
-
       const updatedReminders = (targetNote.reminders || []).filter(
-        (r) => r.id !== reminderId,
+        (r: any) => r.id !== reminderId,
       );
-
-      await updateNote({
-        ...targetNote,
-        content: updatedContent,
-        reminders: updatedReminders,
-      });
+      await updateNote({ ...targetNote, reminders: updatedReminders });
     },
     [notes, updateNote],
   );
-
-  const SIMPLE_SHORTCUTS = {
-    n: () => handleCreateNote(),
-    s: (isCtrlCmd: boolean) => {
-      if (isCtrlCmd && isEditing && editorRef.current) {
-        editorRef.current.save();
-      }
-    },
-    '/': () => navigate('/dashboard/help?tab=overview'),
-    '?': () => navigate('/dashboard/help?tab=overview'),
-    t: () => {
-      setIsToggleTheme((prev) => !prev);
-      setTheme(isToggleTheme ? 'dark' : 'light');
-    },
-    Tab: () => {
-      setIsActiveTab((prev) => {
-        const nextIndex = (prev + 1) % activeTabs.length;
-        setActiveTab(activeTabs[nextIndex]);
-        return nextIndex;
-      });
-    },
-    b: () => setIsSidebarVisible((prev) => !prev),
-    d: () => selectedNote && setIsDeleteDialogOpen(true),
-    Delete: () => selectedNote && setIsDeleteDialogOpen(true),
-    m: () => navigate('/dashboard/myPage?tab=profile'),
-    ',': () => navigate('/dashboard/myPage?tab=activity'),
-    '<': () => navigate('/dashboard/myPage?tab=activity'),
-    '.': () => navigate('/dashboard/myPage?tab=settings'),
-    '>': () => navigate('/dashboard/myPage?tab=settings'),
-  };
 
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
       const isCtrlCmd = e.ctrlKey || e.metaKey;
       const target = e.target as HTMLElement;
 
-      // 입력 필드 체크
-      if (
+      const isInputElement =
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
-        target.contentEditable === 'true'
-      ) {
-        if (!(isCtrlCmd && e.key === 's')) return;
+        target.isContentEditable;
+
+      // 입력 필드에서는 Ctrl/Cmd+S를 제외한 대부분의 단축키를 무시
+      if (isInputElement && !(isCtrlCmd && e.key.toLowerCase() === 's')) {
+        // Tab 키는 항상 작동하도록 허용하지 않음 (필드 내 이동을 위해)
+        if (e.key !== 'Tab') return;
       }
 
-      const handler = SIMPLE_SHORTCUTS[e.key as keyof typeof SIMPLE_SHORTCUTS];
+      const key = e.key === 'Tab' ? 'Tab' : e.key.toLowerCase();
 
+      // 단축키 매핑 객체
+      const shortcuts: { [key: string]: (isCtrlCmd?: boolean) => void } = {
+        n: () => handleCreateNote(),
+        s: (isCtrlCmd) => {
+          if (isCtrlCmd && isEditing && editorRef.current)
+            editorRef.current.save();
+        },
+        '/': () => navigate('/dashboard/help?tab=overview'),
+        '?': () => navigate('/dashboard/help?tab=overview'),
+        t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
+        Tab: () => {
+          // "Tab" 문자열은 소문자로 변환되지 않도록 위에서 처리
+          setIsActiveTab((prev) => {
+            const nextIndex = (prev + 1) % activeTabs.length;
+            setActiveTab(activeTabs[nextIndex]);
+            return nextIndex;
+          });
+        },
+        b: () => setIsSidebarVisible((prev) => !prev),
+        d: () => selectedNote && setIsDeleteDialogOpen(true),
+        delete: () => selectedNote && setIsDeleteDialogOpen(true),
+        m: () => navigate('/dashboard/myPage?tab=profile'),
+        ',': () => navigate('/dashboard/myPage?tab=activity'),
+        '.': () => navigate('/dashboard/myPage?tab=settings'),
+      };
+
+      const handler = shortcuts[key];
       if (handler) {
         e.preventDefault();
         handler(isCtrlCmd);
@@ -308,16 +258,11 @@ export const Dashboard: React.FC = () => {
       handleCreateNote,
       navigate,
       isEditing,
-      editorRef,
-      setIsToggleTheme,
       setTheme,
-      isToggleTheme,
-      setIsActiveTab,
-      setActiveTab,
+      isDarkMode,
+      isDeepDarkMode,
       activeTabs,
-      setIsSidebarVisible,
       selectedNote,
-      setIsDeleteDialogOpen,
     ],
   );
 
@@ -332,20 +277,17 @@ export const Dashboard: React.FC = () => {
     [isDarkMode, isDeepDarkMode],
   );
 
-  if (isLoginLoading || isAuthLoading || isNotesLoading) {
-    return <LoadingSpinner />;
-  }
+  if (isNotesLoading) return <LoadingSpinner />;
 
-  // 메인 컨텐츠 렌더링 함수
+  // --- 메인 렌더링 ---
   const renderMainContent = () => {
     const filteredNotes = selectedTag
       ? notes.filter((note) => (note.tags || []).includes(selectedTag))
       : notes;
-
     switch (activeTab) {
       case 'notes':
         return (
-          <div className="flex h-full custom-scrollbar">
+          <div className="flex h-full">
             <AlertDialog
               open={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
@@ -354,54 +296,30 @@ export const Dashboard: React.FC = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    이 작업은 되돌릴 수 없습니다. 노트가 영구적으로 삭제됩니다.
+                    이 작업은 되돌릴 수 없습니다.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>취소</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => {
-                      if (selectedNote) {
-                        // ✅ deleteNote 호출만 하고, UI 상태 변경은 useEffect에 맡깁니다.
-                        deleteNote(selectedNote.id);
-                      }
-                      // 팝업은 무조건 닫습니다.
-                      setIsDeleteDialogOpen(false);
-                    }}
-                  >
+                  <AlertDialogAction onClick={handleConfirmDelete}>
                     삭제
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
             <div
-              className={`h-full overflow-y-auto border-r border-border transition-all duration-300 ease-in-out ${
-                isEditing ? 'w-0 opacity-0 md:w-0' : 'w-full md:w-1/3'
+              className={`h-full overflow-y-auto border-r transition-all duration-300 ease-in-out ${
+                isEditing ? 'w-0 opacity-0' : 'w-full md:w-1/3'
               }`}
             >
-              {selectedTag && (
-                <div className="p-3 bg-muted border-b">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">
-                      #{selectedTag} 필터링 중
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedTag(null)}
-                      className="h-6 w-6 p-0"
-                    >
-                      ✕
-                    </Button>
-                  </div>
-                </div>
-              )}
               <NoteList
-                notes={filteredNotes}
+                notes={notes}
                 onSelectNote={handleSelectNote}
                 selectedNote={selectedNote}
               />
             </div>
+
             <div
               className={`h-full transition-all duration-300 ease-in-out ${
                 isEditing ? 'w-full' : 'hidden md:block w-2/3'
@@ -409,13 +327,13 @@ export const Dashboard: React.FC = () => {
             >
               {selectedNote ? (
                 <Editor
-                  ref={editorRef}
                   key={selectedNote.id}
                   note={selectedNote}
                   onSave={handleUpdateNote}
-                  onDelete={() => setIsDeleteDialogOpen(true)}
+                  onDeleteRequest={() => setIsDeleteDialogOpen(true)}
                   isEditing={isEditing}
-                  setIsEditing={setIsEditing}
+                  onEnterEditMode={handleEnterEditMode}
+                  onCancelEdit={handleCancelEdit}
                 />
               ) : (
                 <EmptyNoteState handleCreateNote={handleCreateNote} />
@@ -423,48 +341,6 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         );
-      case 'reminder':
-        return (
-          <ReminderView
-            reminders={allReminders}
-            // ✅ props를 새로운 함수로 교체합니다.
-            onToggleComplete={updateReminderCompletion}
-            onToggleEnable={updateReminderEnabled}
-            onDelete={handleDeleteReminder} // 삭제는 기존 로직 유지
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
-        );
-      case 'calendar':
-        return (
-          <Calendar
-            notes={notes} // 캘린더는 노트와 리마인더 둘 다 필요
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
-        );
-      case 'timeline':
-        return (
-          <TimelineView
-            notes={notes} // 타임라인도 노트와 리마인더 둘 다 필요
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
-        );
-      default:
-        return null;
     }
   };
 
@@ -499,21 +375,25 @@ export const Dashboard: React.FC = () => {
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
-          {!isMobile && !isEditing && isSidebarVisible && (
+          <div
+            className={`transition-all duration-300 ease-in-out h-full ${
+              !isMobile && !isEditing && isSidebarVisible
+                ? 'w-56'
+                : 'w-0 opacity-0'
+            }`}
+          >
             <Sidebar
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               onTagSelect={setSelectedTag}
             />
-          )}
+          </div>
           <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
         </div>
       </div>
     </div>
   );
 };
-
-// --- 하위 컴포넌트들 (변경 없음) ---
 
 const Sidebar = ({
   activeTab,
@@ -539,7 +419,7 @@ const Sidebar = ({
   }, [notes]);
 
   return (
-    <aside className="w-56 border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col">
+    <aside className="w-56 border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col h-full">
       <nav className="flex flex-col gap-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
