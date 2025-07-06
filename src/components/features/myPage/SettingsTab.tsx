@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider'; // Slider 임포트
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -37,9 +38,11 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { SettingSwitchItem } from '@/components/ui/myPage/SettingSwitchItem';
+import { useNotes } from '@/hooks/useNotes'; // ⭐️ HIGHLIGHT: useNotes 훅 임포트
+import { User } from '@supabase/supabase-js'; // ⭐️ HIGHLIGHT: 더 구체적인 타입 사용
 
 interface SettingsTabProps {
-  user: any; // Consider a more specific user type if available
+  user: User | null; // any 대신 Supabase의 User 타입 사용
   handleLogout: () => void;
 }
 
@@ -48,19 +51,25 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   handleLogout,
 }) => {
   const { toast } = useToast();
+  const { notes, updateUserGoals } = useNotes(); // ⭐️ HIGHLIGHT: 훅에서 필요한 데이터와 함수 가져오기
+
   const [reminderNotifications, setReminderNotifications] = useState(true);
   const [achievementNotifications, setAchievementNotifications] =
     useState(true);
 
-  const [dailyGoal, setDailyGoal] = useState('5');
-  const [weeklyGoal, setWeeklyGoal] = useState('10');
+  // ⭐️ HIGHLIGHT: user.user_metadata에서 초기값 설정
+  const [dailyGoal, setDailyGoal] = useState(
+    user?.user_metadata?.daily_goal?.toString() ?? '5',
+  );
+  const [weeklyGoal, setWeeklyGoal] = useState(
+    user?.user_metadata?.weekly_goal?.toString() ?? '10',
+  );
   const [isSavingGoals, setIsSavingGoals] = useState(false);
 
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const { permission, requestPermission } = useNotificationPermission();
 
   useEffect(() => {
-    // 초기 로드 시 현재 알림 권한 상태를 반영
     if (permission === 'denied') {
       setReminderNotifications(false);
     }
@@ -68,15 +77,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const handleReminderToggle = useCallback(
     async (checked: boolean) => {
-      // 사용자가 알림을 끄는 경우
       if (!checked) {
         setReminderNotifications(false);
         return;
       }
 
-      // 사용자가 알림을 켜는 경우
       if (permission === 'default') {
-        // 권한이 'default' 상태일 때만 요청
         const result = await requestPermission();
         if (result === 'granted') {
           setReminderNotifications(true);
@@ -86,14 +92,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           });
         } else if (result === 'denied') {
           setReminderNotifications(false);
-          setShowPermissionDialog(true); // 거부된 경우 설정 안내 다이얼로그 표시
+          setShowPermissionDialog(true);
         }
       } else if (permission === 'denied') {
-        // 권한이 'denied' 상태일 경우 즉시 설정 안내 다이얼로그 표시
         setReminderNotifications(false);
         setShowPermissionDialog(true);
       } else if (permission === 'granted') {
-        // 권한이 'granted' 상태일 경우, 단순히 스위치 상태만 변경
         setReminderNotifications(true);
       }
     },
@@ -127,33 +131,67 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const handleSaveGoals = useCallback(async () => {
     setIsSavingGoals(true);
     try {
-      // TODO: 목표 저장 API 연동 (실제 API 호출로 교체)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const newDailyGoal = parseInt(dailyGoal, 10);
+      const newWeeklyGoal = parseInt(weeklyGoal, 10);
+
+      if (
+        isNaN(newDailyGoal) ||
+        isNaN(newWeeklyGoal) ||
+        newDailyGoal <= 0 ||
+        newWeeklyGoal <= 0
+      ) {
+        throw new Error('목표 값은 0보다 큰 숫자여야 합니다.');
+      }
+      await updateUserGoals({
+        dailyGoal: newDailyGoal,
+        weeklyGoal: newWeeklyGoal,
+      });
+
       toast({
         title: '목표 저장됨',
         description: '새로운 목표가 성공적으로 저장되었습니다.',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: '저장 실패',
-        description: '목표 저장 중 오류 발생',
+        description: error.message || '목표 저장 중 오류 발생',
         variant: 'destructive',
       });
     } finally {
       setIsSavingGoals(false);
     }
-  }, [dailyGoal, weeklyGoal, toast]);
+  }, [dailyGoal, weeklyGoal, toast, updateUserGoals]);
 
   const handleExportData = useCallback(() => {
-    // TODO: 데이터 내보내기 로직 구현 (JSON, CSV 등)
+    if (!notes || notes.length === 0) {
+      toast({
+        title: '내보낼 데이터 없음',
+        description: '내보낼 노트가 없습니다.',
+      });
+      return;
+    }
+
+    const jsonString = JSON.stringify(notes, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    link.download = `notes-export-${today}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
     toast({
-      title: '기능 준비 중',
-      description: '데이터 내보내기 기능은 현재 준비 중입니다.',
+      title: '데이터 내보내기 성공',
+      description: '모든 노트가 JSON 파일로 저장되었습니다.',
     });
-  }, [toast]);
+  }, [notes, toast]);
 
   return (
     <div className="space-y-6">
+      {/* 알림 설정 카드 */}
       <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -193,7 +231,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   <Button
                     onClick={() => {
                       setShowPermissionDialog(false);
-                      // 사용자가 직접 브라우저 설정으로 이동하도록 안내 후 페이지 새로고침 유도
                       window.location.reload();
                     }}
                   >
@@ -237,6 +274,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </CardContent>
       </Card>
 
+      {/* 목표 설정 카드 */}
       <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -244,30 +282,50 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             목표 설정
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="dailyGoal">일일 목표 (리마인더 완료 수)</Label>
-            <Input
-              id="dailyGoal"
-              type="number"
-              placeholder="5"
-              min="1"
-              max="50"
-              value={dailyGoal}
-              onChange={(e) => setDailyGoal(e.target.value)}
-            />
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <Label htmlFor="dailyGoal">리마인더 완료 수 (주간)</Label>
+            <div className="flex items-center gap-4">
+              <Slider
+                id="dailyGoal"
+                min={1}
+                max={30}
+                step={1}
+                // ⭐️ 변경점: Slider의 value는 배열 형태여야 합니다.
+                // dailyGoal이 문자열일 수 있으니 숫자로 변환합니다.
+                value={[parseInt(dailyGoal, 10)]}
+                // ⭐️ 변경점: onValueChange는 값 배열을 반환합니다.
+                onValueChange={(value) => setDailyGoal(String(value[0]))}
+                className="flex-1 cursor-pointer"
+              />
+              {/* ⭐️ 추가: 현재 값을 시각적으로 표시 */}
+              <div className="w-12 text-center">
+                <span className="font-bold text-lg text-primary">
+                  {dailyGoal}
+                </span>
+                <span className="text-sm text-muted-foreground">개</span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="weeklyGoal">주간 목표 (노트 작성 수)</Label>
-            <Input
-              id="weeklyGoal"
-              type="number"
-              placeholder="10"
-              min="1"
-              max="100"
-              value={weeklyGoal}
-              onChange={(e) => setWeeklyGoal(e.target.value)}
-            />
+          <div className="space-y-3">
+            <Label htmlFor="weeklyGoal">노트 작성 수 (주간)</Label>
+            <div className="flex items-center gap-4">
+              <Slider
+                id="weeklyGoal"
+                min={1}
+                max={14}
+                step={1}
+                value={[parseInt(weeklyGoal, 10)]}
+                onValueChange={(value) => setWeeklyGoal(String(value[0]))}
+                className="flex-1 cursor-pointer"
+              />
+              <div className="w-12 text-center">
+                <span className="font-bold text-lg text-primary">
+                  {weeklyGoal}
+                </span>
+                <span className="text-sm text-muted-foreground">개</span>
+              </div>
+            </div>
           </div>
           <Button
             className="w-full"
@@ -284,6 +342,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </CardContent>
       </Card>
 
+      {/* 계정 관리 카드 */}
       <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center">

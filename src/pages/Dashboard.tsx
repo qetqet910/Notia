@@ -15,6 +15,7 @@ import { Editor } from '@/components/features/dashboard/editor';
 import { ReminderView } from '@/components/features/dashboard/reminder';
 import { Calendar } from '@/components/features/dashboard/calendar';
 import { TimelineView } from '@/components/features/dashboard/timelineView';
+import { GoalProgress } from '@/components/features/dashboard/goalProgress';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
@@ -309,12 +310,29 @@ export const Dashboard: React.FC = () => {
             </AlertDialog>
 
             <div
-              className={`h-full overflow-y-auto border-r transition-all duration-300 ease-in-out ${
+              className={`h-full overflow-y-auto border-r custom-scrollbar transition-all duration-300 ease-in-out ${
                 isEditing ? 'w-0 opacity-0' : 'w-full md:w-1/3'
               }`}
             >
+              {selectedTag && (
+                <div className="p-3 bg-muted border-b">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      #{selectedTag} 필터링 중
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTag(null)}
+                      className="h-6 w-6 p-0"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                </div>
+              )}
               <NoteList
-                notes={notes}
+                notes={filteredNotes}
                 onSelectNote={handleSelectNote}
                 selectedNote={selectedNote}
               />
@@ -341,6 +359,48 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         );
+      case 'reminder':
+        return (
+          <ReminderView
+            reminders={allReminders}
+            // ✅ props를 새로운 함수로 교체합니다.
+            onToggleComplete={updateReminderCompletion}
+            onToggleEnable={updateReminderEnabled}
+            onDelete={handleDeleteReminder} // 삭제는 기존 로직 유지
+            onOpenNote={(noteId) => {
+              const noteToOpen =
+                notes.find((note) => note.id === noteId) || null;
+              setSelectedNote(noteToOpen);
+              setActiveTab('notes');
+            }}
+          />
+        );
+      case 'calendar':
+        return (
+          <Calendar
+            notes={notes} // 캘린더는 노트와 리마인더 둘 다 필요
+            onOpenNote={(noteId) => {
+              const noteToOpen =
+                notes.find((note) => note.id === noteId) || null;
+              setSelectedNote(noteToOpen);
+              setActiveTab('notes');
+            }}
+          />
+        );
+      case 'timeline':
+        return (
+          <TimelineView
+            notes={notes} // 타임라인도 노트와 리마인더 둘 다 필요
+            onOpenNote={(noteId) => {
+              const noteToOpen =
+                notes.find((note) => note.id === noteId) || null;
+              setSelectedNote(noteToOpen);
+              setActiveTab('notes');
+            }}
+          />
+        );
+      default:
+        return null;
     }
   };
 
@@ -394,7 +454,6 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 };
-
 const Sidebar = ({
   activeTab,
   setActiveTab,
@@ -469,6 +528,7 @@ const Sidebar = ({
             </div>
           </div>
         )}
+        <GoalProgress />
       </div>
     </aside>
   );
