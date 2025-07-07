@@ -496,12 +496,13 @@ const Sidebar = ({
         })}
       </nav>
       <div>
-        <div className="mt-6">
+        {/* TODO: 팀 스페이스 구현 */}
+        {/* <div className="mt-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">
             팀 스페이스
           </h3>
           <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div>
+        </div> */}
         {popularTags.length > 0 && (
           <div className="mt-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">

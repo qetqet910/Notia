@@ -1,7 +1,14 @@
 import React, { useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Calendar, Tag, TrendingUp, CheckCircle } from 'lucide-react';
+import {
+  FileText,
+  Bell,
+  Calendar,
+  Tag,
+  TrendingUp,
+  CheckCircle,
+} from 'lucide-react';
 import { Reminder } from '@/types/index';
 import { StatItem } from '@/components/ui/myPage/StatItem';
 import { ActivityData } from '@/types/index';
@@ -176,24 +183,28 @@ export const ActivityTab: React.FC<ActivityTabProps> = ({
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatItem
-              icon={<FileText className="h-5 w-5" />}
+              icon={<FileText className="h-7 w-7" />}
               value={stats.totalNotes}
               label="총 노트"
+              color="text-blue-500"
             />
             <StatItem
-              icon={<Calendar className="h-5 w-5" />}
+              icon={<Bell className="h-7 w-7" />}
               value={stats.totalReminders}
               label="총 리마인더"
+              color="text-yellow-500"
             />
             <StatItem
-              icon={<CheckCircle className="h-5 w-5" />}
+              icon={<CheckCircle className="h-7 w-7" />}
               value={stats.completedReminders}
               label="완료된 리마인더"
+              color="text-green-500"
             />
             <StatItem
-              icon={<Tag className="h-5 w-5" />}
+              icon={<Tag className="h-7 w-7" />}
               value={stats.tagsUsed}
               label="사용된 태그"
+              color="text-orange-500"
             />
           </div>
         </CardContent>

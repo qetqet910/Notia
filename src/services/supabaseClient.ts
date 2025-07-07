@@ -25,15 +25,15 @@ export const supabase = createClient<Database>(
   },
 );
 
-supabase.auth.onAuthStateChange((event, session) => {
-  console.warn(`Auth 상태 변경: ${event}`);
+// supabase.auth.onAuthStateChange((event, session) => {
+//   console.warn(`Auth 상태 변경: ${event}`);
 
-  if (event === 'SIGNED_IN' && session) {
-    console.warn('로그인 상태:', session.user.id);
-  } else if (event === 'SIGNED_OUT') {
-    console.warn('로그아웃 상태');
-  }
-});
+//   if (event === 'SIGNED_IN' && session) {
+//     console.warn('로그인 상태:', session.user.id);
+//   } else if (event === 'SIGNED_OUT') {
+//     console.warn('로그아웃 상태');
+//   }
+// });
 
 /**
  * Supabase 클라이언트를 초기화합니다.
