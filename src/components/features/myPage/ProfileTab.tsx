@@ -18,20 +18,19 @@ import { supabase } from '@/services/supabaseClient';
 import {
   User,
   Settings,
-  BarChart3, // Not used in ProfileTab, can be removed
+  BarChart3,
   Save,
   Camera,
   Award,
-  TrendingUp, // Not used in ProfileTab, can be removed
+  TrendingUp,
   CheckCircle,
   Flame,
   Trophy,
   Loader2,
 } from 'lucide-react';
-import { StatItem } from '@/components/ui/myPage/StatItem'; // Assuming this is defined elsewhere
-import { Achievement } from '@/types/index'; // Assuming Achievement is defined in types/index.ts
+import { StatItem } from '@/components/ui/myPage/StatItem';
+import { Achievement } from '@/types/index';
 
-// users 테이블의 user_profile 데이터 구조에 맞게 인터페이스 정의
 interface UserProfileData {
   id: string; // uuid
   created_at: string;
@@ -80,38 +79,43 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   useEffect(() => {
     const loadProfile = async () => {
       if (user?.id) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error(
-            'Error fetching user profile from "users" table:',
-            error.message,
-          );
-          toast({
-            title: '프로필 로드 실패',
-            description: `프로필 정보를 가져오는 중 오류가 발생했습니다: ${error.message}`,
-            variant: 'destructive',
-          });
-        } else if (data) {
-          setCurrentProfile(data);
+        if (isProvider) {
+          setCurrentProfile(null); // 'users' 테이블에 프로필이 없으므로 null로 설정
           setDisplayName(
-            data.display_name || user.user_metadata.name || '사용자',
+            user.user_metadata.name || user.user_metadata.full_name || '사용자',
           );
-          setTempAvatarUrl(
-            data.avatar_url || user.user_metadata.avatar_url || '',
-          ); // 초기 미리보기 URL
-          setDbAvatarUrl(
-            data.avatar_url || user.user_metadata.avatar_url || '',
-          ); // 초기 DB URL
-        } else {
-          setCurrentProfile(null);
-          setDisplayName(user.user_metadata.name || '사용자');
           setTempAvatarUrl(user.user_metadata.avatar_url || '');
           setDbAvatarUrl(user.user_metadata.avatar_url || '');
+        } else {
+          const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (error && error.code !== 'PGRST116') {
+            console.error(
+              'Error fetching user profile from "users" table:',
+              error.message,
+            );
+            toast({
+              title: '프로필 로드 실패',
+              description: `프로필 정보를 가져오는 중 오류가 발생했습니다: ${error.message}`,
+              variant: 'destructive',
+            });
+          } else if (data) {
+            setCurrentProfile(data);
+            setDisplayName(
+              data.display_name || user.user_metadata.name || '사용자',
+            );
+            setTempAvatarUrl(
+              data.avatar_url || user.user_metadata.avatar_url || '',
+            );
+
+            setDbAvatarUrl(
+              data.avatar_url || user.user_metadata.avatar_url || '',
+            );
+          }
         }
       } else {
         setCurrentProfile(null);
@@ -120,8 +124,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         setDbAvatarUrl('');
       }
     };
+
     loadProfile();
-  }, [user?.id, toast]);
+  }, [user, toast]);
 
   const displayEmail = useMemo(() => {
     return user?.email ? (
@@ -244,48 +249,64 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
       // 1. 기존 아바타 이미지 삭제 (새로운 URL이 다르다면)
       // handleSaveProfile 함수 내부, 기존 아바타 이미지 삭제 로직 부분
 
-// 1. 기존 아바타 이미지 삭제 (새로운 URL이 다르다면)
-if (dbAvatarUrl && dbAvatarUrl !== tempAvatarUrl) {
-  console.log('DB Avatar URL before deletion attempt:', dbAvatarUrl); 
-  try {
-    // URL에서 '/storage/v1/object/public/버킷명/' 부분을 제거하여 실제 파일 경로만 추출
-    // 정규식을 사용하는 것이 가장 견고합니다.
-    const urlPattern = /^https?:\/\/[^/]+\/storage\/v1\/object\/public\/avatar\/(.*)$/;
-    const match = dbAvatarUrl.match(urlPattern);
+      // 1. 기존 아바타 이미지 삭제 (새로운 URL이 다르다면)
+      if (dbAvatarUrl && dbAvatarUrl !== tempAvatarUrl) {
+        console.log('DB Avatar URL before deletion attempt:', dbAvatarUrl);
+        try {
+          // URL에서 '/storage/v1/object/public/버킷명/' 부분을 제거하여 실제 파일 경로만 추출
+          // 정규식을 사용하는 것이 가장 견고합니다.
+          const urlPattern =
+            /^https?:\/\/[^/]+\/storage\/v1\/object\/public\/avatar\/(.*)$/;
+          const match = dbAvatarUrl.match(urlPattern);
 
-    let oldFilePathToDelete: string | null = null;
-    if (match && match[1]) {
-      oldFilePathToDelete = match[1]; //
-      console.log('Calculated old file path to delete:', oldFilePathToDelete); // 계산된 삭제 경로 확인
+          let oldFilePathToDelete: string | null = null;
+          if (match && match[1]) {
+            oldFilePathToDelete = match[1]; //
+            console.log(
+              'Calculated old file path to delete:',
+              oldFilePathToDelete,
+            ); // 계산된 삭제 경로 확인
 
-      const { error: deleteError } = await supabase.storage
-        .from('avatar')
-        .remove([oldFilePathToDelete]); // 추출한 경로를 직접 사용
+            const { error: deleteError } = await supabase.storage
+              .from('avatar')
+              .remove([oldFilePathToDelete]); // 추출한 경로를 직접 사용
 
-      if (deleteError) {
-        if (deleteError.message !== 'The resource was not found') {
-          console.error('*** ERROR: Failed to delete old avatar:', deleteError.message, deleteError);
-          toast({
-            title: '기존 사진 삭제 실패',
-            description: `이전 프로필 사진 삭제 중 오류 발생: ${deleteError.message}`,
-            variant: 'destructive',
-          });
-        } else {
-          console.log('Old avatar not found (already deleted or never existed).');
+            if (deleteError) {
+              if (deleteError.message !== 'The resource was not found') {
+                console.error(
+                  '*** ERROR: Failed to delete old avatar:',
+                  deleteError.message,
+                  deleteError,
+                );
+                toast({
+                  title: '기존 사진 삭제 실패',
+                  description: `이전 프로필 사진 삭제 중 오류 발생: ${deleteError.message}`,
+                  variant: 'destructive',
+                });
+              } else {
+                console.log(
+                  'Old avatar not found (already deleted or never existed).',
+                );
+              }
+            } else {
+              console.log('Old DB avatar successfully deleted.');
+            }
+            await new Promise((resolve) => setTimeout(resolve, 500)); // 0.5초 대기
+          } else {
+            console.warn(
+              'Could not parse old avatar URL for deletion:',
+              dbAvatarUrl,
+            );
+          }
+        } catch (error) {
+          console.error(
+            'Error processing old DB avatar URL for deletion:',
+            error,
+          );
         }
       } else {
-        console.log('Old DB avatar successfully deleted.');
+        console.log('No old avatar to delete or URL is the same.');
       }
-      await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 대기
-    } else {
-      console.warn('Could not parse old avatar URL for deletion:', dbAvatarUrl);
-    }
-  } catch (error) {
-    console.error("Error processing old DB avatar URL for deletion:", error);
-  }
-} else {
-  console.log('No old avatar to delete or URL is the same.');
-}
 
       // 2. 사용자 프로필 DB 업데이트
       let updateError = null;
@@ -547,28 +568,28 @@ if (dbAvatarUrl && dbAvatarUrl !== tempAvatarUrl) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatItem
-              icon={<Flame className="h-5 w-5" />}
+              icon={<Flame className="h-7 w-7" />}
               value={stats.streak}
               label="연속 일수"
               color="text-orange-500"
             />
             <StatItem
-              icon={<CheckCircle className="h-5 w-5" />}
+              icon={<CheckCircle className="h-7 w-7" />}
               value={stats.todayCompleted}
               label="오늘 완료"
               color="text-green-500"
             />
             <StatItem
-              icon={<Award className="h-5 w-5" />}
+              icon={<Award className="h-7 w-7" />}
               value={`${Math.round(stats.completionRate)}%`}
               label="완료율"
-              color="text-purple-500"
+              color="text-yellow-500"
             />
             <StatItem
-              icon={<TrendingUp className="h-5 w-5" />}
+              icon={<TrendingUp className="h-7 w-7" />}
               value={stats.weeklyAverage}
               label="주간 평균"
-              color="text-blue-500"
+              color="text-purple-500"
             />
           </div>
         </CardContent>

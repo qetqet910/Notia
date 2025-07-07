@@ -10,7 +10,7 @@
       "@/*": ["./src/*"]
     },
     "types": ["chrome", "vite/client"],
-    "target": "es2024",
+    "target": "es6",
     "lib": ["es2019", "dom"]
   }
 }

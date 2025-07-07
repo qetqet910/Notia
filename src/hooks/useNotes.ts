@@ -79,9 +79,8 @@ export const useNotes = () => {
       };
     }
 
-    const noteGoal = user.user_metadata?.weekly_note_goal ?? 10;
-    const reminderGoal = user.user_metadata?.weekly_reminder_goal ?? 5;
-
+    const noteGoal = user.user_metadata?.reminderGoal ?? 10;
+    const reminderGoal = user.user_metadata?.noteGoal ?? 5;
     const startOfWeek = getStartOfWeek();
 
     // 1. 주간 노트 작성 수
@@ -122,11 +121,11 @@ export const useNotes = () => {
   }, [notes, user]);
 
   const updateUserGoals = useCallback(
-    async (goals: { dailyGoal: number; weeklyGoal: number }) => {
+    async (goals: { reminderGoal: number; noteGoal: number }) => {
       const { error } = await supabase.auth.updateUser({
         data: {
-          daily_goal: goals.dailyGoal,
-          weekly_goal: goals.weeklyGoal,
+          reminderGoal: goals.reminderGoal,
+          noteGoal: goals.noteGoal,
         },
       });
 
