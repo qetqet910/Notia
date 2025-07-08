@@ -20,6 +20,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/layout/header';
+import { Footer } from '@/layout/footer';
 
 import randing1 from '@/assets/images/landing/randing1.png';
 import randing2 from '@/assets/images/landing/randing2.png';
@@ -355,14 +356,7 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-12 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <p className="text-center text-gray-500 text-sm">
-            © {new Date().getFullYear()} HyeonMin Kim. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

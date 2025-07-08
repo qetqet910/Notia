@@ -49,7 +49,6 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
   onDelete,
   onOpenNote,
 }) => {
-  const { isDarkMode, isDeepDarkMode } = useThemeStore();
   const { user } = useAuthStore();
   const [activeFilter, setActiveFilter] = useState<
     'recent' | 'upcoming' | 'overdue' | 'completed'
