@@ -71,18 +71,12 @@ MyPage 최적화, 리팩토링, 컴포넌트 분리 - 1440줄은 힘들다 O
 실시간 반영 구현 O - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중 O
  - 기존 구조 유지, 각 구조의 용이성을 살린 상태로 구현 O
 useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기 - Note 적용 완료, 단축키 복구 및 Reminder까지 적용하기 - O
-
 TODO 구현 - O 나머지는 Team or Service Worker = 지금 못 하는 거
+
 Gemini CLI 로 Supabase, Vscode 정리하기
 리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
-
-각종 에러 해결
-각종 사용성 증대
-배포 준비
-배포
-배포환경 테스트
-
 Supabase RLS 최적화, Issue 해결, Lighthouse 개선
+
 
 ---v 1.3.2
 

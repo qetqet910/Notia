@@ -26,7 +26,7 @@ const ThemeToggle = React.forwardRef<HTMLDivElement, ThemeToggleProps>(
             )}
           >
             <Sun className="mr-2 h-4 w-4" />
-            <span>Light</span>
+            <span>라이트</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="dark"
@@ -36,7 +36,7 @@ const ThemeToggle = React.forwardRef<HTMLDivElement, ThemeToggleProps>(
             )}
           >
             <Moon className="mr-2 h-4 w-4" />
-            <span>Dark</span>
+            <span>다크</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="deepdark"
@@ -46,7 +46,7 @@ const ThemeToggle = React.forwardRef<HTMLDivElement, ThemeToggleProps>(
             )}
           >
             <MoonStar className="mr-2 h-4 w-4" />
-            <span>Deep Dark</span>
+            <span>딥다크</span>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
             value="system"
@@ -56,7 +56,7 @@ const ThemeToggle = React.forwardRef<HTMLDivElement, ThemeToggleProps>(
             )}
           >
             <Laptop className="mr-2 h-4 w-4" />
-            <span>System</span>
+            <span>시스템</span>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </div>

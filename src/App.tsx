@@ -12,6 +12,7 @@ import { DownloadPage } from '@/pages/Download';
 import { NotFound } from '@/pages/404';
 import { MyPage } from '@/pages/dashboard/myPage';
 import { HelpPage } from '@/pages/dashboard/help';
+import { ChangelogPage } from '@/pages/ChangelogPage';
 
 import { AuthCallback } from '@/components/features/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
@@ -27,6 +28,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/download" element={<DownloadPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/changelog" element={<ChangelogPage />} />
 
           {/* 보호된 라우트 */}
           <Route
