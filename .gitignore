@@ -9,7 +9,8 @@ lerna-debug.log*
 
 # 환경 변수
 .env
-.env.local
+.env.local.
+.env.*.local
 .env.development
 .env.production
 .gemini

@@ -7,7 +7,7 @@ import {
 
 import { Home } from '@/pages/Home';
 import { Login } from '@/pages/Login';
-import { Dashboard } from '@/pages/Dashboard';
+import { Dashboard } from '@/pages/dashboard/Dashboard';
 import { DownloadPage } from '@/pages/Download';
 import { NotFound } from '@/pages/404';
 import { MyPage } from '@/pages/dashboard/myPage';
