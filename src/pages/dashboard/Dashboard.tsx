@@ -4,22 +4,20 @@ import React, {
   useCallback,
   useMemo,
   useRef,
+  Suspense,
+  lazy,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/toaster';
-import { NoteList } from '@/components/features/dashboard/noteList';
-import { Editor } from '@/components/features/dashboard/editor';
-import { ReminderView } from '@/components/features/dashboard/reminder';
-import { Calendar } from '@/components/features/dashboard/calendar';
-import { TimelineView } from '@/components/features/dashboard/timelineView';
+
 import { GoalProgress } from '@/components/features/dashboard/goalProgress';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
-import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
+// import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
 import {
   PlusCircle,
   Calendar as CalendarIcon,
@@ -41,6 +39,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+const NoteList = lazy(() =>
+  import('@/components/features/dashboard/noteList').then((module) => ({
+    default: module.NoteList,
+  })),
+);
+const Editor = lazy(() =>
+  import('@/components/features/dashboard/editor').then((module) => ({
+    default: module.Editor,
+  })),
+);
+const ReminderView = lazy(() =>
+  import('@/components/features/dashboard/reminder').then((module) => ({
+    default: module.ReminderView,
+  })),
+);
+const Calendar = lazy(() =>
+  import('@/components/features/dashboard/calendar').then((module) => ({
+    default: module.Calendar,
+  })),
+);
+const TimelineView = lazy(() =>
+  import('@/components/features/dashboard/timelineView').then((module) => ({
+    default: module.TimelineView,
+  })),
+);
 
 const NAV_ITEMS = [
   { id: 'notes', label: '노트', icon: List },
@@ -448,7 +472,11 @@ export const Dashboard: React.FC = () => {
               onTagSelect={setSelectedTag}
             />
           </div>
-          <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
+          <Suspense fallback={<LoadingSpinner />}>
+            <main className="flex-1 overflow-hidden">
+              {renderMainContent()}
+            </main>
+          </Suspense>
         </div>
       </div>
     </div>
