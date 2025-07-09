@@ -1,7 +1,6 @@
 import React from 'react';
 import { Monitor, Smartphone, Chrome } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-// ✨ qrcode.react에서 QRCodeSVG를 직접 import 합니다.
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -257,3 +256,5 @@ export const DownloadPage: React.FC = () => {
     </div>
   );
 };
+
+export default DownloadPage;

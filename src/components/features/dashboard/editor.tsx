@@ -5,6 +5,8 @@ import React, {
   useImperativeHandle,
   useCallback,
   useRef,
+  Suspense,
+  lazy,
 } from 'react';
 import { useNoteParser } from '@/hooks/useNoteParser';
 import { useToast } from '@/hooks/useToast';
@@ -31,6 +33,7 @@ import {
   Edit3,
   Eye,
   X,
+  Loader2,
 } from 'lucide-react';
 import {
   Popover,
@@ -40,6 +43,18 @@ import {
 import { Note, EditorReminder } from '@/types';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+const MarkdownPreview = lazy(() =>
+  import('./MarkdownPreview').then((module) => ({
+    default: module.MarkdownPreview,
+  })),
+);
+
+const PreviewLoader = () => (
+  <div className="p-4 h-full flex items-center justify-center">
+    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+  </div>
+);
 
 interface EditorProps {
   note: Note;
@@ -436,7 +451,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     value={content}
                     onChange={(e) => {
                       setContent(e.target.value);
-                      setIsDirty(true);
+                      // setIsDirty(true);
                     }}
                     placeholder="
           내용을 입력하세요...
@@ -459,275 +474,17 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="text-sm font-medium">미리보기</span>
                   </div>
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        h1: ({ children, ...props }) => (
-                          <h1 className="text-xl font-bold mb-4" {...props}>
-                            {children}
-                          </h1>
-                        ),
-                        h2: ({ children, ...props }) => (
-                          <h2 className="text-lg font-semibold mb-3" {...props}>
-                            {children}
-                          </h2>
-                        ),
-                        h3: ({ children, ...props }) => (
-                          <h3 className="text-base font-medium mb-2" {...props}>
-                            {children}
-                          </h3>
-                        ),
-                        p: ({ children, ...props }) => (
-                          <p className="mb-3 leading-relaxed" {...props}>
-                            {children}
-                          </p>
-                        ),
-                        ul: ({ children, ...props }) => (
-                          <ul
-                            className="list-disc list-inside mb-3 space-y-1"
-                            {...props}
-                          >
-                            {children}
-                          </ul>
-                        ),
-                        ol: ({ children, ...props }) => (
-                          <ol
-                            className="list-decimal list-inside mb-3 space-y-1"
-                            {...props}
-                          >
-                            {children}
-                          </ol>
-                        ),
-                        li: ({ children, ...props }) => (
-                          <li className="leading-relaxed" {...props}>
-                            {children}
-                          </li>
-                        ),
-                        blockquote: ({ children, ...props }) => (
-                          <blockquote
-                            className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-3"
-                            {...props}
-                          >
-                            {children}
-                          </blockquote>
-                        ),
-                        code: ({ className, children, ...props }: any) => {
-                          const match = /language-(\w+)/.exec(className || '');
-                          const language = match ? match[1] : '';
-                          const isInline = !match;
-
-                          if (!isInline && language === 'mermaid') {
-                            return (
-                              <MermaidComponent
-                                chart={String(children)}
-                                isEditing={isEditing}
-                              />
-                            );
-                          }
-
-                          // 인라인 코드
-                          if (isInline) {
-                            return (
-                              <code
-                                className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
-                                {...props}
-                              >
-                                {children}
-                              </code>
-                            );
-                          }
-
-                          // 코드 블록
-                          return (
-                            <SyntaxHighlighter
-                              language={language || 'text'}
-                              style={oneDark}
-                              customStyle={{
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                marginBottom: '1rem',
-                              }}
-                              {...props}
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          );
-                        },
-                        pre: ({ children, ...props }) => (
-                          <pre {...props}>{children}</pre>
-                        ),
-                        table: ({ children, ...props }) => (
-                          <table
-                            className="border-collapse border border-border mb-3 w-full"
-                            {...props}
-                          >
-                            {children}
-                          </table>
-                        ),
-                        th: ({ children, ...props }) => (
-                          <th
-                            className="border border-border px-3 py-2 bg-muted font-semibold text-left"
-                            {...props}
-                          >
-                            {children}
-                          </th>
-                        ),
-                        td: ({ children, ...props }) => (
-                          <td
-                            className="border border-border px-3 py-2"
-                            {...props}
-                          >
-                            {children}
-                          </td>
-                        ),
-                        a: ({ children, ...props }) => (
-                          <a
-                            className="text-primary hover:underline"
-                            {...props}
-                          >
-                            {children}
-                          </a>
-                        ),
-                      }}
-                    >
-                      {content || '*내용이 없습니다.*'}
-                    </ReactMarkdown>
-                  </div>
+                  <Suspense fallback={<PreviewLoader />}>
+                    <MarkdownPreview content={content} />
+                  </Suspense>
                 </div>
               </ResizablePanel>
             </ResizablePanelGroup>
           ) : (
             <div className="p-4 h-full overflow-y-auto custom-scrollbar">
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h1: ({ children, ...props }) => (
-                      <h1 className="text-2xl font-bold mb-4" {...props}>
-                        {children}
-                      </h1>
-                    ),
-                    h2: ({ children, ...props }) => (
-                      <h2 className="text-xl font-semibold mb-3" {...props}>
-                        {children}
-                      </h2>
-                    ),
-                    h3: ({ children, ...props }) => (
-                      <h3 className="text-lg font-medium mb-2" {...props}>
-                        {children}
-                      </h3>
-                    ),
-                    p: ({ children, ...props }) => (
-                      <p className="mb-4 leading-relaxed" {...props}>
-                        {children}
-                      </p>
-                    ),
-                    ul: ({ children, ...props }) => (
-                      <ul
-                        className="list-disc list-inside mb-4 space-y-2"
-                        {...props}
-                      >
-                        {children}
-                      </ul>
-                    ),
-                    ol: ({ children, ...props }) => (
-                      <ol
-                        className="list-decimal list-inside mb-4 space-y-2"
-                        {...props}
-                      >
-                        {children}
-                      </ol>
-                    ),
-                    li: ({ children, ...props }) => (
-                      <li className="leading-relaxed" {...props}>
-                        {children}
-                      </li>
-                    ),
-                    blockquote: ({ children, ...props }) => (
-                      <blockquote
-                        className="border-l-4 border-primary pl-4 italic text-muted-foreground mb-4 bg-muted/30 py-2 rounded-r-lg transition-all duration-300"
-                        {...props}
-                      >
-                        {children}
-                      </blockquote>
-                    ),
-                    code: ({ className, children, ...props }: any) => {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const language = match ? match[1] : '';
-                      const isInline = !match;
-
-                      if (!isInline && language === 'mermaid') {
-                        return (
-                          <MermaidComponent
-                            chart={String(children)}
-                            isEditing={isEditing}
-                          />
-                        );
-                      }
-
-                      // 인라인 코드
-                      if (isInline) {
-                        return (
-                          <code
-                            className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        );
-                      }
-
-                      // 코드 블록
-                      return (
-                        <SyntaxHighlighter
-                          language={language || 'text'}
-                          style={oneDark}
-                          customStyle={{
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            marginBottom: '1rem',
-                          }}
-                          {...props}
-                        >
-                          {String(children).replace(/\n$/, '')}
-                        </SyntaxHighlighter>
-                      );
-                    },
-                    pre: ({ children, ...props }) => (
-                      <pre {...props}>{children}</pre>
-                    ),
-                    table: ({ children, ...props }) => (
-                      <table
-                        className="border-collapse border border-border mb-4 w-full transition-all duration-300"
-                        {...props}
-                      >
-                        {children}
-                      </table>
-                    ),
-                    th: ({ children, ...props }) => (
-                      <th
-                        className="border border-border px-4 py-3 bg-muted font-semibold text-left transition-all duration-300"
-                        {...props}
-                      >
-                        {children}
-                      </th>
-                    ),
-                    td: ({ children, ...props }) => (
-                      <td className="border border-border px-4 py-3" {...props}>
-                        {children}
-                      </td>
-                    ),
-                    a: ({ children, ...props }) => (
-                      <a className="text-primary hover:underline" {...props}>
-                        {children}
-                      </a>
-                    ),
-                  }}
-                >
-                  {content || '*내용이 없습니다.*'}
-                </ReactMarkdown>
-              </div>
+              <Suspense fallback={<PreviewLoader />}>
+                <MarkdownPreview content={content} />
+              </Suspense>
             </div>
           )}
         </div>

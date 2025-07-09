@@ -98,3 +98,5 @@ export const ChangelogPage: React.FC = () => {
     </div>
   );
 };
+
+export default ChangelogPage;

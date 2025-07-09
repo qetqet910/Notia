@@ -853,3 +853,5 @@ graph TD;
     </div>
   );
 };
+
+export default HelpPage;
