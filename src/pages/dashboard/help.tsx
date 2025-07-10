@@ -836,11 +836,11 @@ graph TD;
                             후원한잔으로 후원하기
                           </a>
                         </Button>
-                        <Button variant="outline" size="sm" asChild>
+                        {/* <Button variant="outline" size="sm" asChild>
                           <a href="https://coff.ee/qetqet910" target="_blank">
                             Buy Me a Coffee
                           </a>
-                        </Button>
+                        </Button> */}
                       </div>
                     </div>
                   </CardContent>

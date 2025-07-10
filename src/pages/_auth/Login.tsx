@@ -659,7 +659,10 @@ export const Login: React.FC = () => {
                 }
                 transition={{ duration: 0.5 }}
               >
-                <Link to="/" className="w-1/2 object-contain pointer">
+                <Link
+                  to="/"
+                  className="w-1/2 object-contain pointer flex justify-center"
+                >
                   <img src={logoImage || '/placeholder.svg'} alt="로고" />
                 </Link>
               </motion.div>

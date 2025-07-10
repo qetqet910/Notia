@@ -8,15 +8,15 @@ import {
 import { Loader2 } from 'lucide-react';
 
 const Home = lazy(() => import('@/pages/Home'));
-const DownloadPage = lazy(() => import('@/pages/Download'));
-const ChangelogPage = lazy(() => import('@/pages/ChangelogPage'));
-const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'));
-const Login = lazy(() => import('@/pages/Login'));
-const NotFound = lazy(() => import('@/pages/404'));
+const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
+const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
+const Dashboard = lazy(() => import('@/pages/dashboard'));
+const Login = lazy(() => import('@/pages/_auth/Login'));
+const NotFound = lazy(() => import('@/pages/NotFoundPage'));
 const HelpPage = lazy(() => import('@/pages/dashboard/help'));
 const MyPage = lazy(() => import('@/pages/dashboard/myPage'));
 
-import { AuthCallback } from '@/components/features/authCallback';
+import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
 import { ThemeProvider } from '@/components/features/themeProvider';
 
