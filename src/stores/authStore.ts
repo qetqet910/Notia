@@ -3,27 +3,23 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types';
-import { generateRandomKey, formatKey } from '@/utils/keys';
-import { checkCreationLimit } from '@/utils/check';
+import { formatKey } from '@/utils/keyValidation';
+import { checkCreationLimit } from '@/utils/kegisterValidation';
 
 interface AuthState {
-  // 사용자 상태
   user: User | null;
   session: any | null;
-  userProfile: UserProfile | null; // 이제 userProfile은 커스텀 테이블의 데이터
+  userProfile: UserProfile | null;
   isAuthenticated: boolean;
 
-  // 키 관련 상태
   userKey: string | null;
   formattedKey: string | null;
 
-  // 로딩 상태
   isRegisterLoading: boolean;
   isLoginLoading: boolean;
   isLogoutLoading: boolean;
   isSessionCheckLoading: boolean;
 
-  // 오류 상태
   error: Error | null;
 }
 

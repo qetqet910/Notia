@@ -27,9 +27,9 @@ import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
 import { Reminder, Note } from '@/types/index';
 import { Achievement, ActivityData } from '@/types/index';
-import { ActivityTab } from '@/components/features/myPage/ActivityTab';
-import { SettingsTab } from '@/components/features/myPage/SettingsTab';
-import { ProfileTab } from '@/components/features/myPage/ProfileTab';
+import { ActivityTab } from '@/components/features/dashboard/myPage/ActivityTab';
+import { SettingsTab } from '@/components/features/dashboard/myPage/SettingsTab';
+import { ProfileTab } from '@/components/features/dashboard/myPage/ProfileTab';
 
 // --- Main MyPage Component ---
 export const MyPage: React.FC = () => {

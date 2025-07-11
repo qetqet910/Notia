@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Laptop, Moon, MoonStar, Sun } from 'lucide-react';
 
-import { cn } from '@/utils/utils';
+import { cn } from '@/utils/shadcnUtils';
 import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,

@@ -1,6 +1,5 @@
-// src/utils/supabaseNotifications.ts
 import { supabase } from '@/services/supabaseClient';
-import { sendReminderNotification } from '@/utils/notification';
+import { sendReminderNotification } from '@/utils/browserNotification';
 import { format } from 'date-fns';
 
 interface ReminderSchedule {
@@ -55,7 +54,10 @@ export const createReminderNotifications = async (
       note_id: noteId,
       reminder_id: reminderId,
       title: `⏰ 20분 전 리마인더: ${noteTitle}`,
-      body: `곧 '${reminderText}' 할 시간이에요! (${format(reminderTime, 'p')})`,
+      body: `곧 '${reminderText}' 할 시간이에요! (${format(
+        reminderTime,
+        'p',
+      )})`,
       scheduled_time: twentyMinBefore.toISOString(),
       type: 'before_20m',
     });
@@ -70,14 +72,19 @@ export const createReminderNotifications = async (
       note_id: noteId,
       reminder_id: reminderId,
       title: `⏰ 10분 전 리마인더: ${noteTitle}`,
-      body: `곧 '${reminderText}' 할 시간이에요! (${format(reminderTime, 'p')})`,
+      body: `곧 '${reminderText}' 할 시간이에요! (${format(
+        reminderTime,
+        'p',
+      )})`,
       scheduled_time: tenMinBefore.toISOString(),
       type: 'before_10m',
     });
   }
 
   try {
-    const { error } = await supabase.from('scheduled_notifications').insert(notificationsToSchedule);
+    const { error } = await supabase
+      .from('scheduled_notifications')
+      .insert(notificationsToSchedule);
 
     if (error) {
       throw error;

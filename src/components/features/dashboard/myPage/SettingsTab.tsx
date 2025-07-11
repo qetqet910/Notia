@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/useToast';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
-import { sendReminderNotification } from '@/utils/notification';
+import { sendReminderNotification } from '@/utils/browserNotification';
 import {
   Bell,
   Calendar,
@@ -37,7 +37,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { SettingSwitchItem } from '@/components/ui/myPage/SettingSwitchItem';
+import { SettingSwitchItem } from '@/components/features/dashboard/myPage/SettingSwitchItem';
 import { useNotes } from '@/hooks/useNotes'; // HIGHLIGHT: useNotes 훅 임포트
 import { User } from '@supabase/supabase-js'; // HIGHLIGHT: 더 구체적인 타입 사용
 

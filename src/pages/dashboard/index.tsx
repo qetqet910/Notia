@@ -46,24 +46,26 @@ const NoteList = lazy(() =>
   })),
 );
 const Editor = lazy(() =>
-  import('@/components/features/dashboard/editor').then((module) => ({
+  import('@/components/features/dashboard/main/editor').then((module) => ({
     default: module.Editor,
   })),
 );
 const ReminderView = lazy(() =>
-  import('@/components/features/dashboard/reminder').then((module) => ({
+  import('@/components/features/dashboard/main/reminder').then((module) => ({
     default: module.ReminderView,
   })),
 );
 const Calendar = lazy(() =>
-  import('@/components/features/dashboard/calendar').then((module) => ({
+  import('@/components/features/dashboard/main/calendar').then((module) => ({
     default: module.Calendar,
   })),
 );
 const TimelineView = lazy(() =>
-  import('@/components/features/dashboard/timelineView').then((module) => ({
-    default: module.TimelineView,
-  })),
+  import('@/components/features/dashboard/main/timelineView').then(
+    (module) => ({
+      default: module.TimelineView,
+    }),
+  ),
 );
 
 const NAV_ITEMS = [
@@ -441,7 +443,7 @@ export const Dashboard: React.FC = () => {
             <h1 className="text-xl font-bold text-primary">
               <img
                 src={logoSrc}
-                className="max-w-40 cursor-pointer"
+                className="max-w-40 cursor-pointer h-8"
                 alt="로고"
               />
             </h1>

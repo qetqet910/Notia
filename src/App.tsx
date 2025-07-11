@@ -7,7 +7,7 @@ import {
 } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
-const Home = lazy(() => import('@/pages/Home'));
+const Home = lazy(() => import('@/pages/_landing/Home'));
 const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
 const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));

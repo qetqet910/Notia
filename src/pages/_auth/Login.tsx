@@ -17,7 +17,7 @@ import { InputOTPControlled } from '@/components/features/inputOtpControl';
 import { useAuthStore } from '@/stores/authStore';
 import { KeyDisplay } from '@/components/features/keyDisplay';
 import { useToast } from '@/hooks/useToast';
-import { generateRandomKey, formatKey } from '@/utils/keys';
+import { generateRandomKey, formatKey } from '@/utils/keyValidation';
 
 import logoImage from '@/assets/images/Logo.png';
 import animation from '@/assets/data/loginAnimation.lottie';

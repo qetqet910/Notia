@@ -22,11 +22,11 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/layout/header';
 import { Footer } from '@/layout/footer';
 
-import randing1 from '@/assets/images/landing/randing1.png';
-import randing2 from '@/assets/images/landing/randing2.png';
-import randing3 from '@/assets/images/landing/randing3.png';
-import randing4 from '@/assets/images/landing/randing4.png';
-import randing5 from '@/assets/images/landing/randing5.png';
+import landing1 from '@/assets/images/landing/landing1.png';
+import landing2 from '@/assets/images/landing/landing2.png';
+import landing3 from '@/assets/images/landing/landing3.png';
+import landing4 from '@/assets/images/landing/landing4.png';
+import landing5 from '@/assets/images/landing/landing5.png';
 
 const features = [
   {
@@ -169,7 +169,7 @@ const FloatingImage = ({ image, index }: { image: string; index: number }) => {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const landingImages = [randing1, randing2, randing3, randing4, randing5];
+  const landingImages = [landing1, landing2, landing3, landing4, landing5];
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 overflow-hidden">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNotes } from '@/hooks/useNotes';
-import { CustomProgress } from '@/components/ui/myPage/CustomProgress';
+import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';
 import { Target, CheckCircle } from 'lucide-react';
 
 export const GoalProgress = () => {

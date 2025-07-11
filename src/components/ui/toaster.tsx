@@ -8,7 +8,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from '@/components/ui/toast';
-import { cn } from '@/utils/utils';
+import { cn } from '@/utils/shadcnUtils';
 
 export interface ToasterProps extends React.HTMLAttributes<HTMLDivElement> {}
 

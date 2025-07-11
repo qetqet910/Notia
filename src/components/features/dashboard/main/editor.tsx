@@ -45,7 +45,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const MarkdownPreview = lazy(() =>
-  import('./MarkdownPreview').then((module) => ({
+  import('../MarkdownPreview').then((module) => ({
     default: module.MarkdownPreview,
   })),
 );

@@ -20,7 +20,7 @@ export const Header: React.FC = () => {
             <Link to="/">
               <img
                 src={logoImage}
-                className="max-w-40 cursor-pointer"
+                className="max-w-40 cursor-pointer h-8"
                 alt="로고"
               />
             </Link>

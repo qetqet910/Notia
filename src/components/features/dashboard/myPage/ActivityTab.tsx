@@ -10,11 +10,11 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { Reminder } from '@/types/index';
-import { StatItem } from '@/components/ui/myPage/StatItem';
+import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
 import { ActivityData } from '@/types/index';
 
 import { useNotes } from '@/hooks/useNotes';
-import { CustomProgress } from '@/components/ui/myPage/CustomProgress';
+import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';
 
 interface ActivityTabProps {
   stats: {

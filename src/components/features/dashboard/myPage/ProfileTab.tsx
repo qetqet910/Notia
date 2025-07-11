@@ -28,7 +28,7 @@ import {
   Trophy,
   Loader2,
 } from 'lucide-react';
-import { StatItem } from '@/components/ui/myPage/StatItem';
+import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
 import { Achievement } from '@/types/index';
 
 interface UserProfileData {
