@@ -472,6 +472,7 @@ export const Dashboard: React.FC = () => {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               onTagSelect={setSelectedTag}
+              isEditing={isEditing}
             />
           </div>
           <Suspense fallback={<LoadingSpinner />}>
@@ -488,10 +489,12 @@ const Sidebar = ({
   activeTab,
   setActiveTab,
   onTagSelect,
+  isEditing,
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onTagSelect: (tag: string) => void;
+  isEditing: boolean;
 }) => {
   const { notes } = useNotes();
   const popularTags = useMemo(() => {
@@ -508,7 +511,11 @@ const Sidebar = ({
   }, [notes]);
 
   return (
-    <aside className="w-56 border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col h-full">
+    <aside
+      className={`border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col h-full ${
+        isEditing ? 'w-0 opacity-0' : 'w-56'
+      }`}
+    >
       <nav className="flex flex-col gap-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;

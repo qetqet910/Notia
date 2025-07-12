@@ -75,8 +75,8 @@ TODO 구현 - O 나머지는 Team or Service Worker = 지금 못 하는 거
 
 Gemini CLI 로 Supabase, Vscode 정리하기
 리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
-Supabase RLS 최적화, Issue 해결, Lighthouse 개선
 
+Supabase RLS 최적화, Issue 해결, Lighthouse 개선
 UI 수정, 배포준비 O
 배포과정중 생긴 로직 오류 해결
 LazyLoading Loader Style 해결, 각 페이지별 적절성 판단 여부 적용

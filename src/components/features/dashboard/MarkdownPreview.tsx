@@ -1,27 +1,13 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { MermaidComponent } from './MermaidComponent';
+import { DynamicSyntaxHighlighter } from '@/components/features/dashboard/DynamicSyntaxHighlighter';
 
-import {
-  javascript,
-  typescript,
-  jsx,
-  tsx,
-  css,
-  json,
-  bash,
-} from 'react-syntax-highlighter/dist/esm/languages/prism';
-
-SyntaxHighlighter.registerLanguage('javascript', javascript);
-SyntaxHighlighter.registerLanguage('typescript', typescript);
-SyntaxHighlighter.registerLanguage('jsx', jsx);
-SyntaxHighlighter.registerLanguage('tsx', tsx);
-SyntaxHighlighter.registerLanguage('css', css);
-SyntaxHighlighter.registerLanguage('bash', bash);
-SyntaxHighlighter.registerLanguage('json', json);
+const MermaidComponent = lazy(() =>
+  import('./MermaidComponent').then((module) => ({
+    default: module.MermaidComponent,
+  })),
+);
 
 interface MarkdownPreviewProps {
   content: string;
@@ -83,19 +69,9 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           code: ({ className, children, ...props }: any) => {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
-            const isInline = !match;
 
-            if (!isInline && language === 'mermaid') {
-              return (
-                <MermaidComponent
-                  chart={String(children)}
-                  isEditing={isEditing}
-                />
-              );
-            }
-
-            // 인라인 코드
-            if (isInline) {
+            if (!match) {
+              // 인라인 코드
               return (
                 <code
                   className="bg-muted px-1 py-0.5 rounded text-sm font-mono"
@@ -106,20 +82,27 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
               );
             }
 
+            if (language === 'mermaid') {
+              // Mermaid 컴포넌트도 lazy loading 처리하면 더 좋습니다.
+              return (
+                <Suspense
+                  fallback={
+                    <div className="h-32 animate-pulse bg-muted rounded-lg" />
+                  }
+                >
+                  <MermaidComponent
+                    chart={String(children).replace(/\n$/, '')}
+                    isEditing={isEditing}
+                  />
+                </Suspense>
+              );
+            }
+
             // 코드 블록
             return (
-              <SyntaxHighlighter
-                language={language || 'text'}
-                style={oneDark}
-                customStyle={{
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  marginBottom: '1rem',
-                }}
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
+              <DynamicSyntaxHighlighter language={language} {...props}>
+                {children}
+              </DynamicSyntaxHighlighter>
             );
           },
           pre: ({ children, ...props }) => <pre {...props}>{children}</pre>,

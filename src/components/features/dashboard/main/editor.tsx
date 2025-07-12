@@ -20,8 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { MarkdownPreviewLoader } from '@/components/features/dashboard/MarkdownPreviewLoader';
 import mermaid from 'mermaid';
 import {
   Trash2,
@@ -41,19 +40,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Note, EditorReminder } from '@/types';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 const MarkdownPreview = lazy(() =>
-  import('../MarkdownPreview').then((module) => ({
+  import('@/components/features/dashboard/MarkdownPreview').then((module) => ({
     default: module.MarkdownPreview,
   })),
-);
-
-const PreviewLoader = () => (
-  <div className="p-4 h-full flex items-center justify-center">
-    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-  </div>
 );
 
 interface EditorProps {
@@ -474,7 +465,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     <Eye className="h-4 w-4 mr-2 text-muted-foreground" />
                     <span className="text-sm font-medium">미리보기</span>
                   </div>
-                  <Suspense fallback={<PreviewLoader />}>
+                  <Suspense fallback={<MarkdownPreviewLoader />}>
                     <MarkdownPreview content={content} />
                   </Suspense>
                 </div>
@@ -482,7 +473,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
             </ResizablePanelGroup>
           ) : (
             <div className="p-4 h-full overflow-y-auto custom-scrollbar">
-              <Suspense fallback={<PreviewLoader />}>
+              <Suspense fallback={<MarkdownPreviewLoader />}>
                 <MarkdownPreview content={content} />
               </Suspense>
             </div>
