@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { DynamicSyntaxHighlighter } from '@/components/features/dashboard/DynamicSyntaxHighlighter';
+import { MermaidLoader } from '@/components/loader/MermaidLoader';
 
 const MermaidComponent = lazy(() =>
   import('./MermaidComponent').then((module) => ({
@@ -85,11 +86,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
             if (language === 'mermaid') {
               // Mermaid 컴포넌트도 lazy loading 처리하면 더 좋습니다.
               return (
-                <Suspense
-                  fallback={
-                    <div className="h-32 animate-pulse bg-muted rounded-lg" />
-                  }
-                >
+                <Suspense fallback={<MermaidLoader />}>
                   <MermaidComponent
                     chart={String(children).replace(/\n$/, '')}
                     isEditing={isEditing}

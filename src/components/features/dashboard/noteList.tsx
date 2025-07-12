@@ -31,13 +31,9 @@ export const NoteList: React.FC<NoteListProps> = ({
     )
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); // ✅ 최신순 정렬 추가
 
-  // Get a preview of the content (first 60 characters)
-  const getContentPreview = (content: string) => {
-    if (!content) return '';
-    const plainText = content.replace(/<[^>]*>/g, '');
-    return plainText.length > 60
-      ? plainText.substring(0, 60) + '...'
-      : plainText;
+  const getContentPreview = (previewText: string | null) => {
+    if (!previewText) return '미리보기 없음';
+    return previewText.length >= 100 ? previewText + '...' : previewText;
   };
 
   return (
@@ -68,7 +64,7 @@ export const NoteList: React.FC<NoteListProps> = ({
               >
                 <h3 className="font-medium line-clamp-1">{note.title}</h3>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {getContentPreview(note.content)}
+                  {getContentPreview(note.content_preview)}
                 </p>
 
                 <div className="flex items-center justify-between mt-2">

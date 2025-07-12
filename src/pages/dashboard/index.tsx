@@ -40,6 +40,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+import { EditorLoader } from '@/components/loader/EditorLoader';
+import { DashboardLoader } from '@/components/loader/DashboardLoader';
+
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/noteList').then((module) => ({
     default: module.NoteList,
@@ -75,12 +78,6 @@ const NAV_ITEMS = [
   { id: 'timeline', label: '타임라인', icon: List },
 ];
 
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-  </div>
-);
-
 const EmptyNoteState = ({
   handleCreateNote,
 }: {
@@ -105,6 +102,7 @@ export const Dashboard: React.FC = () => {
     deleteNote,
     updateReminderCompletion,
     updateReminderEnabled,
+    fetchNoteContent,
   } = useNotes();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -112,6 +110,7 @@ export const Dashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState('notes');
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [isNoteContentLoading, setIsNoteContentLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -177,10 +176,23 @@ export const Dashboard: React.FC = () => {
 
   // --- 핸들러 함수들 ---
 
-  const handleSelectNote = (note: Note) => {
-    setSelectedNote(note);
-    setIsEditing(false);
-  };
+  const handleSelectNote = useCallback(
+    async (note: Note) => {
+      setSelectedNote(note);
+      setIsEditing(false);
+
+      if (!note.content) {
+        setIsNoteContentLoading(true);
+        const content = await fetchNoteContent(note.id);
+        // content가 포함된 완전한 노트 객체로 상태 업데이트
+        setSelectedNote({ ...note, content: content || '' });
+        setIsNoteContentLoading(false);
+      } else {
+        setSelectedNote(note);
+      }
+    },
+    [fetchNoteContent],
+  );
 
   const handleEnterEditMode = useCallback(() => {
     setTimeout(() => setIsEditing(true), 0);
@@ -304,7 +316,7 @@ export const Dashboard: React.FC = () => {
     [isDarkMode, isDeepDarkMode],
   );
 
-  if (isNotesLoading) return <LoadingSpinner />;
+  if (isNotesLoading) return <DashboardLoader />;
 
   // --- 메인 렌더링 ---
   const renderMainContent = () => {
@@ -363,13 +375,14 @@ export const Dashboard: React.FC = () => {
                 selectedNote={selectedNote}
               />
             </div>
-
             <div
               className={`h-full transition-all duration-300 ease-in-out ${
                 isEditing ? 'w-full' : 'hidden md:block w-2/3'
               }`}
             >
-              {selectedNote ? (
+              {isNoteContentLoading ? (
+                <EditorLoader />
+              ) : selectedNote ? (
                 <Editor
                   key={selectedNote.id}
                   note={selectedNote}
@@ -475,11 +488,7 @@ export const Dashboard: React.FC = () => {
               isEditing={isEditing}
             />
           </div>
-          <Suspense fallback={<LoadingSpinner />}>
-            <main className="flex-1 overflow-hidden">
-              {renderMainContent()}
-            </main>
-          </Suspense>
+          <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
         </div>
       </div>
     </div>
