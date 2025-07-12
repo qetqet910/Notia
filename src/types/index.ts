@@ -12,6 +12,7 @@ export interface Note {
   createdAt: Date;
   updatedAt: Date;
   reminders?: EditorReminder[];
+  content_preview: string;
 }
 
 export interface EditorReminder {

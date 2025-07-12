@@ -14,24 +14,27 @@ const Loader = () => (
   <pre className="bg-muted rounded-lg p-4 h-32 animate-pulse" />
 );
 
-const DynamicSyntaxHighlighterComponent: React.FC<DynamicSyntaxHighlighterProps> = ({
-  language,
-  children,
-  ...props
-}) => {
+const DynamicSyntaxHighlighterComponent: React.FC<
+  DynamicSyntaxHighlighterProps
+> = ({ language, children, ...props }) => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     // 언어가 유효하고, 아직 등록되지 않았다면 동적으로 불러옵니다.
     if (language && !registeredLanguages.has(language)) {
       setIsReady(false); // 새로운 언어 로딩 시작
-      import(`react-syntax-highlighter/dist/esm/languages/hljs/${language}`)
-        .then(module => {
+
+      import(
+        /* @vite-ignore */ `react-syntax-highlighter/dist/esm/languages/hljs/${language}`
+      )
+        .then((module) => {
           SyntaxHighlighter.registerLanguage(language, module.default);
           registeredLanguages.add(language);
         })
         .catch(() => {
-          console.warn(`Language '${language}' not found, falling back to plaintext.`);
+          console.warn(
+            `Language '${language}' not found, falling back to plaintext.`,
+          );
           // 실패한 경우에도 다시 시도하지 않도록 등록
           registeredLanguages.add(language);
         })

@@ -71,6 +71,33 @@ export const useNotes = () => {
     };
   }, [user, initialize, unsubscribeAll, isInitialized]);
 
+  const fetchNoteContent = useCallback(async (noteId: string) => {
+    const localNote = useDataStore
+      .getState()
+      .notes.find((n) => n.id === noteId);
+    if (localNote && localNote.content) {
+      return localNote.content;
+    }
+
+    const { data, error } = await supabase
+      .from('notes')
+      .select('content')
+      .eq('id', noteId)
+      .single();
+
+    if (error) {
+      console.error('노트 내용 로딩 실패:', error);
+      return null;
+    }
+
+    // 불러온 content로 dataStore 상태 업데이트
+    useDataStore
+      .getState()
+      .updateNoteState({ ...localNote, content: data.content });
+
+    return data.content;
+  }, []);
+
   const goalStats = useMemo(() => {
     if (!user || !notes) {
       return {
@@ -620,6 +647,7 @@ export const useNotes = () => {
     notes,
     loading,
     error,
+    fetchNoteContent,
     goalStats,
     updateUserGoals,
     addNote,
@@ -636,5 +664,6 @@ export const useNotes = () => {
     shareNoteWithTeam,
     unshareNoteWithTeam,
     getTeamsWithAccess,
+    
   };
 };
