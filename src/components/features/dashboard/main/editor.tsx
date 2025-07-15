@@ -442,7 +442,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     value={content}
                     onChange={(e) => {
                       setContent(e.target.value);
-                      // setIsDirty(true);
+                      setIsDirty(true);
                     }}
                     placeholder="
           내용을 입력하세요...

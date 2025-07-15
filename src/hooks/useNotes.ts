@@ -41,10 +41,14 @@ const getStartOfWeek = () => {
 export const useNotes = () => {
   const { user } = useAuthStore();
   const allNotes = useDataStore((state) => state.notes);
-  const { initialize, unsubscribeAll } = useDataStore.getState();
   const isInitialized = useDataStore((state) => state.isInitialized);
-  const { addNoteState } = useDataStore.getState();
-  const { removeNoteState } = useDataStore.getState();
+  const {
+    initialize,
+    unsubscribeAll,
+    addNoteState,
+    removeNoteState,
+    updateNoteState,
+  } = useDataStore.getState();
 
   const notes = useMemo(
     () => allNotes.filter((note) => note.owner_id === user?.id),
@@ -72,10 +76,17 @@ export const useNotes = () => {
   }, [user, initialize, unsubscribeAll, isInitialized]);
 
   const fetchNoteContent = useCallback(async (noteId: string) => {
+    // ✨ 이 함수는 이제 순수하게 데이터만 가져옵니다. 상태 업데이트 X
+
+    // 캐싱을 위해 로컬 스토어에 content가 이미 있는지 확인하는 로직은 유용합니다.
     const localNote = useDataStore
       .getState()
       .notes.find((n) => n.id === noteId);
-    if (localNote && localNote.content) {
+    if (
+      localNote &&
+      localNote.content !== undefined &&
+      localNote.content !== null
+    ) {
       return localNote.content;
     }
 
@@ -90,13 +101,11 @@ export const useNotes = () => {
       return null;
     }
 
-    // 불러온 content로 dataStore 상태 업데이트
-    useDataStore
-      .getState()
-      .updateNoteState({ ...localNote, content: data.content });
+    // ❗️❗️❗️ dataStore를 업데이트하던 로직을 완전히 제거합니다.
+    // updateNoteContent(noteId, data.content);
 
     return data.content;
-  }, []);
+  }, []); // 의존성 배열도 비워줍니다.
 
   const goalStats = useMemo(() => {
     if (!user || !notes) {
@@ -664,6 +673,5 @@ export const useNotes = () => {
     shareNoteWithTeam,
     unshareNoteWithTeam,
     getTeamsWithAccess,
-    
   };
 };
