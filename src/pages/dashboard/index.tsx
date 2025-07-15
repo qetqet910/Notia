@@ -6,6 +6,7 @@ import React, {
   useRef,
   Suspense,
   lazy,
+  useTransition,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { GoalProgress } from '@/components/features/dashboard/goalProgress';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
+import { useDataStore } from '@/stores/dataStore';
 // import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
 import {
   PlusCircle,
@@ -41,7 +43,10 @@ import {
 } from '@/components/ui/alert-dialog';
 
 import { EditorLoader } from '@/components/loader/EditorLoader';
-import { DashboardLoader } from '@/components/loader/DashboardLoader';
+import {
+  DashboardLoader,
+  MainSectionLoader,
+} from '@/components/loader/DashboardLoader';
 
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/noteList').then((module) => ({
@@ -109,16 +114,26 @@ export const Dashboard: React.FC = () => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState('notes');
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [isNoteContentLoading, setIsNoteContentLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [detailedNote, setDetailedNote] = useState<Note | null>(null);
+  const [isNoteContentLoading, setIsNoteContentLoading] = useState(false);
+
+  const [isContentLoading, setIsContentLoading] = useState(false);
+
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const selectedNote = useMemo(() => {
+    return notes.find((note) => note.id === selectedNoteId) || null;
+  }, [notes, selectedNoteId]);
+  const [isEditing, setIsEditing] = useState(false);
 
   const editorRef = useRef<{ save: () => void } | null>(null);
   const newlyCreatedNoteId = useRef<string | null>(null);
 
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [isActiveTab, setIsActiveTab] = useState(0);
+  const [isPending, startTransition] = useTransition();
+
   const activeTabs = useMemo(
     () => ['notes', 'reminder', 'calendar', 'timeline'],
     [],
@@ -159,39 +174,38 @@ export const Dashboard: React.FC = () => {
   }, [navigate, checkSession]);
 
   useEffect(() => {
-    if (selectedNote && !notes.some((note) => note.id === selectedNote.id)) {
-      setSelectedNote(null);
-      setIsEditing(false);
+    if (!selectedNoteId) {
+      setDetailedNote(null);
+      return;
     }
-  }, [notes, selectedNote]);
 
-  useEffect(() => {
-    if (selectedNote && selectedNote.id === newlyCreatedNoteId.current) {
-      setTimeout(() => {
-        setIsEditing(true);
-        newlyCreatedNoteId.current = null;
-      }, 50); // 짧은 딜레이로 안정성 확보
-    }
-  }, [selectedNote]);
+    const loadContent = async () => {
+      setIsContentLoading(true);
+
+      const noteMetadata = notes.find((n) => n.id === selectedNoteId);
+      if (!noteMetadata) {
+        setIsContentLoading(false);
+        return;
+      }
+
+      const content = await fetchNoteContent(selectedNoteId);
+
+      // ✅ 전역 상태가 아닌, Dashboard의 로컬 상태(detailedNote)만 업데이트합니다.
+      setDetailedNote({ ...noteMetadata, content: content || '' });
+      setIsContentLoading(false);
+    };
+
+    loadContent();
+  }, [selectedNoteId]);
 
   // --- 핸들러 함수들 ---
 
   const handleSelectNote = useCallback(
-    async (note: Note) => {
-      setSelectedNote(note);
-      setIsEditing(false);
-
-      if (!note.content) {
-        setIsNoteContentLoading(true);
-        const content = await fetchNoteContent(note.id);
-        // content가 포함된 완전한 노트 객체로 상태 업데이트
-        setSelectedNote({ ...note, content: content || '' });
-        setIsNoteContentLoading(false);
-      } else {
-        setSelectedNote(note);
-      }
+    (noteId: string) => {
+      if (selectedNoteId === noteId) return;
+      setSelectedNoteId(noteId);
     },
-    [fetchNoteContent],
+    [selectedNoteId],
   );
 
   const handleEnterEditMode = useCallback(() => {
@@ -211,7 +225,7 @@ export const Dashboard: React.FC = () => {
     });
     if (newNote) {
       newlyCreatedNoteId.current = newNote.id;
-      setSelectedNote(newNote);
+      setSelectedNoteId(newNote.id);
       setActiveTab('notes');
     }
   }, [addNote, session?.user?.id]);
@@ -371,8 +385,8 @@ export const Dashboard: React.FC = () => {
               )}
               <NoteList
                 notes={filteredNotes}
-                onSelectNote={handleSelectNote}
-                selectedNote={selectedNote}
+                onSelectNote={handleSelectNote} // ✅ ID를 넘겨주는 핸들러
+                selectedNoteId={selectedNoteId} // ✅ ID를 prop으로 전달
               />
             </div>
             <div
@@ -380,17 +394,17 @@ export const Dashboard: React.FC = () => {
                 isEditing ? 'w-full' : 'hidden md:block w-2/3'
               }`}
             >
-              {isNoteContentLoading ? (
+              {isPending ? (
                 <EditorLoader />
-              ) : selectedNote ? (
+              ) : detailedNote ? (
                 <Editor
-                  key={selectedNote.id}
-                  note={selectedNote}
-                  onSave={handleUpdateNote}
                   onDeleteRequest={() => setIsDeleteDialogOpen(true)}
+                  key={detailedNote.id} // ✅ key prop으로 완벽한 리렌더링 보장
+                  note={detailedNote}
                   isEditing={isEditing}
-                  onEnterEditMode={handleEnterEditMode}
-                  onCancelEdit={handleCancelEdit}
+                  onEnterEditMode={() => setIsEditing(true)}
+                  onCancelEdit={() => setIsEditing(false)}
+                  onSave={updateNote}
                 />
               ) : (
                 <EmptyNoteState handleCreateNote={handleCreateNote} />
@@ -407,9 +421,7 @@ export const Dashboard: React.FC = () => {
             onToggleEnable={updateReminderEnabled}
             onDelete={handleDeleteReminder} // 삭제는 기존 로직 유지
             onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
+              setSelectedNoteId(noteId);
               setActiveTab('notes');
             }}
           />
@@ -419,9 +431,7 @@ export const Dashboard: React.FC = () => {
           <Calendar
             notes={notes} // 캘린더는 노트와 리마인더 둘 다 필요
             onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
+              setSelectedNoteId(noteId);
               setActiveTab('notes');
             }}
           />
@@ -431,9 +441,7 @@ export const Dashboard: React.FC = () => {
           <TimelineView
             notes={notes} // 타임라인도 노트와 리마인더 둘 다 필요
             onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
+              setSelectedNoteId(noteId);
               setActiveTab('notes');
             }}
           />
@@ -488,7 +496,11 @@ export const Dashboard: React.FC = () => {
               isEditing={isEditing}
             />
           </div>
-          <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
+          <main className="flex-1 overflow-hidden">
+            <Suspense fallback={<MainSectionLoader />}>
+              {renderMainContent()}
+            </Suspense>
+          </main>
         </div>
       </div>
     </div>
