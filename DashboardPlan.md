@@ -79,6 +79,7 @@ Gemini CLI 로 Supabase, Vscode 정리하기
 UI 수정, 배포준비 O
 배포과정중 생긴 로직 오류 해결 
 노트 개별로 Content Lazy Loading 적용 O
+2시간동안 삽질하다가 끝남 ㅅㅂ
 LazyLoading 디버깅
 스켈레톤 로딩 컴포넌트 제작, 적용
 LazyLoading Loader Style 해결, O 각 페이지별 적절성 판단 여부 적용
