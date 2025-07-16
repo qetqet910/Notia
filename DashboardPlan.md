@@ -85,6 +85,15 @@ LazyLoading 디버깅
 LazyLoading Loader Style 해결, O 각 페이지별 적절성 판단 여부 적용
 Supabase RLS 최적화, Issue 해결, Lighthouse 개선 
 
+온보딩(Onboarding): 사용자가 처음 가입하고 대시보드에 들어왔을 때 무엇을 해야 할지 막막할 수 있습니다.
+첫 번째 환영 노트: 가입 시 "Notia에 오신 것을 환영합니다!"라는 제목의 안내 노트를 자동으로 생성해주면 좋습니다. 이 노트 안에 #태그와 @리마인더 사용법을 예시와 함께 적어두면 사용자가 기능을 자연스럽게 학습할 수 있습니다.
+main
+feature/dashboard
+feature/EnterService
+Dev
+feature/EnterService-QA
+Hotfix
+
 ---v 1.3.2
 
 Supabase Realtime Subscriptions Func팀 스페이스에 활용
