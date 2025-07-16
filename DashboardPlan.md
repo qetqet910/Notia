@@ -1,167 +1,112 @@
-#### 오늘/내일 할 것들
+# Notia Dashboard Plan
 
-```ruby
-Login Logic Complete O
-OAuth 로그인 성능이슈 해결 O
-AuthCallback Error / 성능이슈 해결 O
-이메일 없이 회원가입 로직 수정 O
+이 문서는 Notia 프로젝트의 개발 계획, 아이디어, 가이드라인을 관리합니다.
 
-IP 회원가입 제한 걸기 O
-로딩 UI들 정상화 Toast Message 재정비, 최적화 O
-Social Login할 때 로딩 설정하기 O
+---
 
-Darkmode, Light, System Mode, Classic Dark 개발 O
-플젝 파일구조 정리 O - types부터 이어서 하기 O
+![alt text](image.png)
 
-package.json 버전 문제 해결 X, bot 삭제 O
-Supabase 수정 및 개선 O
-사용자별 개인 노트 연결 및 생성, 삭제, 저장 O
+## 🎯 Action Items (진행중 / 예정)
 
-인기태그 디스플레이 O
-본래의 의미 강화 O - 페이지 통합 O (노트에 Reminder 기능 추가)
-Editor, NoteList 한 페이지로 통합 O
-@내일 3시 띄어쓰기 하면 안 됌 해결하기 O
+- [ ] **v1.3.2**
+    - [ ] Supabase Realtime Subscriptions을 팀 스페이스에 활용
+    - [ ] 팀 스페이스 생성 및 접근 레벨 설정 기능 구현
+    - [ ] 웹앱 및 모바일 환경 최적화
+- [ ] **리마인더 기능 고도화**
+    - [ ] 로컬 환경에서 ServiceWorker를 사용한 리마인더 기능 테스트
+    - [ ] Supabase Cron Job을 활용한 백그라운드 알림 기능 추가
+- [ ] **UI/UX 개선**
+    - [ ] 전반적인 UI 수정 및 배포 준비
+    - [ ] 온보딩 경험 개선
+        -   신규 가입 시 환영 노트 자동 생성 (기능 사용법 안내 포함)
+- [ ] **기타**
+    - [ ] Gemini CLI를 활용한 Supabase 및 VSCode 환경 정리
 
-index.ts 파일 타입으로 통합, 일단 Editor 호환성을 위해 EditorReminder Interface 생성 O
-editor regex 바꾸고 reminder crawling 실패중 해결 O
-오늘/내일탭 통합 지난 탭 추가 O
-@2025-12-25 1시 시간 없으면 제대로 안 들어감 O
-리마인더 UX 추가 1시는 PM 1시 O
+---
 
-완료된 리마인더 삭제 구현 O (노트에서도 리마인더, 구문 삭제 구현, 노트 다시 저장시 완료 리마인더 삭제 해결) *수정과 삭제, original_text 추가에 문제가 있음 삭제가 된다 안 된다는 그 다음 문제 = (수정, 삭제) 행동 반복 후 DB 데이터 증식 + Original_text allowd Null 에러 발생* O - 거의 키 로그인 만큼의 개빡이였다 - textarea를 md로 바꾸니까 고장남 씨ㅡ빨 O
+## ✅ Completed Tasks (완료)
 
-@내일 1시 - 오전 1시로 들어감 0붙이지 않는 이상 오후로 판정 등등의 오류 개선 O
-리마인더에도 카드 클릭시 노트로 돌아가기 O
-최근 리마인더에 내일, 모레 따로 구분하기 O
-에디터 리마인더 카드 가로 스크롤로 shadow, fadein, transition O
+- **인증 및 사용자 관리**
+    - [x] 로그인 로직 구현 완료
+    - [x] OAuth 로그인 성능 이슈 해결
+    - [x] AuthCallback 오류 및 성능 문제 해결
+    - [x] 이메일 없이 회원가입 로직 구현
+    - [x] IP 기반 회원가입 제한 기능
+    - [x] 소셜 로그인 시 로딩 상태 표시
+    - [x] Auth 계정 프로필 설정 제한
+    - [x] 익명 계정 이메일 표시 처리
+- **노트 및 에디터**
+    - [x] 사용자별 개인 노트 CRUD 및 저장 기능 구현
+    - [x] 에디터와 노트 목록 페이지 통합
+    - [x] 마크다운 에디터 도입 (코드 하이라이터 포함)
+    - [x] 노트 내용 Lazy Loading 적용 및 스켈레톤 UI 구현
+    - [x] 인기 태그 표시 기능
+    - [x] 태그 클릭 이벤트 구현
+- **리마인더**
+    - [x] 노트 내 리마인더 기능 추가 (`@시간`)
+    - [x] 리마인더 파싱 로직 개선 (오전/오후, 시간 형식 등)
+    - [x] 완료된 리마인더 삭제 및 노트 연동 처리
+    - [x] 리마인더 카드에서 원본 노트로 이동 기능
+    - [x] 리마인더 목록 가로 스크롤 UI 개선
+- **대시보드 및 페이지**
+    - [x] 캘린더 페이지 구현
+    - [x] 타임라인 페이지 구현
+    - [x] 마이페이지 구현 (프로필, 활동, 설정 탭 분리)
+    - [x] 도움말 페이지 및 부가 기능 구현
+    - [x] 단축키 시스템 구현 및 최적화
+- **아키텍처 및 리팩토링**
+    - [x] 다크/라이트/시스템/클래식 다크 모드 테마 구현
+    - [x] 프로젝트 파일 구조 정리 및 `index.ts`를 활용한 타입 통합
+    - [x] Supabase 스키마 수정 및 개선
+    - [x] `useNotes.ts` 훅을 `dataStore` 중앙 관리 방식으로 변경 (Supabase Realtime Subscriptions 활용)
+    - [x] 마이페이지 코드 리팩토링 및 컴포넌트 분리
+    - [x] Supabase RLS 최적화 및 Lighthouse 성능 개선
+- **기타**
+    - [x] 로딩 UI 및 Toast 메시지 시스템 최적화
+    - [x] 폰트 적용
+    - [x] 프로필 사진 업로드 기능 구현
+    - [x] 콘솔 에러 해결
 
-리마인더 완료 후 똑같은 내용의 노트 수정 시 다시 원상태로 돌아감, 리마인더 @1시간 이라면 수정할 때 기준 1시간으로 바뀜 - 이게 수정할 때도 다 지우고 수정하는 방식이라 그게 아니라 따로 처리를 해야할듯 - 성능 개선과 로직개선 필요 O
-에디터에서 리마인더 지우는 경우 삭제 로직 필요 O
-삭제할 때 ~~도 같이 삭제 O
+---
 
-현재는 리마인더 내용/이름 변경 - 다른 리마인더로 인식, text로 uuid라서 - 문제될 경우 바꾸는 걸로
+## 💡 Future Ideas (미래 아이디어)
 
-에디터 마크다운 도입 O
-에디터 코드 하이라이터 도입 O
-태그 클릭 이벤트 구현 O
-usePlan 관한 것 삭제 O
+- **개인 성장 일기:** 다마고치 스타일의 성장 요소 도입 (예: 썸원, 듀오링고 새)
+- **원격 노트 연동:** Obsidian 노트와 연동하는 아이디어
+- **폼 기능:** Google Forms 또는 Naver Form과 유사한 설문/폼 생성 기능 확장
 
-캘린더 페이지 구현 O
-타임라인 페이지 구현 O
-마이페이지 O
-설정페이지 구현 O
-도움말 페이지 구현 O
-단축키 구현, 추가 단축키 구현 및 최적화 O
+---
 
-도움말 페이지에 있는 부가 기능들 구현 O
-설정, 마이페이지 기능 구현 O
-캘린더 타임라인 완전 기능구현 O
-콘솔 에러 해결 O
-리마인더 오늘 기준 말고 시간 기준으로 넘기기 O
-타임라인 CreateAt이 reminderTime으로 바뀐듯 + 기능추가 O
-폰트 적용하기 O
-뱃지, 잔디 추가하기 O
+## 🛠️ Project Guidelines (프로젝트 가이드라인)
 
-myPage Todo 구현 - userProfile Table 관련 구현중 - 원래 방식 userProfile import로 개선하기 - O
-이거 하려고 Login, Create Table부터 다 바꾸는 중 O
-Auth 계정이면 프로필 설정 불가 추가 O
-MYpage anon 이메일 display 작업중 O
-MyPage 최적화, 리팩토링, 컴포넌트 분리 - 1440줄은 힘들다 O
-파일 전송 메인 에러 - Supabase Global Header application/json 으로 되어있었다 매우 조심할것 - 프사 완벽 구현 O
-실시간 반영 구현 O - Supabase Realtime Subscriptions 사용중 useNotes.ts 훅 폐지 dataStore에서 중앙집중 관리 구현중 O
- - 기존 구조 유지, 각 구조의 용이성을 살린 상태로 구현 O
-useNotes.ts, dataStore.ts 구현, 각 컴포넌트에 적용하기 - Note 적용 완료, 단축키 복구 및 Reminder까지 적용하기 - O
-TODO 구현 - O 나머지는 Team or Service Worker = 지금 못 하는 거
+### Commit Message Conventions
 
-Gemini CLI 로 Supabase, Vscode 정리하기
-리마인더 기능 구현 - Local 환경에서 ServiceWorker 확인 - AI실 노트북 로컬에서 테스트, Gemini - Supabase Cron 추가
+- `FIX`: 버그 수정
+- `FEAT`: 새로운 기능 추가
+- `CHORE`: 빌드, 설정 등 유지보수 작업
+- `DOCS`: 문서 변경
+- `STYLE`: 코드 스타일 수정 (로직 변경 없음)
+- `REFACTOR`: 코드 리팩토링
+- `TEST`: 테스트 추가 또는 수정
+- `PERF`: 성능 개선
+- `DESIGN`: 디자인 변경
 
-UI 수정, 배포준비 O
-배포과정중 생긴 로직 오류 해결 
-노트 개별로 Content Lazy Loading 적용 O
-2시간동안 삽질하다가 끝남 ㅅㅂ
-LazyLoading 디버깅
-스켈레톤 로딩 컴포넌트 제작, 적용
-LazyLoading Loader Style 해결, O 각 페이지별 적절성 판단 여부 적용
-Supabase RLS 최적화, Issue 해결, Lighthouse 개선 
+### Directory Structure
 
-온보딩(Onboarding): 사용자가 처음 가입하고 대시보드에 들어왔을 때 무엇을 해야 할지 막막할 수 있습니다.
-첫 번째 환영 노트: 가입 시 "Notia에 오신 것을 환영합니다!"라는 제목의 안내 노트를 자동으로 생성해주면 좋습니다. 이 노트 안에 #태그와 @리마인더 사용법을 예시와 함께 적어두면 사용자가 기능을 자연스럽게 학습할 수 있습니다.
-main
-feature/dashboard
-feature/EnterService
-Dev
-feature/EnterService-QA
-Hotfix
+- **`assets`**: 정적 리소스 (이미지, 아이콘, 애니메이션)
+- **`components`**: UI 컴포넌트
+    - `features`: 비즈니스 로직 포함한 기능 단위 컴포넌트
+    - `ui`: 재사용 가능한 순수 UI 컴포넌트 (Stateless)
+- **`hooks`**: 재사용 가능한 커스텀 React 훅
+- **`layouts`**: 페이지 레이아웃 (헤더, 푸터 등)
+- **`pages`**: 라우트에 매핑되는 페이지 컴포넌트
+- **`services`**: 외부 서비스 통신 로직 (API 호출 등)
+- **`stores`**: 전역 상태 관리 (Zustand)
+- **`styles`**: 전역 스타일 및 테마
+- **`types`**: TypeScript 타입 정의
+- **`utils`**: 유틸리티 함수
+- **`public`**: 서비스 워커, 매니페스트, 파비콘 등 정적 파일
 
----v 1.3.2
+### Architecture Pattern
 
-Supabase Realtime Subscriptions Func팀 스페이스에 활용
-팀스페이스 생성, 접근 레벨 설정
-웹앱, 모바일 환경 구현
-
-```
-
-====================================================================<br/>
-
-Personal Growth Diary 다마고치(썸원, 듀오링고 새) 키우미<br/>
-Remote Obsidian note idea<br/>
-google form or naver form 같은 기능 확장으로 추가 <br/>
-
-====================================================================<br/>
-
-FIX: - 버그 수정 시<br/>
-FEAT: - 새로운 기능 추가 시<br/>
-CHORE: - 유지보수 및 설정 변경 시<br/>
-DOCS: - 문서 변경 시<br/>
-STYLE: - 코드 스타일 수정 시 (로직 변경 없음)<br/>
-REFACTOR: - 리팩토링 (기능 변경 없이 코드 구조 개선)<br/>
-TEST: - 테스트 추가 또는 수정 시<br/>
-PERF - 성능 개선<br/>
-DESIGN - 디자인 변경<br/>
-
-====================================================================<br/><br/>
-
-assets: 정적 리소스를 저장
-이미지, 아이콘, 애니메이션 등 미디어 파일<br/>
-
-components: UI 요소들을 저장
-features: 비즈니스 로직을 포함한 특정 기능 컴포넌트
-ui: 재사용 가능한 순수 UI 컴포넌트 (stateless)
-
-config: 환경 설정 관련 파일
-API 엔드포인트, 환경 변수, 상수 등
-
-hooks: 커스텀 React 훅
-재사용 가능한 상태 로직과 사이드 이펙트
-
-layouts: 페이지 레이아웃 컴포넌트
-헤더, 푸터, 사이드바, 네비게이션 바 등
-
-pages: 라우트에 매핑되는 페이지 컴포넌트
-각 URL 경로에 해당하는 최상위 컴포넌트
-
-services: 외부 서비스와의 통신 로직
-API 호출, 데이터 가공, 인증 서비스 등
-
-stores: 상태 관리 로직
-Zustand, Redux, Context API 등의 상태 저장소
-
-styles: 전역 스타일 및 테마 관련 파일
-글로벌 CSS, 테마 변수, 믹스인 등
-
-types: 타입스크립트 타입 정의
-인터페이스, 타입, 열거형 등
-
-utils: 유틸리티 함수
-날짜 포맷팅, 문자열 처리, 수학 함수 등
-
-public: 정적 파일
-서비스 워커, 매니페스트, 파비콘, 아이콘 등
-<br/><br/>
-
-```js
-전체적인 구조 패턴
-이 구조는 주로 **기능 중심 아키텍처(Feature-oriented Architecture)**로 구성되어 있으며, 이는 대규모 프로젝트에서 기능별로 코드를 분리하여 유지보수성을 높이는 데 효과적입니다. 또한 아토믹 디자인 시스템(Atomic Design System) 원칙을 UI 컴포넌트에 적용하고 있는 것으로 보입니다.
-이러한 구조는 확장성이 좋고, 새로운 개발자가 프로젝트에 쉽게 적응할 수 있으며, 기능별로 분리되어 있어 코드의 응집도를 높이고 결합도를 낮추는 데 도움이 됩니다.
-```
+이 프로젝트는 **기능 중심 아키텍처 (Feature-oriented Architecture)**를 기반으로 합니다. 기능별로 코드를 분리하여 유지보수성을 높이고, UI 컴포넌트는 **아토믹 디자인 시스템 (Atomic Design System)** 원칙을 따릅니다. 이 구조는 확장성이 뛰어나고 코드의 응집도를 높여 폴더 구조의 진입장벽을 낮추고, 쉽게 이해할 수 있도록 합니다.

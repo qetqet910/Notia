@@ -1,13 +1,15 @@
 {
-  "name": "Amnesia",
+  "name": "Notia",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20.10.0"
+      "version": "lts"
     }
   },
   "forwardPorts": [5173],
-  "postCreateCommand": "npm install",
+
+  "postCreateCommand": "npm install && echo \"alias treex='tree -I \\\"node_modules|dist|.git|.vscode|.devcontainer|coverage\\\"'\" >> ~/.bashrc",
+
   "customizations": {
     "vscode": {
       "extensions": [
@@ -18,6 +20,5 @@
         "akamud.vscode-theme-onedark"
       ]
     }
-  },
-  "initializeCommand": "/bin/bash -c 'echo \"alias treex=\\\"tree -I \\'node_modules|dist|.git|.vscode|.devcontainer|coverage\\'\\\"\" >> ~/.bashrc'"
+  }
 }
