@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Notia",
+  "version": "1.2.1",
+  "description": "마크다운, #태그, @리마인더로 생각을 정리하고, 중요한 약속을 관리하는 가장 가볍고 빠른 생산성 도구입니다.",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "permissions": ["activeTab"],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

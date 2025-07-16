@@ -1,0 +1,44 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 환경 변수
+.env
+.env.local.
+.env.*.local
+.env.development
+.env.production
+.gemini
+
+# 빌드 및 출력 파일
+out/
+build/
+coverage/
+
+# OS/IDE 파일
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+.vite-cache/
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+debug.dev.md
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

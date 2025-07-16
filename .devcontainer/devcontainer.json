@@ -1,0 +1,23 @@
+{
+  "name": "Amnesia",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20.10.0"
+    }
+  },
+  "forwardPorts": [5173],
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "PKief.material-icon-theme",
+        "akamud.vscode-theme-onedark"
+      ]
+    }
+  },
+  "initializeCommand": "/bin/bash -c 'echo \"alias treex=\\\"tree -I \\'node_modules|dist|.git|.vscode|.devcontainer|coverage\\'\\\"\" >> ~/.bashrc'"
+}
