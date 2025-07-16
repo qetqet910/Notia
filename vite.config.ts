@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import path from 'path';
 import { visualizer } from 'rollup-plugin-visualizer'; // ✨ 추가
+import path from 'path';
 
 export default defineConfig({
   cacheDir: '.vite-cache',
@@ -20,10 +20,11 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    visualizer({ // ✨ 추가
-      open: true, // 빌드 시 자동으로 분석 결과 페이지를 엽니다.
-      filename: 'bundle-analysis.html', // 분석 결과 파일명
-    }),
+    // visualizer({
+    //   // ✨ 추가
+    //   open: true, // 빌드 시 자동으로 분석 결과 페이지를 엽니다.
+    //   filename: 'bundle-analysis.html', // 분석 결과 파일명
+    // }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
