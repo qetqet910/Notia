@@ -55,13 +55,13 @@ export const useNotes = () => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // 사용자가 있고, 아직 데이터 스토어가 초기화되지 않았을 때만 '전체 로딩'을 수행합니다.
     if (user && !isInitialized) {
       setLoading(true);
       initialize(user.id).finally(() => setLoading(false));
-    } else if (!user) {
-      setLoading(false);
     } else {
-      // user && isInitialized
+      // 그 외의 모든 경우 (사용자가 없거나, 이미 초기화되었거나, user 객체 참조만 바뀐 경우)
+      // 로딩 상태를 false로 유지하여 불필요한 전체 화면 로딩을 방지합니다.
       setLoading(false);
     }
 
@@ -69,7 +69,7 @@ export const useNotes = () => {
     return () => {
       unsubscribeAll();
     };
-  }, [user, initialize, unsubscribeAll, isInitialized]);
+  }, [user?.id, isInitialized, initialize, unsubscribeAll]);
 
   const fetchNoteContent = useCallback(async (noteId: string) => {
     const localNote = useDataStore

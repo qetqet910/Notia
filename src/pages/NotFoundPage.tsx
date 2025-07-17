@@ -1,9 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const NotFound: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-white to-[#e6f7f2] p-4">
       <div className="text-center max-w-md">
@@ -20,24 +22,23 @@ export const NotFound: React.FC = () => {
           <Button 
             variant="outline" 
             className="flex items-center gap-2 border-[#61C9A8] text-[#61C9A8] hover:bg-[#e6f7f2]"
-            onClick={() => window.history.back()}
+            onClick={() => navigate(-1)}
           >
             <ArrowLeft size={16} />
             이전 페이지로
           </Button>
           
-          <Link to="/">
-            <Button className="flex items-center gap-2 bg-[#61C9A8] hover:bg-[#4db596] w-full sm:w-auto">
+          
+            <Button onClick={() => navigate('/')} className="flex items-center gap-2 bg-[#61C9A8] hover:bg-[#4db596] w-full sm:w-auto">
               <Home size={16} />
               홈으로 이동
             </Button>
-          </Link>
         </div>
       </div>
       
       <div className="mt-12 text-center">
         <p className="text-gray-500 text-sm">
-          도움이 필요하시면 <a href="mailto:support@example.com" className="text-[#61C9A8] hover:underline">고객센터</a>로 문의해주세요.
+          도움이 필요하시면 <a href="mailto:haemmin48@gmail.com" className="text-[#61C9A8] hover:underline">고객센터</a>로 문의해주세요.
         </p>
       </div>
     </div>

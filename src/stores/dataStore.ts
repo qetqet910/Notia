@@ -130,7 +130,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           handleChange,
         )
         .subscribe();
-      const groupMemberrhsChannel = supabase
+      const groupMembersChannel = supabase
         .channel('realtime-group-members')
         .on(
           'postgres_changes',

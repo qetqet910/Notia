@@ -40,8 +40,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-import { EditorLoader } from '@/components/loader/EditorLoader';
 import { DashboardLoader } from '@/components/loader/DashboardLoader';
+import { EditorLoader } from '@/components/loader/EditorLoader';
+import { ReminderLoader } from '@/components/loader/ReminderLoader';
+import { CalendarLoader } from '@/components/loader/CalendarLoader';
+import { TimelineLoader } from '@/components/loader/TimelineLoader';
+import { NoteListLoader } from '@/components/loader/NoteListLoader';
 
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/noteList').then((module) => ({
@@ -352,91 +356,100 @@ export const Dashboard: React.FC = () => {
                 isEditing ? 'w-0 opacity-0' : 'w-full md:w-1/3'
               }`}
             >
-              {selectedTag && (
-                <div className="p-3 bg-muted border-b">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">
-                      #{selectedTag} 필터링 중
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedTag(null)}
-                      className="h-6 w-6 p-0"
-                    >
-                      ✕
-                    </Button>
+              <Suspense fallback={<NoteListLoader />}>
+                {selectedTag && (
+                  <div className="p-3 bg-muted border-b">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">
+                        #{selectedTag} 필터링 중
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedTag(null)}
+                        className="h-6 w-6 p-0"
+                      >
+                        ✕
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-              <NoteList
-                notes={filteredNotes}
-                onSelectNote={handleSelectNote}
-                selectedNote={selectedNote}
-              />
+                )}
+                <NoteList
+                  notes={filteredNotes}
+                  onSelectNote={handleSelectNote}
+                  selectedNote={selectedNote}
+                />
+              </Suspense>
             </div>
             <div
               className={`h-full transition-all duration-300 ease-in-out ${
                 isEditing ? 'w-full' : 'hidden md:block w-2/3'
               }`}
             >
-              {isNoteContentLoading ? (
-                <EditorLoader />
-              ) : selectedNote ? (
-                <Editor
-                  key={selectedNote.id}
-                  note={selectedNote}
-                  onSave={handleUpdateNote}
-                  onDeleteRequest={() => setIsDeleteDialogOpen(true)}
-                  isEditing={isEditing}
-                  onEnterEditMode={handleEnterEditMode}
-                  onCancelEdit={handleCancelEdit}
-                />
-              ) : (
-                <EmptyNoteState handleCreateNote={handleCreateNote} />
-              )}
+              <Suspense fallback={<EditorLoader />}>
+                {isNoteContentLoading ? (
+                  <EditorLoader />
+                ) : selectedNote ? (
+                  <Editor
+                    key={selectedNote.id}
+                    note={selectedNote}
+                    onSave={handleUpdateNote}
+                    onDeleteRequest={() => setIsDeleteDialogOpen(true)}
+                    isEditing={isEditing}
+                    onEnterEditMode={handleEnterEditMode}
+                    onCancelEdit={handleCancelEdit}
+                  />
+                ) : (
+                  <EmptyNoteState handleCreateNote={handleCreateNote} />
+                )}
+              </Suspense>
             </div>
           </div>
         );
       case 'reminder':
         return (
-          <ReminderView
-            reminders={allReminders}
-            // ✅ props를 새로운 함수로 교체합니다.
-            onToggleComplete={updateReminderCompletion}
-            onToggleEnable={updateReminderEnabled}
-            onDelete={handleDeleteReminder} // 삭제는 기존 로직 유지
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
+          <Suspense fallback={<ReminderLoader />}>
+            <ReminderView
+              reminders={allReminders}
+              onToggleComplete={updateReminderCompletion}
+              onToggleEnable={updateReminderEnabled}
+              onDelete={handleDeleteReminder}
+              onOpenNote={(noteId) => {
+                const noteToOpen =
+                  notes.find((note) => note.id === noteId) || null;
+                setSelectedNote(noteToOpen);
+                setActiveTab('notes');
+              }}
+            />
+          </Suspense>
         );
       case 'calendar':
         return (
-          <Calendar
-            notes={notes} // 캘린더는 노트와 리마인더 둘 다 필요
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
+          <Suspense fallback={<CalendarLoader />}>
+            <Calendar
+              notes={notes}
+              onOpenNote={(noteId) => {
+                const noteToOpen =
+                  notes.find((note) => note.id === noteId) || null;
+                setSelectedNote(noteToOpen);
+                setActiveTab('notes');
+              }}
+            />
+          </Suspense>
         );
       case 'timeline':
         return (
-          <TimelineView
-            notes={notes} // 타임라인도 노트와 리마인더 둘 다 필요
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
+          <Suspense fallback={<TimelineLoader />}>
+            <TimelineView
+              notes={notes}
+              onOpenNote={(noteId) => {
+                const noteToOpen =
+                  notes.find((note) => note.id === noteId) || null;
+                setSelectedNote(noteToOpen);
+                setActiveTab('notes');
+              }}
+            />
+          </Suspense>
         );
       default:
         return null;

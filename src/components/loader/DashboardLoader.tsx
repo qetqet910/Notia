@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { NoteListLoader } from '@/components/loader/NoteListLoader';
-import { Loader2 } from 'lucide-react';
+import { EmptyEditorLoader } from '@/components/loader/EditorLoader';
 
 const HeaderLoader = () => {
   return (
@@ -42,15 +42,6 @@ const SidebarLoader = () => {
   );
 };
 
-const EmptyEditorLoader = () => {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <Skeleton className="h-5 w-64" />
-      <Skeleton className="h-9 w-28 rounded-md" />
-    </div>
-  );
-};
-
 export const DashboardLoader = () => {
   return (
     <div className="flex flex-col h-screen">
@@ -64,14 +55,6 @@ export const DashboardLoader = () => {
           <EmptyEditorLoader />
         </main>
       </div>
-    </div>
-  );
-};
-
-export const MainSectionLoader = () => {
-  return (
-    <div className="flex flex-col h-screen justify-center items-center">
-      <Loader2 className="h-48 w-48 animate-spin text-primary" />
     </div>
   );
 };

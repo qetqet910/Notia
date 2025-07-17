@@ -91,7 +91,7 @@ export const useAuth = () => {
     };
 
     initializeAuth();
-  }, [checkSession, restoreSession, store.isAuthenticated]);
+  }, []);
 
   return {
     // 상태
