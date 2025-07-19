@@ -70,9 +70,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const { permission, requestPermission } = useNotificationPermission();
 
   useEffect(() => {
-    if (permission === 'denied') {
-      setReminderNotifications(false);
-    }
+    setReminderNotifications(permission === 'granted');
   }, [permission]);
 
   const handleReminderToggle = useCallback(

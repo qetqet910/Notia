@@ -23,7 +23,7 @@ export default defineConfig({
     // visualizer({
     //   // ✨ 추가
     //   open: true, // 빌드 시 자동으로 분석 결과 페이지를 엽니다.
-    //   filename: 'bundle-analysis.html', // 분석 결과 파일명
+    //   filename: 'dist/bundle-analysis.html', // 분석 결과 파일명
     // }),
     VitePWA({
       registerType: 'autoUpdate',

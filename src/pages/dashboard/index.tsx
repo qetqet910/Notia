@@ -17,6 +17,7 @@ import { GoalProgress } from '@/components/features/dashboard/goalProgress';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
+import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 // import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
 import {
   PlusCircle,
@@ -108,6 +109,7 @@ export const Dashboard: React.FC = () => {
     updateReminderEnabled,
     fetchNoteContent,
   } = useNotes();
+  const { permission, requestPermission } = useNotificationPermission();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -161,6 +163,12 @@ export const Dashboard: React.FC = () => {
     };
     initializeAuth();
   }, [navigate, checkSession]);
+
+  useEffect(() => {
+    if (permission === 'default') {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
 
   useEffect(() => {
     if (selectedNote && !notes.some((note) => note.id === selectedNote.id)) {
@@ -269,8 +277,9 @@ export const Dashboard: React.FC = () => {
       const shortcuts: { [key: string]: (isCtrlCmd?: boolean) => void } = {
         n: () => handleCreateNote(),
         s: (isCtrlCmd) => {
-          if (isCtrlCmd && isEditing && editorRef.current)
+          if (isCtrlCmd && isEditing && editorRef.current) {
             editorRef.current.save();
+          }
         },
         '/': () => navigate('/dashboard/help?tab=overview'),
         '?': () => navigate('/dashboard/help?tab=overview'),
@@ -330,7 +339,7 @@ export const Dashboard: React.FC = () => {
     switch (activeTab) {
       case 'notes':
         return (
-          <div className="flex h-full">
+          <div className="flex h-full overflow-hidden">
             <AlertDialog
               open={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
@@ -391,6 +400,7 @@ export const Dashboard: React.FC = () => {
                   <EditorLoader />
                 ) : selectedNote ? (
                   <Editor
+                    ref={editorRef}
                     key={selectedNote.id}
                     note={selectedNote}
                     onSave={handleUpdateNote}

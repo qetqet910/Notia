@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserProfile } from '@/components/features/dashboard/userProfile'; // Assuming this is an existing component
+import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { Toaster } from '@/components/ui/toaster';
+import { DashboardHeader } from '@/components/layout/dashboardHeader';
 import { useToast } from '@/hooks/useToast';
 import { useNotes } from '@/hooks/useNotes';
 import { useAuthStore } from '@/stores/authStore';
@@ -346,32 +347,9 @@ export const MyPage: React.FC = () => {
       <div className="flex flex-col h-full bg-background text-foreground">
         <Toaster />
 
-        <header className="flex justify-between items-center px-4 py-3 border-b border-border flex-shrink-0">
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="mr-2"
-              onClick={handleBackUrl}
-              aria-label="대시보드로 돌아가기"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl font-bold text-primary">
-              <img
-                src={logoSrc}
-                className="max-w-40 cursor-pointer transition-transform duration-200"
-                alt="로고"
-                onClick={handleBackUrl}
-              />
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <UserProfile />
-          </div>
-        </header>
+        <DashboardHeader />
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 mt-14">
           <div className="container mx-auto p-6 max-w-4xl">
             <Tabs
               value={tab}

@@ -17,8 +17,8 @@ const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Login = lazy(() => import('@/pages/_auth/Login'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
-const HelpPage = lazy(() => import('@/pages/dashboard/help'));
-const MyPage = lazy(() => import('@/pages/dashboard/myPage'));
+import HelpPage from '@/pages/dashboard/help';
+import MyPage from '@/pages/dashboard/myPage';
 
 import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
@@ -78,9 +78,7 @@ function App() {
             path="/dashboard/myPage"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<MyPageLoader />}>
-                  <MyPage />
-                </Suspense>
+                <MyPage />
               </ProtectedRoute>
             }
           />
@@ -88,9 +86,7 @@ function App() {
             path="/dashboard/help"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<MyPageLoader />}>
-                  <HelpPage />
-                </Suspense>
+                <HelpPage />
               </ProtectedRoute>
             }
           />

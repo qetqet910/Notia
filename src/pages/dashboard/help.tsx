@@ -41,6 +41,7 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
+import { DashboardHeader } from '@/components/layout/dashboardHeader';
 
 export const HelpPage: React.FC = () => {
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
@@ -220,32 +221,9 @@ graph TD;
       }`}
     >
       <div className="flex flex-col h-full bg-background text-foreground">
-        {/* 헤더 */}
-        <header className="flex justify-between items-center px-4 py-3 border-b border-border flex-shrink-0">
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBackUrl}
-              className="mr-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl font-bold text-primary">
-              <img
-                src={logoSrc || '/placeholder.svg'}
-                className="max-w-40 cursor-pointer"
-                alt="로고"
-              />
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <UserProfile />
-          </div>
-        </header>
+        <DashboardHeader />
 
-        {/* 메인 콘텐츠 */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 mt-14">
           <div className="container mx-auto p-4 max-w-4xl">
             <Tabs
               value={tab}
@@ -322,8 +300,8 @@ graph TD;
                   ))}
                 </div>
 
-                {/* 사용자 리뷰 */}
                 <Card>
+                  {/*
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <MessageCircle className="h-5 w-5" />
@@ -413,7 +391,7 @@ graph TD;
                         리뷰)
                       </p>
                     </div>
-                  </CardContent>
+                  </CardContent> */}
                 </Card>
 
                 {/* 통계 */}
@@ -428,25 +406,16 @@ graph TD;
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="text-center">
                         <div className="text-3xl font-bold text-blue-500 mb-2">
-                          99%
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          사용자 만족도
+                          쉽고 빠른 기록
                         </div>
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-green-500 mb-2">
-                          99%
-                        </div>
-                        <div className="text-sm text-muted-foreground">
                           생산성 향상
                         </div>
                       </div>
                       <div className="text-center">
                         <div className="text-3xl font-bold text-purple-500 mb-2">
-                          24/7
-                        </div>
-                        <div className="text-sm text-muted-foreground">
                           언제든 접근 가능
                         </div>
                       </div>

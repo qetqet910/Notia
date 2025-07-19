@@ -26,7 +26,7 @@
 2.  React는 `lazy` 컴포넌트의 코드를 로드하는 동안 렌더링을 **일시 중단(suspend)** 합니다.
 3.  렌더링이 중단되면, React는 가장 가까운 상위 `Suspense` 컴포넌트를 찾아 `fallback` UI를 렌더링합니다.
 4.  **문제의 핵심**: `dashboard/index.tsx`의 `notes` 탭 내부에는 `NoteList`와 `Editor`를 감싸는 개별 `Suspense` 경계가 없었습니다.
-5.  따라��� 렌더링 중단 이벤트는 부모로, 또 그 부모로 계속 전파되다가, 결국 최상위인 `App.tsx`에 설정된 `<Suspense fallback={<DashboardLoader />}>`에 도달했습니다.
+5.  따라서 렌더링 중단 이벤트는 부모로, 또 그 부모로 계속 전파되다가, 결국 최상위인 `App.tsx`에 설정된 `<Suspense fallback={<DashboardLoader />}>`에 도달했습니다.
 6.  이로 인해 React는 `DashboardLoader`를 렌더링했고, 사용자 입장에서는 마치 대시보드 전체가 다시 로드되는 것처럼 보이게 된 것입니다.
 
 ## 4. 해결책

@@ -155,7 +155,7 @@ export const Calendar: React.FC<CalendarProps> = ({ notes, onOpenNote }) => {
                   className={`text-xs p-1 rounded truncate ${
                     event.completed
                       ? 'bg-muted text-muted-foreground line-through'
-                      : 'bg-primary/20 text-primary-foreground'
+                      : 'bg-primary/20 text-muted-foreground'
                   }`}
                   title={event.reminder_text}
                 >

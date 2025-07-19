@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Header } from '@/layout/header';
-import { Footer } from '@/layout/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 
 import landing1 from '@/assets/images/landing/landing1.png';
 import landing2 from '@/assets/images/landing/landing2.png';

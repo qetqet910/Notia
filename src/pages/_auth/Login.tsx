@@ -20,7 +20,6 @@ import { useToast } from '@/hooks/useToast';
 import { generateRandomKey, formatKey } from '@/utils/keyValidation';
 
 import logoImage from '@/assets/images/Logo.png';
-import animation from '@/assets/data/loginAnimation.lottie';
 
 // 애니메이션 변수들
 const animations = {
@@ -600,7 +599,7 @@ export const Login: React.FC = () => {
           }}
         >
           <DotLottieReact
-            src={animation}
+            src="/loginAnimation.lottie"
             loop
             autoplay
             className="drop-shadow-xl w-full h-full transform scale-150"
