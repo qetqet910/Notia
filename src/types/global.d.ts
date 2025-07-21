@@ -1,8 +1,17 @@
-declare const chrome: any;
-declare const browser: any;
+/// <reference types="chrome" />
+
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
 
 interface Window {
-  deferredInstallPrompt: any;
+  deferredInstallPrompt: BeforeInstallPromptEvent | null;
+  browser?: typeof chrome;
 }
 
 interface ImportMetaEnv {

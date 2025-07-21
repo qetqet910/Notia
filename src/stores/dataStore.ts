@@ -32,7 +32,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set((state) => ({
       notes: state.notes.map((note) => ({
         ...note,
-        reminders: (note.reminders || []).map((r: any) =>
+        reminders: (note.reminders || []).map((r) =>
           r.id === reminderId ? { ...r, ...updates } : r,
         ),
       })),
@@ -71,16 +71,16 @@ export const useDataStore = create<DataState>((set, get) => ({
         return;
       }
 
-      const formattedNotes = data.map((note: any) => ({
+      const formattedNotes = data.map((note) => ({
         ...note,
         createdAt: new Date(note.created_at),
         updatedAt: new Date(note.updated_at),
-        reminders: (note.reminders || []).map((r: any) => ({
+        reminders: (note.reminders || []).map((r) => ({
           ...r,
           date: new Date(r.reminder_time),
         })),
       }));
-      set({ notes: formattedNotes });
+      set({ notes: formattedNotes as Note[] });
     } catch (err) {
       console.error('Initialization failed:', err);
       set({ isInitialized: false });

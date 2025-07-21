@@ -1,31 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/services/supabaseClient';
-
-interface Team {
-  id: string;
-  name: string;
-  key: string;
-  owner_id: string;
-  created_at: string;
-  settings?: any;
-  description?: string;
-  icon?: string;
-}
-
-interface TeamMember {
-  id: string;
-  group_id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
-  joined_at: string;
-  group_name?: string;
-  userProfile?: {
-    displayName?: string;
-    avatarUrl?: string;
-    email?: string;
-  };
-}
+import type { Team, TeamMember } from '@/types';
 
 interface TeamState {
   teams: Team[];
@@ -61,38 +36,19 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   error: null,
 
   fetchTeams: async () => {
+    set({ isLoading: true });
     try {
-      set({ isLoading: true });
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('인증된 사용자가 없습니다');
 
-      // 사용자가 속한 그룹 가져오기
       const { data, error } = await supabase
         .from('group_members')
-        .select(
-          `
-          group_id,
-          user_groups:group_id(id, name, key, description, icon, owner_id, created_at, settings)
-        `,
-        )
+        .select('user_groups(*)')
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      const teams = data.map((item) => ({
-        id: item.user_groups.id,
-        name: item.user_groups.name,
-        key: item.user_groups.key,
-        owner_id: item.user_groups.owner_id,
-        created_at: item.user_groups.created_at,
-        settings: item.user_groups.settings,
-        description: item.user_groups.description,
-        icon: item.user_groups.icon,
-      }));
-
+      const teams = data.map((item) => item.user_groups).filter(Boolean) as unknown as Team[];
       set({ teams, isLoading: false });
     } catch (err) {
       console.error('팀 로드 중 오류 발생:', err);
@@ -101,121 +57,66 @@ export const useTeamStore = create<TeamState>((set, get) => ({
   },
 
   setCurrentTeam: async (teamId) => {
-    try {
-      if (!teamId) {
-        set({ currentTeam: null, teamMembers: [] });
-        return;
-      }
+    if (!teamId) {
+      set({ currentTeam: null, teamMembers: [] });
+      return;
+    }
 
+    set({ isLoading: true });
+    try {
       const { teams } = get();
       const team = teams.find((t) => t.id === teamId);
-
       if (!team) throw new Error('팀을 찾을 수 없습니다');
 
-      // 팀 멤버 로드
       const { data, error } = await supabase
         .from('group_members')
-        .select(
-          `
-          id,
-          user_id,
-          group_id,
-          role,
-          joined_at,
-          created_at,
-          group_name
-        `,
-        )
+        .select('*, user_profiles(display_name, avatar_url, email)')
         .eq('group_id', teamId);
 
       if (error) throw error;
 
-      // 사용자 프로필 정보 가져오기 (별도 쿼리)
-      const userIds = data.map((member) => member.user_id);
-      const { data: userProfiles, error: profileError } = await supabase
-        .from('user_profile')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
+      const members = data.map(item => ({
+        ...item,
+        userProfile: item.user_profiles ? {
+          displayName: item.user_profiles.display_name,
+          avatarUrl: item.user_profiles.avatar_url,
+          email: item.user_profiles.email,
+        } : undefined,
+      })) as TeamMember[];
 
-      if (profileError) console.warn('사용자 프로필 로드 오류:', profileError);
-
-      const members = data.map((item) => {
-        const profile = userProfiles?.find((p) => p.user_id === item.user_id);
-
-        return {
-          id: item.id,
-          user_id: item.user_id,
-          group_id: item.group_id,
-          role: item.role,
-          joined_at: item.joined_at,
-          created_at: item.created_at,
-          group_name: item.group_name,
-          userProfile: profile
-            ? {
-                displayName: profile.display_name,
-                avatarUrl: profile.avatar_url,
-              }
-            : undefined,
-        };
-      });
-
-      set({ currentTeam: team, teamMembers: members });
+      set({ currentTeam: team, teamMembers: members, isLoading: false });
     } catch (err) {
       console.error('팀 설정 중 오류 발생:', err);
-      set({ error: err as Error });
+      set({ error: err as Error, isLoading: false });
     }
   },
 
-  createTeam: async (name) => {
+  createTeam: async (name: string) => {
+    set({ isLoading: true });
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('인증된 사용자가 없습니다');
 
-      // 랜덤 키 생성
-      const key = Math.random().toString(36).substring(2, 10);
-
-      // 팀 생성
-      const { data, error } = await supabase
+      const { data: newTeam, error } = await supabase
         .from('user_groups')
-        .insert([
-          {
-            name,
-            owner_id: user.id,
-            key,
-            created_at: new Date().toISOString(),
-          },
-        ])
-        .select();
+        .insert({ name, owner_id: user.id })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // 생성자를 멤버로 추가
-      await supabase.from('group_members').insert([
-        {
-          group_id: data[0].id,
-          user_id: user.id,
-          role: 'admin',
-          joined_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          group_name: name,
-        },
-      ]);
+      await supabase.from('group_members').insert({
+        group_id: newTeam.id,
+        user_id: user.id,
+        role: 'admin',
+        group_name: name,
+      });
 
-      const newTeam = {
-        id: data[0].id,
-        name: data[0].name,
-        key: data[0].key,
-        owner_id: data[0].owner_id,
-        created_at: data[0].created_at,
-      };
-
-      set((state) => ({ teams: [...state.teams, newTeam] }));
-      return newTeam;
+      set((state) => ({ teams: [...state.teams, newTeam], isLoading: false }));
+      return newTeam as Team;
     } catch (err) {
       console.error('팀 생성 중 오류 발생:', err);
-      set({ error: err as Error });
+      set({ error: err as Error, isLoading: false });
       return null;
     }
   },

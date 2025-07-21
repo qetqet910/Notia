@@ -20,7 +20,6 @@ export default function TermsAgreement() {
   const from = location.state?.from?.pathname || '/';
 
   const handleAgreement = async () => {
-    // isTermsLoading 상태를 이미 store에서 관리하므로, 별도 setIsLoading은 필요 없음
     try {
       const { success, error } = await updateTermsAgreement();
       if (success) {
@@ -30,12 +29,13 @@ export default function TermsAgreement() {
         });
         navigate(from, { replace: true });
       } else {
-        throw new Error(typeof error === 'string' ? error : '약관 동의 중 오류가 발생했습니다.');
+        throw error || new Error('약관 동의 중 오류가 발생했습니다.');
       }
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as Error;
       toast({
         title: '오류',
-        description: err.message || '약관 동의에 실패했습니다. 다시 시도해주세요.',
+        description: error.message || '약관 동의에 실패했습니다. 다시 시도해주세요.',
         variant: 'destructive',
       });
     }

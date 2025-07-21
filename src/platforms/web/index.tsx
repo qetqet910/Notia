@@ -1,54 +1,54 @@
-export default async function initWeb() {
-  console.log('1️⃣ initWeb Executed');
-  // TODO: 배포환경 서비스워커 테스트 - 리마인더 유지 기능
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from '@/App';
+import '@/styles/global.css';
 
-  // if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
-  //   const registerSW = () => {
-  //     navigator.serviceWorker
-  //       .register('/service-worker.js', {
-  //         type: 'module',
-  //         scope: './',
-  //       })
-  //       // .then((registration) => {
-  //       //   console.log('✅ Service Worker 등록 완료:', registration.scope);
-  //       // })
-  //       // .catch((error) => {
-  //       //   console.log('❌ Service Worker 등록 실패:', error);
-  //       // });
-  //   };
+const init = () => {
+  // PWA 설치 프롬프트 로직
+  let deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
 
-  //   if (document.readyState === 'complete') {
-  //     // 이미 로드된 상태면 바로 등록
-  //     registerSW();
-  //   } else {
-  //     // 아니라면 load 이벤트 기다리기
-  //     window.addEventListener('load', registerSW);
-  //   }
-  // }
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e as BeforeInstallPromptEvent;
+  });
 
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  checkBrowserCompatibility();
-}
-
-// 페이지 떠날 때 처리
-function handleBeforeUnload(event: BeforeUnloadEvent) {
-  // 필요시 작업 저장 요청 등
-}
-
-// 브라우저 호환성 체크
-function checkBrowserCompatibility() {
-  const unsupportedFeatures = [];
-  // 필요한 API 체크 예시
-  if (!window.Intl) unsupportedFeatures.push('Internationalization API');
-  if (!('IntersectionObserver' in window))
-    unsupportedFeatures.push('IntersectionObserver');
-
-  if (unsupportedFeatures.length > 0) {
-    console.warn('Browser compatibility issues:', unsupportedFeatures);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async function showInstallPrompt() {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      deferredInstallPrompt = null;
+    }
   }
-}
 
-// 웹 분석 초기화
-// function initWebAnalytics() {
-//   // 웹 전용 분석 도구 초기화
-// }
+  // 서비스 워커 등록
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/service-worker.js')
+        .then((registration) => {
+          console.log(
+            'Service Worker registered with scope:',
+            registration.scope,
+          );
+        })
+        .catch((error) => {
+          console.log('Service Worker registration failed:', error);
+        });
+    });
+  }
+
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error("Failed to find the root element");
+  }
+  
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+};
+
+export default init;

@@ -1,8 +1,7 @@
+import path from 'path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import { visualizer } from 'rollup-plugin-visualizer'; // ✨ 추가
-import path from 'path';
 
 export default defineConfig({
   cacheDir: '.vite-cache',
@@ -20,26 +19,22 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    // visualizer({
-    //   // ✨ 추가
-    //   open: true, // 빌드 시 자동으로 분석 결과 페이지를 엽니다.
-    //   filename: 'dist/bundle-analysis.html', // 분석 결과 파일명
-    // }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
         'favicon.ico',
-        'icon16.png',
-        'icon48.png',
-        'icon128.png',
+        'icon16x16.png',
+        'icon32x32.png',
         'apple-touch-icon.png',
-        'masked-icon.svg',
+        'android-chrome-192x192',
+        'android-chrome-512x512',
       ],
       manifest: {
-        name: 'Amnesia',
-        short_name: 'Note',
-        description: '까먹지 않게, 하루하루 성실하게.',
-        theme_color: '#333333',
+        name: 'Notia',
+        short_name: 'Notia',
+        description:
+          '마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며, 일상 속 중요한 약속까지 관리하세요. 당신의 생산성을 위한 가장 가볍고 빠른 도구입니다.',
+        theme_color: '#cec',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -58,25 +53,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@pages': path.resolve(__dirname, './src/pages'),
-      '@utils': path.resolve(__dirname, './src/utils'),
-      '@services': path.resolve(__dirname, './src/services'),
-      '@types': path.resolve(__dirname, './src/types'),
-      '@styles': path.resolve(__dirname, './src/styles'),
-      '@stores': path.resolve(__dirname, './src/stores'),
-      '@platforms': path.resolve(__dirname, './src/platforms'),
     },
   },
   build: {
-    minify: false,
-    sourcemap: false,
-    // 코드 압축(난독화) 비활성화 → 빌드 속도 증가 / 배포 과정에선 당연히 true로 바꿀 것
     rollupOptions: {
-      input: {
-        main: 'index.html',
-      },
       output: {
         manualChunks: {
           web: ['./src/platforms/web'],

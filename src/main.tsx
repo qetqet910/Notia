@@ -1,5 +1,3 @@
-import ReactDOM from 'react-dom/client';
-import App from '@/App';
 import '@/styles/global.css';
 
 /**
@@ -10,41 +8,20 @@ import '@/styles/global.css';
 async function initializePlatform(platformName: string): Promise<boolean> {
   try {
     type PlatformModule = {
-      default: () => Promise<void>; // 또는 `() => void` 등 실제 반환 타입에 맞게
+      default: () => void;
     };
 
     const module = (await import(
       `./platforms/${platformName}/index.tsx`
     )) as PlatformModule;
+    
     const initPlatform = module.default;
-    await initPlatform();
+    initPlatform(); // This function now handles rendering
 
     console.log(`2️⃣ Platform : ¦¦¦${platformName}¦¦¦ Initialized Successfully`);
     return true;
   } catch (error) {
     console.error(`Failed to initialize platform ${platformName}:`, error);
-    return false;
-  }
-}
-
-/**
- * React 앱을 DOM에 렌더링합니다.
- * @returns 렌더링 성공 여부
- */
-function renderReactApp(): boolean {
-  try {
-    const rootElement = document.getElementById('root');
-    if (!rootElement) {
-      throw new Error('Root element not found');
-    }
-
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(<App />);
-
-    console.log('3️⃣ React app rendered successfully');
-    return true;
-  } catch (error) {
-    console.error('Failed to render React app:', error);
     return false;
   }
 }
@@ -57,13 +34,10 @@ async function initializeApp(): Promise<void> {
     // 1. 플랫폼 결정
     const platform = import.meta.env.VITE_PLATFORM || 'web';
 
-    // 2. 플랫폼별 초기화 모듈 로드 및 실행
+    // 2. 플랫폼별 초기화 모듈 로드 및 실행 (렌더링 포함)
     const platformInitialized = await initializePlatform(platform);
 
-    // 3. React 앱 렌더링 (플랫폼 초기화 성공 여부와 관계없이 시도)
-    renderReactApp();
-
-    // 4. 전체 초기화 결과 로깅
+    // 3. 전체 초기화 결과 로깅
     if (platformInitialized) {
       console.log('4️⃣ Application initialized successfully');
     } else {

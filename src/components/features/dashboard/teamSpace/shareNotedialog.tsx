@@ -1,176 +1,178 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTeamStore } from '@/stores/teamStore';
 import { useNotes } from '@/hooks/useNotes';
-import { Note } from '@/types';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/useToast';
+import { Team } from '@/types';
 
-export const ShareNoteDialog = ({
-  open,
+interface ShareNoteDialogProps {
+  noteId: string;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+}
+
+type AccessLevel = 'read' | 'write' | 'admin';
+
+export const ShareNoteDialog: React.FC<ShareNoteDialogProps> = ({
+  noteId,
+  isOpen,
   onOpenChange,
-  note,
-  onShare
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  note: Note;
-  onShare: (noteId: string, teamId: string, accessLevel: 'read' | 'write' | 'admin') => Promise<boolean>;
 }) => {
-  const { teams } = useTeamStore();
+  const { teams, fetchTeams } = useTeamStore();
+  const { shareNoteWithTeam, unshareNoteWithTeam, getTeamsWithAccess } =
+    useNotes();
+  const { toast } = useToast();
+
   const [selectedTeam, setSelectedTeam] = useState<string>('');
-  const [accessLevel, setAccessLevel] = useState<'read' | 'write' | 'admin'>('read');
-  const [isLoading, setIsLoading] = useState(false);
-  const [sharedTeams, setSharedTeams] = useState<{teamId: string, teamName: string, accessLevel: string}[]>([]);
-  const { getTeamsWithAccess, unshareNoteWithTeam } = useNotes();
-  
-  // 노트가 공유된 팀 목록 로드
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>('read');
+  const [sharedWith, setSharedWith] = useState<
+    { teamId: string; teamName: string; accessLevel: AccessLevel }[]
+  >([]);
+
+  const loadSharedTeams = useCallback(async () => {
+    if (!noteId) return;
+    const teamsWithAccess = await getTeamsWithAccess(noteId);
+    setSharedWith(
+      teamsWithAccess.map((t) => ({
+        teamId: t.teamId,
+        teamName: t.teamName?.name || 'Unknown Team',
+        accessLevel: t.accessLevel as AccessLevel,
+      })),
+    );
+  }, [noteId, getTeamsWithAccess]);
+
   useEffect(() => {
-    if (open && note) {
-      const loadSharedTeams = async () => {
-        const teams = await getTeamsWithAccess(note.id);
-        setSharedTeams(teams);
-      };
-      
+    if (isOpen) {
+      fetchTeams();
       loadSharedTeams();
     }
-  }, [open, note, getTeamsWithAccess]);
-  
+  }, [isOpen, fetchTeams, loadSharedTeams]);
+
   const handleShare = async () => {
-    if (!selectedTeam || !note) return;
-    
-    try {
-      setIsLoading(true);
-      const success = await onShare(note.id, selectedTeam, accessLevel);
-      
-      if (success) {
-        // 공유 목록 업데이트
-        const team = teams.find(t => t.id === selectedTeam);
-        if (team) {
-          setSharedTeams(prev => [
-            ...prev.filter(t => t.teamId !== selectedTeam),
-            { teamId: selectedTeam, teamName: team.name, accessLevel }
-          ]);
-        }
-        
-        // 입력 초기화
-        setSelectedTeam('');
-      }
-    } catch (err) {
-      console.error('노트 공유 중 오류 발생:', err);
-    } finally {
-      setIsLoading(false);
+    if (!selectedTeam) {
+      toast({
+        title: '오류',
+        description: '공유할 팀을 선택해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const success = await shareNoteWithTeam(noteId, selectedTeam, accessLevel);
+    if (success) {
+      toast({ title: '성공', description: '노트가 팀과 공유되었습니다.' });
+      loadSharedTeams();
+      setSelectedTeam('');
+    } else {
+      toast({
+        title: '오류',
+        description: '노트 공유에 실패했습니다.',
+        variant: 'destructive',
+      });
     }
   };
-  
+
   const handleUnshare = async (teamId: string) => {
-    try {
-      setIsLoading(true);
-      const success = await unshareNoteWithTeam(note.id, teamId);
-      
-      if (success) {
-        setSharedTeams(prev => prev.filter(t => t.teamId !== teamId));
-      }
-    } catch (err) {
-      console.error('노트 공유 취소 중 오류 발생:', err);
-    } finally {
-      setIsLoading(false);
+    const success = await unshareNoteWithTeam(noteId, teamId);
+    if (success) {
+      toast({ title: '성공', description: '노트 공유가 취소되었습니다.' });
+      loadSharedTeams();
+    } else {
+      toast({
+        title: '오류',
+        description: '노트 공유 취소에 실패했습니다.',
+        variant: 'destructive',
+      });
     }
   };
-  
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>노트 공유하기</DialogTitle>
+          <DialogTitle>노트 공유</DialogTitle>
+          <DialogDescription>
+            팀과 노트를 공유하고 권한을 설정하세요.
+          </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          {/* 현재 공유된 팀 목록 */}
-          {sharedTeams.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">공유된 팀</h3>
-              <div className="space-y-1">
-                {sharedTeams.map(team => (
-                  <div key={team.teamId} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                    <div className="flex items-center">
-                      <div className="w-6 h-6 rounded-md bg-primary/20 flex items-center justify-center mr-2">
-                        <span className="text-xs font-bold">{team.teamName.charAt(0)}</span>
-                      </div>
-                      <span>{team.teamName}</span>
-                      <Badge variant="outline" className="ml-2">
-                        {team.accessLevel === 'read' ? '읽기' : 
-                         team.accessLevel === 'write' ? '쓰기' : '관리자'}
-                      </Badge>
-                    </div>
+        <div className="space-y-4">
+          <div>
+            <Label>공유된 팀</Label>
+            <div className="space-y-2 mt-2">
+              {sharedWith.length > 0 ? (
+                sharedWith.map((team) => (
+                  <div
+                    key={team.teamId}
+                    className="flex justify-between items-center p-2 border rounded"
+                  >
+                    <span>{team.teamName} ({team.accessLevel})</span>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleUnshare(team.teamId)}
                     >
-                      <X className="h-4 w-4" />
+                      공유 취소
                     </Button>
                   </div>
-                ))}
-              </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  아직 공유된 팀이 없습니다.
+                </p>
+              )}
             </div>
-          )}
-          
-          {/* 팀 선택 */}
-          <div className="grid gap-2">
-            <Label htmlFor="team">팀 선택</Label>
-            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-              <SelectTrigger>
-                <SelectValue placeholder="공유할 팀 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {teams
-                  .filter(team => !sharedTeams.some(st => st.teamId === team.id))
-                  .map(team => (
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="team-select">팀 선택</Label>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger id="team-select">
+                  <SelectValue placeholder="팀 선택..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((team: Team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.name}
                     </SelectItem>
                   ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* 접근 레벨 선택 */}
-          <div className="grid gap-2">
-            <Label htmlFor="access-level">접근 권한</Label>
-            <Select value={accessLevel} onValueChange={(value: any) => setAccessLevel(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="read">읽기 전용</SelectItem>
-                <SelectItem value="write">읽기 및 수정</SelectItem>
-                <SelectItem value="admin">관리자 권한</SelectItem>
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="access-level">권한</Label>
+              <Select
+                value={accessLevel}
+                onValueChange={(v) => setAccessLevel(v as AccessLevel)}
+              >
+                <SelectTrigger id="access-level">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="read">읽기</SelectItem>
+                  <SelectItem value="write">쓰기</SelectItem>
+                  <SelectItem value="admin">관리</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-        
         <DialogFooter>
-          <Button
-            onClick={handleShare}
-            disabled={isLoading || !selectedTeam}
-          >
-            {isLoading ? (
-              <div className="animate-spin h-4 w-4 border-2 border-background rounded-full border-t-transparent"></div>
-            ) : (
-              '공유하기'
-            )}
-          </Button>
+          <Button onClick={handleShare}>공유하기</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

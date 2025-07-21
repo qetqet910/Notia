@@ -1,110 +1,68 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/stores/authStore';
-import { PlusCircle } from 'lucide-react';
-import { supabase } from '@/services/supabaseClient';
-import { CreateTeamDialog } from '@/components/features/dashboard/teamSpace/teamDialog';
+import { PlusCircle, Users, Settings } from 'lucide-react';
+import { Team } from '@/types';
 
-export const TeamSpaceList = ({
-  activeTab,
-  setActiveTab,
-}: {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
+interface TeamSpaceListProps {
+  teams: Team[];
+  onSelectTeam: (teamId: string) => void;
+  onCreateTeam: () => void;
+  onManageTeam: (teamId: string) => void;
+  isLoading: boolean;
+}
+
+export const TeamSpaceList: React.FC<TeamSpaceListProps> = ({
+  teams,
+  onSelectTeam,
+  onCreateTeam,
+  onManageTeam,
+  isLoading,
 }) => {
-  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuthStore();
-
-  // 사용자의 팀 목록 가져오기
-  // useEffect(() => {
-  //   const fetchTeams = async () => {
-  //     if (!user) return;
-
-  //     try {
-  //       setIsLoading(true);
-
-  //       // 사용자가 속한 그룹 가져오기
-  //       const { data, error } = await supabase
-  //         .from('group_members')
-  //         .select(
-  //           `
-  //           group_id,
-  //           user_id
-  //         `,
-  //         )
-  //         .eq('user_id', user.id);
-
-  //       if (error) throw error;
-
-  //       // 데이터 형식 변환
-  //       const formattedTeams = data.map((item) => ({
-  //         id: item.user_groups?.id,
-  //         name: item.user_groups?.name,
-  //       }));
-
-  //       setTeams(formattedTeams);
-  //     } catch (err) {
-  //       console.error('팀 로드 중 오류 발생:', err);
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   fetchTeams();
-  // }, [user]);
-
-  // 새 팀 생성 다이얼로그 상태
-  const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
-
   return (
-    <div className="space-y-1">
-      {isLoading ? (
-        <div className="flex items-center justify-center py-2">출시 예정</div>
-      ) : (
-        <>
-          {teams.map((team) => (
-            <Button
-              key={team.id}
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => {
-                // 팀 스페이스로 이동하는 로직
-                // 예: setActiveTeam(team.id);
-              }}
-            >
-              <div className="flex items-center">
-                <div className="w-4 h-4 rounded-sm bg-primary/20 flex items-center justify-center mr-2">
-                  <span className="text-[10px] font-bold">
-                    {team.name.charAt(0)}
-                  </span>
-                </div>
-                <span className="truncate">{team.name}</span>
-              </div>
-            </Button>
-          ))}
-
-          {/* 새 팀 생성 버튼 */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground"
-            onClick={() => setIsCreateTeamOpen(true)}
-          >
-            <PlusCircle className="mr-2 h-3 w-3" />새 팀 만들기
-          </Button>
-
-          {/* 팀 생성 다이얼로그 */}
-          <CreateTeamDialog
-            open={isCreateTeamOpen}
-            onOpenChange={setIsCreateTeamOpen}
-            onTeamCreated={(newTeam) => {
-              setTeams((prev) => [...prev, newTeam]);
-            }}
-          />
-        </>
-      )}
-    </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center">
+          <Users className="h-5 w-5 mr-2" />
+          팀 스페이스
+        </CardTitle>
+        <Button variant="ghost" size="sm" onClick={onCreateTeam}>
+          <PlusCircle className="h-4 w-4 mr-1" />
+          팀 만들기
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p>로딩 중...</p>
+        ) : teams.length > 0 ? (
+          <ul className="space-y-2">
+            {teams.map((team) => (
+              <li
+                key={team.id}
+                className="flex items-center justify-between p-2 rounded-md hover:bg-accent"
+              >
+                <button
+                  className="flex-1 text-left"
+                  onClick={() => onSelectTeam(team.id)}
+                >
+                  {team.name}
+                </button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onManageTeam(team.id)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            소속된 팀이 없습니다.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 };
