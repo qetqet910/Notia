@@ -21,6 +21,7 @@ const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
 const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Login = lazy(() => import('@/pages/_auth/Login'));
+const TermsAgreement = lazy(() => import('@/pages/_auth/TermsAgreement'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
 
 import { AuthCallback } from '@/pages/_auth/authCallback';
@@ -47,6 +48,16 @@ function App() {
               <Suspense fallback={<LoginPageLoader />}>
                 <Login />
               </Suspense>
+            }
+          />
+          <Route
+            path="/terms-agreement"
+            element={
+              <ProtectedRoute checkTerms={false}>
+                <Suspense fallback={<TermsLoader />}>
+                  <TermsAgreement />
+                </Suspense>
+              </ProtectedRoute>
             }
           />
           <Route

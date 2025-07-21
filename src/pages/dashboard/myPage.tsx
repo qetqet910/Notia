@@ -183,7 +183,7 @@ export const MyPage: React.FC = () => {
 
     let currentStreak = 0;
     if (completionDates.length > 0) {
-      let tempDate = new Date(today);
+      const tempDate = new Date(today);
       // 오늘 완료했으면 오늘부터, 아니면 어제부터
       const lastCompletedDay = completionDates[completionDates.length - 1];
       if (lastCompletedDay === todayISO) {
@@ -200,7 +200,7 @@ export const MyPage: React.FC = () => {
 
       if (currentStreak > 0) {
         // 어제부터 역순으로 탐색하며 연속일수 계산
-        let checkDate = new Date(today);
+        const checkDate = new Date(today);
         if (lastCompletedDay === todayISO) {
           // 오늘 완료했으면 오늘부터 카운트
           checkDate.setDate(today.getDate());

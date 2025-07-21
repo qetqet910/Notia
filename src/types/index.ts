@@ -44,6 +44,7 @@ export interface UserProfile {
   key?: string;
   created_at?: string;
   updated_at?: string;
+  terms_agreed: boolean;
 }
 
 export interface Achievement {

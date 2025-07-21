@@ -72,7 +72,7 @@ export const ReminderView: React.FC<ReminderViewProps> = ({
     const today = startOfDay(now);
     const threeDaysLater = startOfDay(addDays(now, 3));
 
-    let filtered = reminders.filter((reminder) => {
+    const filtered = reminders.filter((reminder) => {
       const reminderDate = startOfDay(new Date(reminder.reminder_time));
       const reminderTime = new Date(reminder.reminder_time);
 

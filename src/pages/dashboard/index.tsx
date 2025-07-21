@@ -18,7 +18,6 @@ import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
-// import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
 import {
   PlusCircle,
   Calendar as CalendarIcon,
@@ -130,39 +129,50 @@ export const Dashboard: React.FC = () => {
     [],
   );
 
+  // --- 데이터 처리 로직 (방어적 코딩 적용) ---
   const allReminders = useMemo(() => {
-    return notes.flatMap((note) =>
-      (note.reminders || []).map((reminder: any) => ({
-        id: reminder.id,
-        note_id: note.id,
-        owner_id: note.owner_id,
-        reminder_text: reminder.text || reminder.reminder_text,
-        reminder_time: (reminder.date
-          ? new Date(reminder.date)
-          : new Date(reminder.reminder_time)
-        ).toISOString(),
-        completed: reminder.completed,
-        enabled: reminder.enabled ?? true,
-        created_at: reminder.created_at || new Date().toISOString(),
-        updated_at: reminder.updated_at || new Date().toISOString(),
-        original_text: reminder.original_text,
-        noteId: note.id,
-        noteTitle: note.title,
-        noteContent:
-          note.content?.replace(/<[^>]*>/g, '').substring(0, 100) || '',
-      })),
-    );
+    if (!notes || !Array.isArray(notes)) return [];
+
+    const safeToISOString = (dateInput: any) => {
+      if (!dateInput) return new Date().toISOString();
+      const date = new Date(dateInput);
+      if (isNaN(date.getTime())) {
+        return new Date().toISOString();
+      }
+      return date.toISOString();
+    };
+
+    return notes
+      .filter((note) => note && typeof note === 'object')
+      .flatMap((note) => {
+        const reminders = note.reminders;
+        if (!reminders || !Array.isArray(reminders)) return [];
+
+        return reminders
+          .filter((reminder) => reminder && typeof reminder === 'object')
+          .map((reminder: any) => ({
+            id: reminder.id,
+            note_id: note.id,
+            owner_id: note.owner_id,
+            reminder_text: reminder.text || reminder.reminder_text || '',
+            reminder_time: safeToISOString(
+              reminder.date || reminder.reminder_time,
+            ),
+            completed: reminder.completed || false,
+            enabled: reminder.enabled ?? true,
+            created_at: reminder.created_at || new Date().toISOString(),
+            updated_at: reminder.updated_at || new Date().toISOString(),
+            original_text: reminder.original_text || '',
+            noteId: note.id,
+            noteTitle: note.title || '제목 없음',
+            noteContent: '',
+          }));
+      });
   }, [notes]);
 
   // --- useEffects ---
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const isAuth = await checkSession();
-      if (!isAuth) navigate('/login');
-    };
-    initializeAuth();
-  }, [navigate, checkSession]);
+  
 
   useEffect(() => {
     if (permission === 'default') {
@@ -171,7 +181,10 @@ export const Dashboard: React.FC = () => {
   }, [permission, requestPermission]);
 
   useEffect(() => {
-    if (selectedNote && !notes.some((note) => note.id === selectedNote.id)) {
+    if (
+      selectedNote &&
+      !(notes || []).some((note) => note && note.id === selectedNote.id)
+    ) {
       setSelectedNote(null);
       setIsEditing(false);
     }
@@ -182,7 +195,7 @@ export const Dashboard: React.FC = () => {
       setTimeout(() => {
         setIsEditing(true);
         newlyCreatedNoteId.current = null;
-      }, 50); // 짧은 딜레이로 안정성 확보
+      }, 50);
     }
   }, [selectedNote]);
 
@@ -193,14 +206,11 @@ export const Dashboard: React.FC = () => {
       setSelectedNote(note);
       setIsEditing(false);
 
-      if (!note.content) {
+      if (note && !note.content) {
         setIsNoteContentLoading(true);
         const content = await fetchNoteContent(note.id);
-        // content가 포함된 완전한 노트 객체로 상태 업데이트
         setSelectedNote({ ...note, content: content || '' });
         setIsNoteContentLoading(false);
-      } else {
-        setSelectedNote(note);
       }
     },
     [fetchNoteContent],
@@ -243,7 +253,7 @@ export const Dashboard: React.FC = () => {
 
   const handleDeleteReminder = useCallback(
     async (reminderId: string) => {
-      const targetNote = notes.find((n) =>
+      const targetNote = (notes || []).find((n) =>
         (n.reminders || []).some((r: any) => r.id === reminderId),
       );
       if (!targetNote) return;
@@ -265,15 +275,12 @@ export const Dashboard: React.FC = () => {
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
 
-      // 입력 필드에서는 Ctrl/Cmd+S를 제외한 대부분의 단축키를 무시
       if (isInputElement && !(isCtrlCmd && e.key.toLowerCase() === 's')) {
-        // Tab 키는 항상 작동하도록 허용하지 않음 (필드 내 이동을 위해)
         if (e.key !== 'Tab') return;
       }
 
       const key = e.key === 'Tab' ? 'Tab' : e.key.toLowerCase();
 
-      // 단축키 매핑 객체
       const shortcuts: { [key: string]: (isCtrlCmd?: boolean) => void } = {
         n: () => handleCreateNote(),
         s: (isCtrlCmd) => {
@@ -285,7 +292,6 @@ export const Dashboard: React.FC = () => {
         '?': () => navigate('/dashboard/help?tab=overview'),
         t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
         Tab: () => {
-          // "Tab" 문자열은 소문자로 변환되지 않도록 위에서 처리
           setIsActiveTab((prev) => {
             const nextIndex = (prev + 1) % activeTabs.length;
             setActiveTab(activeTabs[nextIndex]);
@@ -334,8 +340,11 @@ export const Dashboard: React.FC = () => {
   // --- 메인 렌더링 ---
   const renderMainContent = () => {
     const filteredNotes = selectedTag
-      ? notes.filter((note) => (note.tags || []).includes(selectedTag))
-      : notes;
+      ? (notes || []).filter(
+          (note) => note && (note.tags || []).includes(selectedTag),
+        )
+      : notes || [];
+
     switch (activeTab) {
       case 'notes':
         return (
@@ -426,7 +435,8 @@ export const Dashboard: React.FC = () => {
               onDelete={handleDeleteReminder}
               onOpenNote={(noteId) => {
                 const noteToOpen =
-                  notes.find((note) => note.id === noteId) || null;
+                  (notes || []).find((note) => note && note.id === noteId) ||
+                  null;
                 setSelectedNote(noteToOpen);
                 setActiveTab('notes');
               }}
@@ -437,10 +447,11 @@ export const Dashboard: React.FC = () => {
         return (
           <Suspense fallback={<CalendarLoader />}>
             <Calendar
-              notes={notes}
+              notes={notes || []}
               onOpenNote={(noteId) => {
                 const noteToOpen =
-                  notes.find((note) => note.id === noteId) || null;
+                  (notes || []).find((note) => note && note.id === noteId) ||
+                  null;
                 setSelectedNote(noteToOpen);
                 setActiveTab('notes');
               }}
@@ -451,10 +462,11 @@ export const Dashboard: React.FC = () => {
         return (
           <Suspense fallback={<TimelineLoader />}>
             <TimelineView
-              notes={notes}
+              notes={notes || []}
               onOpenNote={(noteId) => {
                 const noteToOpen =
-                  notes.find((note) => note.id === noteId) || null;
+                  (notes || []).find((note) => note && note.id === noteId) ||
+                  null;
                 setSelectedNote(noteToOpen);
                 setActiveTab('notes');
               }}
@@ -530,12 +542,20 @@ const Sidebar = ({
 }) => {
   const { notes } = useNotes();
   const popularTags = useMemo(() => {
+    if (!notes || !Array.isArray(notes)) return [];
     const tagCount: Record<string, number> = {};
-    notes.forEach((note) => {
-      (note.tags || []).forEach((tag) => {
-        tagCount[tag] = (tagCount[tag] || 0) + 1;
+    notes
+      .filter((note) => note && typeof note === 'object')
+      .forEach((note) => {
+        const tags = note.tags;
+        if (tags && Array.isArray(tags)) {
+          tags
+            .filter((tag) => typeof tag === 'string')
+            .forEach((tag) => {
+              tagCount[tag] = (tagCount[tag] || 0) + 1;
+            });
+        }
       });
-    });
     return Object.entries(tagCount)
       .map(([tag, count]) => ({ tag, count }))
       .sort((a, b) => b.count - a.count)
@@ -565,13 +585,6 @@ const Sidebar = ({
         })}
       </nav>
       <div>
-        {/* TODO: 팀 스페이스 구현 */}
-        {/* <div className="mt-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">
-            팀 스페이스
-          </h3>
-          <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div> */}
         {popularTags.length > 0 && (
           <div className="mt-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">

@@ -6,27 +6,24 @@ import type { Note, Reminder } from '@/types';
 interface DataState {
   notes: Note[];
   isInitialized: boolean;
+  channels: RealtimeChannel[];
   initialize: (userId: string) => Promise<void>;
-  unsubscribeAll: () => void;
+  unsubscribeAll: () => Promise<void>;
   updateNoteState: (updatedNote: Note) => void;
   updateReminderState: (reminderId: string, updates: Partial<Reminder>) => void;
   addNoteState: (newNote: Note) => void;
   removeNoteState: (noteId: string) => void;
 }
 
-let refetchTimer: NodeJS.Timeout;
-
 export const useDataStore = create<DataState>((set, get) => ({
   notes: [],
   isInitialized: false,
-  channels: [], // 내부용 채널 관리
-
-  // 낙관적 UI 관련
+  channels: [],
 
   updateNoteState: (updatedNote: Note) => {
     set((state) => ({
       notes: state.notes.map((note) =>
-        note.id === updatedNote.id ? updatedNote : note,
+        note.id === updatedNote.id ? { ...note, ...updatedNote } : note,
       ),
     }));
   },
@@ -42,7 +39,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     }));
   },
 
-  addNoteState: (newNote) => {
+  addNoteState: (newNote: Note) => {
     set((state) => ({
       notes: [newNote, ...state.notes],
     }));
@@ -54,116 +51,99 @@ export const useDataStore = create<DataState>((set, get) => ({
     }));
   },
 
-  /**
-   * 사용자와 관련된 모든 데이터를 가져오고 실시간 구독을 시작합니다.
-   * 이 함수는 앱에서 단 한 번만 호출되어야 합니다.
-   */
   initialize: async (userId: string) => {
-    // 중복 실행 방지
     if (get().isInitialized) return;
     set({ isInitialized: true });
 
-    const fetchDataAndSubscribe = async () => {
-      // --- 1. 데이터 가져오기 ---
-      // 사용자의 개인 노트와 팀 노트를 모두 가져옵니다.
-      try {
-        const { data, error } = await supabase.rpc('get_all_user_notes', {
-          p_user_id: userId,
-        });
+    // 1. 이전 구독을 완전히 해제하고 기다립니다.
+    await get().unsubscribeAll();
 
-        if (error) throw new Error('데이터 로드 실패: ' + error.message);
+    // 2. 초기 데이터를 가져옵니다.
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*, reminders(*)')
+        .eq('owner_id', userId);
 
-        // 데이터 포맷팅 (날짜 객체 변환 등)
-        const formattedNotes = data.map((note: any) => ({
-          ...note,
-          createdAt: new Date(note.created_at),
-          updatedAt: new Date(note.updated_at),
-          reminders:
-            note.reminders?.map((r: any) => ({
-              ...r,
-              date: new Date(r.reminder_time),
-            })) || [],
-        }));
-        set({ notes: formattedNotes });
-      } catch (err) {
-        console.error('Initialize Error:', err);
-        set({ isInitialized: false }); // 실패 시 다시 시도할 수 있도록 초기화
+      if (error) {
+        console.error('Error fetching initial notes:', error);
+        set({ isInitialized: false });
         return;
       }
 
-      // --- 2. 실시간 구독 설정 ---
-      get().unsubscribeAll(); // 기존 구독 해지
+      const formattedNotes = data.map((note: any) => ({
+        ...note,
+        createdAt: new Date(note.created_at),
+        updatedAt: new Date(note.updated_at),
+        reminders: (note.reminders || []).map((r: any) => ({
+          ...r,
+          date: new Date(r.reminder_time),
+        })),
+      }));
+      set({ notes: formattedNotes });
+    } catch (err) {
+      console.error('Initialization failed:', err);
+      set({ isInitialized: false });
+      return;
+    }
 
-      const handleChange = (payload: any) => {
-        console.log('Realtime change detected, debouncing refetch...', payload);
+    // 3. 사용자별 고유 채널로 실시간 구독을 설정합니다.
+    const channel = supabase
+      .channel(`notes-changes-for-user-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notes', filter: `owner_id=eq.${userId}` },
+        (payload) => {
+          const newNote = {
+            ...(payload.new as Note),
+            createdAt: new Date(payload.new.created_at),
+            updatedAt: new Date(payload.new.updated_at),
+            reminders: [],
+          };
+          get().addNoteState(newNote);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notes', filter: `owner_id=eq.${userId}` },
+        (payload) => {
+          const updatedNote = {
+            ...(payload.new as Note),
+            createdAt: new Date(payload.new.created_at),
+            updatedAt: new Date(payload.new.updated_at),
+          };
+          get().updateNoteState(updatedNote);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'notes', filter: `owner_id=eq.${userId}` },
+        (payload) => {
+          get().removeNoteState(payload.old.id);
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`Successfully subscribed to notes changes for user ${userId}!`);
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`Channel error for user ${userId}:`, err);
+          set({ isInitialized: false });
+        }
+        if (status === 'TIMED_OUT') {
+          console.warn(`Subscription timed out for user ${userId}.`);
+          set({ isInitialized: false });
+        }
+      });
 
-        // ✅ 2. 기존 타이머를 취소하고 새로운 타이머를 설정합니다.
-        clearTimeout(refetchTimer);
-        refetchTimer = setTimeout(() => {
-          console.log('Executing debounced refetch.');
-          fetchDataAndSubscribe();
-        }, 300); // 300ms 지연 후 데이터 요청
-      };
-
-      // 사용자가 접근할 수 있는 모든 테이블의 변경을 감지합니다.
-      const notesChannel = supabase
-        .channel('realtime-notes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'notes' },
-          handleChange,
-        )
-        .subscribe();
-      const remindersChannel = supabase
-        .channel('realtime-reminders')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'reminders' },
-          handleChange,
-        )
-        .subscribe();
-      const groupNotesChannel = supabase
-        .channel('realtime-group-notes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'group_notes' },
-          handleChange,
-        )
-        .subscribe();
-      const groupMembersChannel = supabase
-        .channel('realtime-group-members')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'group_members',
-            filter: `user_id=eq.${userId}`,
-          },
-          handleChange,
-        )
-        .subscribe();
-
-      (get() as any).channels = [
-        notesChannel,
-        remindersChannel,
-        groupNotesChannel,
-        groupMembersChannel,
-      ];
-    };
-
-    await fetchDataAndSubscribe();
+    set({ channels: [channel] });
   },
 
-  /**
-   * 모든 실시간 구독을 해지합니다.
-   */
   unsubscribeAll: async () => {
-    const channels = (get() as any).channels;
-    if (channels && channels.length > 0) {
-      await supabase.removeAllChannels();
-      (get() as any).channels = [];
-      set({ isInitialized: false }); // 구독 해지 시 초기화 상태도 되돌림
+    const { channels } = get();
+    if (channels.length > 0) {
+      await Promise.all(channels.map((c) => c.unsubscribe()));
+      set({ channels: [] });
     }
   },
 }));

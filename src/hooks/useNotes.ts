@@ -41,13 +41,12 @@ const getStartOfWeek = () => {
 export const useNotes = () => {
   const { user } = useAuthStore();
   const allNotes = useDataStore((state) => state.notes);
-  const { initialize, unsubscribeAll } = useDataStore.getState();
-  const isInitialized = useDataStore((state) => state.isInitialized);
-  const { addNoteState } = useDataStore.getState();
-  const { removeNoteState } = useDataStore.getState();
+  const { initialize, unsubscribeAll, addNoteState, removeNoteState } = useDataStore.getState();
 
   const notes = useMemo(
-    () => allNotes.filter((note) => note.owner_id === user?.id),
+    () =>
+      (allNotes || [])
+        .filter(note => note && typeof note === 'object' && note.owner_id === user?.id),
     [allNotes, user],
   );
 
@@ -55,21 +54,24 @@ export const useNotes = () => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    // 사용자가 있고, 아직 데이터 스토어가 초기화되지 않았을 때만 '전체 로딩'을 수행합니다.
-    if (user && !isInitialized) {
+    // user가 존재하면 데이터 초기화를 시도합니다.
+    // initialize 함수 내부에 중복 실행 방지 로직이 이미 존재합니다.
+    if (user) {
       setLoading(true);
-      initialize(user.id).finally(() => setLoading(false));
+      initialize(user.id).finally(() => {
+        setLoading(false);
+      });
     } else {
-      // 그 외의 모든 경우 (사용자가 없거나, 이미 초기화되었거나, user 객체 참조만 바뀐 경우)
-      // 로딩 상태를 false로 유지하여 불필요한 전체 화면 로딩을 방지합니다.
+      // user가 없으면 로딩을 중지하고, 모든 구독을 해지합니다.
       setLoading(false);
+      unsubscribeAll();
     }
 
-    // 컴포넌트가 언마운트되거나 사용자가 바뀔 때 구독을 해지합니다.
+    // 컴포넌트가 언마운트되거나, 사용자가 변경될 때(로그아웃 등) 모든 구독을 해지합니다.
     return () => {
       unsubscribeAll();
     };
-  }, [user?.id, isInitialized, initialize, unsubscribeAll]);
+  }, [user?.id, initialize, unsubscribeAll]);
 
   const fetchNoteContent = useCallback(async (noteId: string) => {
     const localNote = useDataStore

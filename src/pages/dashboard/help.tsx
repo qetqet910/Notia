@@ -800,7 +800,7 @@ graph TD;
                         <Button variant="outline" size="sm" asChild>
                           <a
                             href="https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f"
-                            target="_blank"
+                            target="_blank" rel="noreferrer"
                           >
                             후원한잔으로 후원하기
                           </a>
