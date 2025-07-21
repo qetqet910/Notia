@@ -6,10 +6,15 @@ import {
   Navigate,
 } from 'react-router-dom';
 import { LandingPageLoader } from '@/components/loader/LandingPageLoader';
-import { LoginPageLoader } from '@/components/loader/LoginPageLoader';
-import { MyPageLoader } from '@/components/loader/MyPageLoader';
+import { DonwloadPage } from '@/components/loader/LandingLoader';
+import {
+  TermsLoader,
+  LoginPageLoader,
+} from '@/components/loader/LoginPageLoader';
 import { NotFoundPageLoader } from '@/components/loader/NotFoundPageLoader';
 import { DashboardLoader } from '@/components/loader/DashboardLoader';
+import HelpPage from '@/pages/dashboard/help';
+import MyPage from '@/pages/dashboard/myPage';
 
 const Home = lazy(() => import('@/pages/_landing/Home'));
 const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
@@ -17,8 +22,6 @@ const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Login = lazy(() => import('@/pages/_auth/Login'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
-import HelpPage from '@/pages/dashboard/help';
-import MyPage from '@/pages/dashboard/myPage';
 
 import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
@@ -49,7 +52,7 @@ function App() {
           <Route
             path="/download"
             element={
-              <Suspense fallback={<LandingPageLoader />}>
+              <Suspense fallback={<DonwloadPage />}>
                 <DownloadPage />
               </Suspense>
             }
