@@ -4,7 +4,6 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
-  useRef,
   Suspense,
   lazy,
 } from 'react';
@@ -21,7 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { MarkdownPreviewLoader } from '@/components/loader/MarkdownPreviewLoader';
-import mermaid from 'mermaid';
 import {
   Trash2,
   Save,
@@ -32,7 +30,6 @@ import {
   Edit3,
   Eye,
   X,
-  Loader2,
 } from 'lucide-react';
 import {
   Popover,
@@ -60,86 +57,20 @@ interface EditorRef {
   save: () => void;
 }
 
-mermaid.initialize({
-  startOnLoad: true,
-  theme: 'default',
-});
-
-const MermaidComponent = ({
-  chart,
-  isEditing,
-}: {
-  chart: string;
-  isEditing: boolean;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (ref.current && chart && !isEditing) {
-      // 이전 내용 초기화
-      ref.current.innerHTML = '';
-
-      try {
-        const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
-
-        // DOM에서 기존 mermaid 오류 SVG 제거
-        const existingErrors = document.querySelectorAll('svg[id*="mermaid"]');
-        existingErrors.forEach((svg) => {
-          if (svg.textContent?.includes('Syntax error')) {
-            svg.remove();
-          }
-        });
-
-        mermaid
-          .render(id, chart)
-          .then(({ svg }) => {
-            if (ref.current) {
-              ref.current.innerHTML = svg;
-            }
-          })
-          .catch((error) => {
-            console.error('Mermaid render error:', error);
-
-            // DOM에서 새로 생긴 오류 SVG 찾아서 이동
-            setTimeout(() => {
-              const errorSvg = document.querySelector('svg[id*="mermaid"]');
-              if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
-                if (ref.current) {
-                  ref.current.appendChild(errorSvg.cloneNode(true));
-                }
-                errorSvg.remove();
-              }
-            }, 100);
-
-            toast({
-              title: 'Mermaid 렌더링 오류',
-              description: '다이어그램 문법을 확인해주세요.',
-            });
-          });
-      } catch (error) {
-        console.error('Mermaid render error:', error);
-
-        // DOM에서 오류 SVG 찾아서 이동
-        setTimeout(() => {
-          const errorSvg = document.querySelector('svg[id*="mermaid"]');
-          if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
-            if (ref.current) {
-              ref.current.appendChild(errorSvg.cloneNode(true));
-            }
-            errorSvg.remove();
-          }
-        }, 100);
-
-        toast({
-          title: 'Mermaid 렌더링 오류',
-          description: '다이어그램 문법을 확인해주세요.',
-        });
-      }
-    }
-  }, [chart, isEditing]);
-
-  return <div ref={ref} className="mermaid-container" />;
+const formatDate = (date: Date): string => {
+  if (!date || !(date instanceof Date)) return '날짜 정보 없음';
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const isTomorrow =
+    date.toDateString() ===
+    new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+  const timeString = `${date.getHours().toString().padStart(2, '0')}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, '0')}`;
+  if (isToday) return `오늘 ${timeString}`;
+  if (isTomorrow) return `내일 ${timeString}`;
+  return `${date.getMonth() + 1}/${date.getDate()} ${timeString}`;
 };
 
 export const Editor = forwardRef<EditorRef, EditorProps>(
@@ -164,8 +95,8 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 
     const handleSave = useCallback(() => {
       const extractedTags = parsedTags.map((tag) => tag.text);
-      const existingRemindersMap = new Map(
-        (note.reminders || []).map((r: any) => [
+      const existingRemindersMap = new Map<string, EditorReminder>(
+        (note.reminders || []).map((r) => [
           r.original_text || `@${r.text || r.reminder_text}.`,
           r,
         ]),
@@ -174,10 +105,8 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         const existing = existingRemindersMap.get(parsed.originalText);
         if (existing) {
           return {
-            id: existing.id,
+            ...existing,
             text: parsed.reminderText!,
-            date: existing.date,
-            completed: existing.completed,
             original_text: parsed.originalText,
           };
         }
@@ -228,33 +157,12 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 
     const navigateHandler = () => navigate('/dashboard/help?tab=shortcuts');
 
-    const formatDate = (date: Date): string => {
-      if (!date || !(date instanceof Date)) return '날짜 정보 없음';
-      const now = new Date();
-      const isToday = date.toDateString() === now.toDateString();
-      const isTomorrow =
-        date.toDateString() ===
-        new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
-      const timeString = `${date.getHours().toString().padStart(2, '0')}:${date
-        .getMinutes()
-        .toString()
-        .padStart(2, '0')}`;
-      if (isToday) return `오늘 ${timeString}`;
-      if (isTomorrow) return `내일 ${timeString}`;
-      return `${date.getMonth() + 1}/${date.getDate()} ${timeString}`;
-    };
-
     return (
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-border">
           <div className="flex items-center">
-            {isEditing ? (
-              <h2 className="text-lg font-semibold pl-3">편집 중</h2>
-            ) : (
-              <h2 className="text-lg font-semibold">미리보기</h2>
-            )}
-            {/* 정보 아이콘 및 팝오버 */}
+            <h2 className="text-lg font-semibold pl-3">{isEditing ? '편집 중' : '미리보기'}</h2>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="ml-1 h-8 w-8">
@@ -483,3 +391,5 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     );
   },
 );
+
+Editor.displayName = 'Editor';

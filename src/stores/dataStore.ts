@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/services/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Note, Reminder } from '@/types';
+import type { Note, Reminder, EditorReminder } from '@/types';
 
 interface DataState {
   notes: Note[];
@@ -10,7 +10,10 @@ interface DataState {
   initialize: (userId: string) => Promise<void>;
   unsubscribeAll: () => Promise<void>;
   updateNoteState: (updatedNote: Note) => void;
-  updateReminderState: (reminderId: string, updates: Partial<Reminder>) => void;
+  updateReminderState: (
+    reminderId: string,
+    updates: Partial<Reminder>,
+  ) => void;
   addNoteState: (newNote: Note) => void;
   removeNoteState: (noteId: string) => void;
 }
@@ -55,30 +58,21 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (get().isInitialized) return;
     set({ isInitialized: true });
 
-    // 1. 이전 구독을 완전히 해제하고 기다립니다.
     await get().unsubscribeAll();
 
-    // 2. 초기 데이터를 가져옵니다.
     try {
       const { data, error } = await supabase
         .from('notes')
         .select('*, reminders(*)')
         .eq('owner_id', userId);
 
-      if (error) {
-        console.error('Error fetching initial notes:', error);
-        set({ isInitialized: false });
-        return;
-      }
+      if (error) throw error;
 
       const formattedNotes = data.map((note) => ({
         ...note,
         createdAt: new Date(note.created_at),
         updatedAt: new Date(note.updated_at),
-        reminders: (note.reminders || []).map((r) => ({
-          ...r,
-          date: new Date(r.reminder_time),
-        })),
+        reminders: note.reminders || [],
       }));
       set({ notes: formattedNotes as Note[] });
     } catch (err) {
@@ -87,56 +81,81 @@ export const useDataStore = create<DataState>((set, get) => ({
       return;
     }
 
-    // 3. 사용자별 고유 채널로 실시간 구독을 설정합니다.
-    const channel = supabase
+    const notesChannel = supabase
       .channel(`notes-changes-for-user-${userId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notes', filter: `owner_id=eq.${userId}` },
-        (payload) => {
-          const newNote = {
-            ...(payload.new as Note),
-            createdAt: new Date(payload.new.created_at),
-            updatedAt: new Date(payload.new.updated_at),
-            reminders: [],
-          };
-          get().addNoteState(newNote);
-        }
+        (payload) => get().addNoteState({ ...(payload.new as Note), reminders: [] })
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'notes', filter: `owner_id=eq.${userId}` },
-        (payload) => {
-          const updatedNote = {
-            ...(payload.new as Note),
-            createdAt: new Date(payload.new.created_at),
-            updatedAt: new Date(payload.new.updated_at),
-          };
-          get().updateNoteState(updatedNote);
-        }
+        (payload) => get().updateNoteState(payload.new as Note)
       )
       .on(
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'notes', filter: `owner_id=eq.${userId}` },
+        (payload) => get().removeNoteState(payload.old.id)
+      )
+      .subscribe();
+
+    const remindersChannel = supabase
+      .channel(`reminders-changes-for-user-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'reminders', filter: `owner_id=eq.${userId}` },
         (payload) => {
-          get().removeNoteState(payload.old.id);
+          const newReminder = payload.new as Reminder;
+          set((state) => ({
+            notes: state.notes.map((note) =>
+              note.id === payload.new.note_id
+                ? { ...note, reminders: [...(note.reminders || []), newReminder] }
+                : note
+            ),
+          }));
         }
       )
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`Successfully subscribed to notes changes for user ${userId}!`);
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'reminders', filter: `owner_id=eq.${userId}` },
+        (payload) => {
+          const updatedReminder = payload.new as Reminder;
+          set((state) => ({
+            notes: state.notes.map((note) =>
+              note.id === payload.new.note_id
+                ? {
+                    ...note,
+                    reminders: (note.reminders || []).map((r) =>
+                      r.id === updatedReminder.id ? updatedReminder : r
+                    ),
+                  }
+                : note
+            ),
+          }));
         }
-        if (status === 'CHANNEL_ERROR') {
-          console.error(`Channel error for user ${userId}:`, err);
-          set({ isInitialized: false });
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'reminders', filter: `owner_id=eq.${userId}` },
+        (payload) => {
+          set((state) => ({
+            notes: state.notes.map((note) =>
+              note.id === payload.old.note_id
+                ? {
+                    ...note,
+                    reminders: (note.reminders || []).filter(
+                      (r) => r.id !== payload.old.id
+                    ),
+                  }
+                : note
+            ),
+          }));
         }
-        if (status === 'TIMED_OUT') {
-          console.warn(`Subscription timed out for user ${userId}.`);
-          set({ isInitialized: false });
-        }
-      });
+      )
+      .subscribe();
 
-    set({ channels: [channel] });
+    set({ channels: [notesChannel, remindersChannel] });
   },
 
   unsubscribeAll: async () => {

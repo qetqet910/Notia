@@ -28,7 +28,7 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note } from '@/types';
+import { Note, EnrichedReminder } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,20 +97,21 @@ const EmptyNoteState = ({
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { session, checkSession } = useAuthStore();
+  const { session } = useAuthStore();
   const {
     notes,
     loading: isNotesLoading,
     addNote,
     updateNote,
     deleteNote,
+    deleteReminder,
     updateReminderCompletion,
     updateReminderEnabled,
     fetchNoteContent,
   } = useNotes();
   const { permission, requestPermission } = useNotificationPermission();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile] = useState(window.innerWidth < 768);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState('notes');
@@ -129,50 +130,17 @@ export const Dashboard: React.FC = () => {
     [],
   );
 
-  // --- 데이터 처리 로직 (방어적 코딩 적용) ---
-  const allReminders = useMemo(() => {
+  const allReminders = useMemo((): EnrichedReminder[] => {
     if (!notes || !Array.isArray(notes)) return [];
-
-    const safeToISOString = (dateInput: any) => {
-      if (!dateInput) return new Date().toISOString();
-      const date = new Date(dateInput);
-      if (isNaN(date.getTime())) {
-        return new Date().toISOString();
-      }
-      return date.toISOString();
-    };
-
-    return notes
-      .filter((note) => note && typeof note === 'object')
-      .flatMap((note) => {
-        const reminders = note.reminders;
-        if (!reminders || !Array.isArray(reminders)) return [];
-
-        return reminders
-          .filter((reminder) => reminder && typeof reminder === 'object')
-          .map((reminder: any) => ({
-            id: reminder.id,
-            note_id: note.id,
-            owner_id: note.owner_id,
-            reminder_text: reminder.text || reminder.reminder_text || '',
-            reminder_time: safeToISOString(
-              reminder.date || reminder.reminder_time,
-            ),
-            completed: reminder.completed || false,
-            enabled: reminder.enabled ?? true,
-            created_at: reminder.created_at || new Date().toISOString(),
-            updated_at: reminder.updated_at || new Date().toISOString(),
-            original_text: reminder.original_text || '',
-            noteId: note.id,
-            noteTitle: note.title || '제목 없음',
-            noteContent: '',
-          }));
-      });
+    return notes.flatMap((note) =>
+      (note.reminders || []).map((reminder) => ({
+        ...reminder,
+        noteId: note.id,
+        noteTitle: note.title || '제목 없음',
+        noteContent: note.content?.substring(0, 100) || '',
+      })),
+    );
   }, [notes]);
-
-  // --- useEffects ---
-
-  
 
   useEffect(() => {
     if (permission === 'default') {
@@ -199,8 +167,6 @@ export const Dashboard: React.FC = () => {
     }
   }, [selectedNote]);
 
-  // --- 핸들러 함수들 ---
-
   const handleSelectNote = useCallback(
     async (note: Note) => {
       setSelectedNote(note);
@@ -209,7 +175,9 @@ export const Dashboard: React.FC = () => {
       if (note && !note.content) {
         setIsNoteContentLoading(true);
         const content = await fetchNoteContent(note.id);
-        setSelectedNote({ ...note, content: content || '' });
+        setSelectedNote((prev) =>
+          prev?.id === note.id ? { ...prev, content: content || '' } : prev,
+        );
         setIsNoteContentLoading(false);
       }
     },
@@ -250,20 +218,6 @@ export const Dashboard: React.FC = () => {
     await deleteNote(selectedNote.id);
     setIsDeleteDialogOpen(false);
   }, [deleteNote, selectedNote]);
-
-  const handleDeleteReminder = useCallback(
-    async (reminderId: string) => {
-      const targetNote = (notes || []).find((n) =>
-        (n.reminders || []).some((r: any) => r.id === reminderId),
-      );
-      if (!targetNote) return;
-      const updatedReminders = (targetNote.reminders || []).filter(
-        (r: any) => r.id !== reminderId,
-      );
-      await updateNote({ ...targetNote, reminders: updatedReminders });
-    },
-    [notes, updateNote],
-  );
 
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
@@ -337,7 +291,6 @@ export const Dashboard: React.FC = () => {
 
   if (isNotesLoading) return <DashboardLoader />;
 
-  // --- 메인 렌더링 ---
   const renderMainContent = () => {
     const filteredNotes = selectedTag
       ? (notes || []).filter(
@@ -432,12 +385,12 @@ export const Dashboard: React.FC = () => {
               reminders={allReminders}
               onToggleComplete={updateReminderCompletion}
               onToggleEnable={updateReminderEnabled}
-              onDelete={handleDeleteReminder}
+              onDelete={deleteReminder}
               onOpenNote={(noteId) => {
                 const noteToOpen =
                   (notes || []).find((note) => note && note.id === noteId) ||
                   null;
-                setSelectedNote(noteToOpen);
+                if (noteToOpen) handleSelectNote(noteToOpen);
                 setActiveTab('notes');
               }}
             />
@@ -447,12 +400,12 @@ export const Dashboard: React.FC = () => {
         return (
           <Suspense fallback={<CalendarLoader />}>
             <Calendar
-              notes={notes || []}
+              reminders={allReminders}
               onOpenNote={(noteId) => {
                 const noteToOpen =
                   (notes || []).find((note) => note && note.id === noteId) ||
                   null;
-                setSelectedNote(noteToOpen);
+                if (noteToOpen) handleSelectNote(noteToOpen);
                 setActiveTab('notes');
               }}
             />
@@ -463,11 +416,12 @@ export const Dashboard: React.FC = () => {
           <Suspense fallback={<TimelineLoader />}>
             <TimelineView
               notes={notes || []}
+              reminders={allReminders}
               onOpenNote={(noteId) => {
                 const noteToOpen =
                   (notes || []).find((note) => note && note.id === noteId) ||
                   null;
-                setSelectedNote(noteToOpen);
+                if (noteToOpen) handleSelectNote(noteToOpen);
                 setActiveTab('notes');
               }}
             />

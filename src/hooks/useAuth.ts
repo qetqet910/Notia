@@ -1,20 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { resetSupabaseClient } from '@/services/supabaseClient';
 
-interface UserProfile {
-  user_id: string;
-  display_name?: string | null;
-  avatar_url?: string | null;
-  email?: string | null;
-  provider?: string;
-}
-
 export const useAuth = () => {
   const store = useAuthStore();
-  const [isInitializing, setIsInitializing] = useState(true);
 
-  // 모든 인증 상태 및 메서드 가져오기
+  // authStore의 상태가 변경될 때마다 이 훅을 사용하는 컴포넌트가 리렌더링됩니다.
   const {
     user,
     session,
@@ -24,74 +15,24 @@ export const useAuth = () => {
     isLoginLoading,
     isLogoutLoading,
     isSessionCheckLoading,
+    isProfileLoading,
     checkSession,
     loginWithKey,
     loginWithSocial,
     signOut,
-    generateEmailKey,
-    generateAnonymousKey,
     fetchUserProfile,
     restoreSession,
   } = store;
 
-  // 초기 세션 확인
+  // 앱이 처음 로드될 때 세션 복원을 시도합니다.
+  // 이 로직은 authStore의 onRehydrateStorage에서도 처리되지만,
+  // 앱의 진입점에서 명시적으로 호출하여 초기화 흐름을 보장합니다.
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        setIsInitializing(true);
-
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const authKey =
-          'sb-' +
-          supabaseUrl.replace('https://', '').replace('.supabase.co', '') +
-          '-auth-token';
-        const storedSession = localStorage.getItem(authKey);
-
-        // 세션 확인 시도
-        console.log('세션 확인 시도...');
-        const sessionCheckPromise = checkSession();
-
-        const timeoutPromise = new Promise<boolean>((resolve) => {
-          setTimeout(() => {
-            console.log('세션 확인 타임아웃');
-            resolve(false);
-          }, 10000); // 10초로 타임아웃 시간 늘림
-        });
-
-        const hasSession = await Promise.race([
-          sessionCheckPromise,
-          timeoutPromise,
-        ]);
-
-        // 세션 확인 실패 시 복원 시도
-        if (!hasSession && storedSession) {
-          console.log('세션 확인 실패, 복원 시도');
-          await restoreSession();
-        }
-
-        // 세션 상태 로그
-        console.log('인증 초기화 완료, 인증 상태:', store.isAuthenticated);
-      } catch (error) {
-        console.error('인증 초기화 오류:', error);
-
-        // 오류 발생 시 로컬스토리지에서 복원 시도
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const authKey = `sb-${supabaseUrl
-          .replace('https://', '')
-          .replace('.supabase.co', '')}-auth-token`;
-        const storedSession = localStorage.getItem(authKey);
-
-        if (storedSession) {
-          console.log('오류 발생, 세션 복원 시도');
-          await restoreSession();
-        }
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-
-    initializeAuth();
-  }, []);
+    // isSessionCheckLoading이 true일 때만 실행하여 중복 호출을 방지합니다.
+    if (isSessionCheckLoading) {
+      restoreSession();
+    }
+  }, [isSessionCheckLoading, restoreSession]);
 
   return {
     // 상태
@@ -103,15 +44,14 @@ export const useAuth = () => {
     isLoginLoading,
     isLogoutLoading,
     isSessionCheckLoading,
-    isInitializing,
+    isProfileLoading,
+    isInitializing: isSessionCheckLoading || isProfileLoading, // 초기화 상태를 통합
 
     // 메서드
     checkSession,
     loginWithKey,
     loginWithSocial,
-    signOut,
-    generateEmailKey,
-    generateAnonymousKey,
+signOut,
     fetchUserProfile,
     restoreSession,
     resetSupabaseClient,

@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
-import type { User } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types';
 import { formatKey } from '@/utils/keyValidation';
 import { checkCreationLimit } from '@/utils/kegisterValidation';
 
 interface AuthState {
   user: User | null;
-  session: any | null;
+  session: Session | null;
   userProfile: UserProfile | null;
   isAuthenticated: boolean;
 
@@ -44,7 +44,7 @@ interface AuthStore extends AuthState {
   }>;
 
   loginWithSocial: (provider: 'github' | 'google') => Promise<void>;
-  signOut: () => Promise<{ success: boolean; error?: any }>;
+  signOut: () => Promise<{ success: boolean; error?: Error | null }>;
 
   // 세션 관리
   checkSession: () => Promise<boolean>;
@@ -57,7 +57,6 @@ interface AuthStore extends AuthState {
   createAnonymousUserWithEdgeFunction: (
     key: string,
     clientIP: string,
-    termsAgreed: boolean,
   ) => Promise<{
     success: boolean;
     user?: User; // Edge Function에서 반환하는 user 객체
@@ -68,14 +67,13 @@ interface AuthStore extends AuthState {
     email: string,
     key: string,
     clientIP: string,
-    termsAgreed: boolean,
   ) => Promise<{
     success: boolean;
     user?: User; // Edge Function에서 반환하는 user 객체
     error?: string;
     code?: string;
   }>;
-  updateTermsAgreement: () => Promise<{ success: boolean; error?: any }>;
+  updateTermsAgreement: () => Promise<{ success: boolean; error?: Error | null }>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -279,13 +277,13 @@ export const useAuthStore = create<AuthStore>()(
         } catch (error) {
           console.error('로그아웃 오류:', error);
           set({ error: error as Error });
-          return { success: false, error };
+          return { success: false, error: error as Error };
         } finally {
           set({ isLogoutLoading: false });
         }
       },
 
-      createAnonymousUserWithEdgeFunction: async (key: string, clientIP: string, termsAgreed: boolean) => {
+      createAnonymousUserWithEdgeFunction: async (key: string, clientIP: string) => {
         set({ isRegisterLoading: true, error: null });
         try {
           const limitCheckResult = await checkCreationLimit(clientIP);
@@ -294,7 +292,7 @@ export const useAuthStore = create<AuthStore>()(
           }
 
           const { data, error } = await supabase.functions.invoke('create_anonymous_user', {
-            body: { key: key.replace(/-/g, '').toUpperCase(), terms_agreed: termsAgreed },
+            body: { key: key.replace(/-/g, '').toUpperCase() },
           });
 
           if (error || !data?.success) {
@@ -324,7 +322,7 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      createEmailUserWithEdgeFunction: async (email: string, key: string, clientIP: string, termsAgreed: boolean) => {
+      createEmailUserWithEdgeFunction: async (email: string, key: string, clientIP: string) => {
         set({ isRegisterLoading: true, error: null });
         try {
           const limitCheckResult = await checkCreationLimit(clientIP);
@@ -333,7 +331,7 @@ export const useAuthStore = create<AuthStore>()(
           }
 
           const { data, error } = await supabase.functions.invoke('create_email_user', {
-            body: { email, key: key.replace(/-/g, '').toUpperCase(), terms_agreed: termsAgreed },
+            body: { email, key: key.replace(/-/g, '').toUpperCase() },
           });
 
           if (error || !data?.success) {
@@ -382,7 +380,7 @@ export const useAuthStore = create<AuthStore>()(
           return { success: true };
         } catch (error) {
           console.error('Error updating terms agreement:', error);
-          return { success: false, error };
+          return { success: false, error: error as Error };
         } finally {
           set({ isTermsLoading: false });
         }
