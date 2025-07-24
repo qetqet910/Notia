@@ -1,10 +1,10 @@
-import type React from 'react';
-import { useState, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Key, AlertCircle, Loader2 } from 'lucide-react';
+import { Key, Loader2 } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { isGenerator, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { supabase } from '@/services/supabaseClient';
 
 import { Toaster } from '@/components/ui/toaster';
@@ -14,54 +14,28 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { InputOTPControlled } from '@/components/features/inputOtpControl';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { useAuthStore } from '@/stores/authStore';
 import { KeyDisplay } from '@/components/features/keyDisplay';
+import { MarkdownPreview } from '@/components/features/dashboard/MarkdownPreview';
 import { useToast } from '@/hooks/useToast';
 import { generateRandomKey, formatKey } from '@/utils/keyValidation';
+import { termsOfService, privacyPolicy } from '@/constants/terms';
+import { animations } from '@/constants/animations';
 
 import logoImage from '@/assets/images/Logo.png';
-import animation from '@/assets/data/loginAnimation.lottie';
 
-// 애니메이션 변수들
-const animations = {
-  card: {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6, ease: 'easeOut' },
-    },
-  },
-  tabContent: {
-    hidden: { opacity: 0, x: -10 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: { duration: 0.4, ease: 'easeOut' },
-    },
-    exit: {
-      opacity: 0,
-      x: 10,
-      transition: { duration: 0.2 },
-    },
-  },
-  stagger: {
-    visible: {
-      transition: { staggerChildren: 0.1 },
-    },
-  },
-  item: {
-    hidden: { opacity: 0, y: 10 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.3 },
-    },
-  },
-};
+// --- Memoized Sub-components ---
 
-// 소셜 로그인 버튼 컴포넌트
-const SocialLoginButton: React.FC<{
+const SocialLoginButton = React.memo<{
   provider: 'github' | 'google';
   icon: string;
   color: string;
@@ -70,518 +44,35 @@ const SocialLoginButton: React.FC<{
   disabled: boolean;
   animate: boolean;
   keyPrefix: string;
-}> = ({
-  provider,
-  icon,
-  color,
-  label,
-  onClick,
-  disabled,
-  animate,
-  keyPrefix,
-}) => (
-  <motion.div
-    key={`${keyPrefix}-${provider}`}
-    initial={animate ? { opacity: 0, y: 10 } : false}
-    animate={animate ? { opacity: 1, y: 0 } : {}}
-    transition={{ duration: 0.3 }}
-  >
-    <Button
-      variant="outline"
-      className="w-full flex items-center justify-center gap-2 h-11 mb-2 hover:shadow-sm"
-      style={{ borderColor: color, color }}
-      onClick={() => onClick(provider)}
-      disabled={disabled}
-    >
-      <img
-        src={icon || '/placeholder.svg'}
-        alt={provider}
-        className="w-5 h-5"
-      />
-      <span>{label}</span>
-    </Button>
-  </motion.div>
-);
-
-// 에러 메시지 컴포넌트
-const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
-  <motion.div
-    key="error-message"
-    className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded flex items-center gap-2 mt-4"
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: 10 }}
-    transition={{ duration: 0.3 }}
-  >
-    <AlertCircle size={16} />
-    <span className="text-sm">{message}</span>
-  </motion.div>
-);
-
-// 로그인 컴포넌트
-export const Login: React.FC = () => {
-  // Zustand 스토어 사용
-  const {
-    isAuthenticated,
-    formattedKey,
-    isRegisterLoading,
-    isLoginLoading,
-    loginWithSocial,
-    createAnonymousUserWithEdgeFunction,
-    createEmailUserWithEdgeFunction,
-  } = useAuthStore();
-
-  const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [activeTab, setActiveTab] = useState('login');
-  const [activeAuthTab, setActiveAuthTab] = useState('key');
-  const [signupTab, setSignupTab] = useState('key');
-  const [initialAnimationComplete, setInitialAnimationComplete] =
-    useState(false);
-  const [localLoading, setLocalLoading] = useState(false);
-  const [showKey, setShowKey] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // 인증 상태 변경 시 리디렉션
-  useEffect(() => {
-    if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, location]);
-
-  // 애니메이션 완료 타이머
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialAnimationComplete(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // 세션 체크
-  useEffect(() => {
-    useAuthStore.getState().checkSession();
-  }, []);
-
-  // 키 복사 핸들러
-  // 키 복사 핸들러 - 하이픈 제거 버전
-  const copyToClipboard = async (text: string) => {
-    try {
-      // 하이픈 제거
-      const cleanText = text.replace(/-/g, '');
-
-      // 클립보드에 복사
-      await navigator.clipboard.writeText(cleanText);
-      setCopiedKey(true);
-
-      toast({
-        title: '클립보드에 복사됨',
-        description: '하이픈이 제거된 키가 클립보드에 복사되었습니다.',
-      });
-
-      setTimeout(() => setCopiedKey(false), 2000); // Reset after 2 seconds
-    } catch (err) {
-      console.error('클립보드 복사 오류:', err);
-      toast({
-        title: '클립보드 복사 오류',
-        description: '클립보드에 복사하는 데 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleCreateEmailKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (formattedKey && showKey) {
-      toast({
-        title: '이미 키가 생성되어 있습니다',
-        description: '생성된 키를 복사해서 사용하세요.',
-      });
-      return;
-    }
-
-    if (!email || !email.includes('@')) {
-      toast({
-        title: '유효하지 않은 이메일',
-        description: '올바른 이메일 주소를 입력해주세요.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      // 키 미리 생성 (하지만 아직 표시하지 않음)
-      const key = generateRandomKey(16);
-      const formattedKeyValue = formatKey(key);
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      const { ip } = await ipResponse.json();
-      // Edge Function으로 이메일 키 생성 요청
-      const result = await createEmailUserWithEdgeFunction(
-        email,
-        formattedKeyValue,
-        ip,
-      );
-
-      // 성공일 경우에만 키 저장 및 표시
-      if (result.success) {
-        // 상태 업데이트
-        useAuthStore.setState({
-          userKey: key,
-          formattedKey: formattedKeyValue,
-          // userEmail: email,
-        });
-
-        setShowKey(true);
-
-        toast({
-          title: '키 생성 성공',
-          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
-        });
-        await supabase.from('creation_attempts').insert({ client_ip: ip });
-      } else {
-        // 에러 코드에 따른 처리
-        let errorMessage = result.error || '알 수 없는 오류가 발생했습니다.';
-        let toastVariant: 'default' | 'destructive' = 'destructive';
-
-        // 특정 에러 코드별 메시지 처리
-        if (result.code === 'EMAIL_EXISTS') {
-          errorMessage = '이미 등록된 이메일입니다. 다른 이메일을 사용하세요.';
-        } else if (result.code === 'INVALID_PASSWORD') {
-          errorMessage =
-            '생성된 키가 보안 요구사항을 충족하지 않습니다. 다시 시도해주세요.';
-        }
-
-        toast({
-          title: '키 생성 실패',
-          description: errorMessage,
-          variant: toastVariant,
-        });
-
-        setEmail('');
-      }
-    } catch (err) {
-      console.error('이메일 키 생성 오류:', err);
-
-      toast({
-        title: '키 생성 오류',
-        description:
-          '서버 연결 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
-        variant: 'destructive',
-      });
-      setEmail('');
-    }
-  };
-
-  // 소셜 로그인 핸들러
-  const handleSocialLogin = async (provider: 'github' | 'google') => {
-    await loginWithSocial(provider);
-  };
-
-  // 익명 키 생성 핸들러
-  const handleCreateAnonymousKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 이미 로딩 중이거나 키가 생성된 경우 중복 처리 방지
-    if (isRegisterLoading) return;
-
-    if (formattedKey && showKey) {
-      toast({
-        title: '이미 키가 생성되어 있습니다',
-        description: '생성된 키를 복사해서 사용하세요.',
-      });
-      return;
-    }
-
-    try {
-      setShowKey(false);
-
-      // 키 생성 및 IP 가져오기 병렬 처리
-      const key = generateRandomKey(16);
-      const formattedKeyValue = formatKey(key);
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      const { ip } = await ipResponse.json();
-
-      const result = await createAnonymousUserWithEdgeFunction(
-        formattedKeyValue,
-        ip,
-      );
-
-      if (!result.success) {
-        const errorMessage = result?.error || '알 수 없는 오류가 발생했습니다.';
-        toast({
-          title: '키 생성 실패',
-          description: errorMessage,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // 성공 처리 로직
-      console.log('익명 사용자 저장 결과:', result);
-
-      useAuthStore.setState({
-        userKey: key,
-        formattedKey: formattedKeyValue,
-      });
-
-      setShowKey(true);
-
-      toast({
-        title: '키 생성 성공',
-        description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
-      });
-
-      // IP 기록 - 성공 후에만 수행
-      await supabase.from('creation_attempts').insert({ client_ip: ip });
-    } catch (err) {
-      console.error('익명 사용자 저장 오류:', err);
-      toast({
-        title: '키 생성 오류',
-        description:
-          err instanceof Error
-            ? err.message
-            : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // 로그인 탭 렌더링
-  const renderLoginTab = () => (
+}>(
+  ({ provider, icon, color, label, onClick, disabled, animate, keyPrefix }) => (
     <motion.div
-      key="login-form-tab"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={animations.tabContent}
-      className="space-y-4"
+      key={`${keyPrefix}-${provider}`}
+      initial={animate ? { opacity: 0, y: 10 } : false}
+      animate={animate ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.3 }}
     >
-      <form className="space-y-4 mb-6">
-        <Tabs
-          defaultValue="key"
-          className="space-y-4"
-          onValueChange={setActiveAuthTab}
-        >
-          <div className="min-h-[120px]">
-            <motion.div
-              key="key-login-tab"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={animations.tabContent}
-              className="space-y-4"
-            >
-              <motion.div
-                key="key-input"
-                className="bg-[#f0faf7] p-4 rounded-lg"
-                variants={animations.item}
-              >
-                <InputOTPControlled />
-              </motion.div>
-              <motion.div key="key-button" variants={animations.item}>
-                <Button
-                  type="submit"
-                  className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isLoginLoading}
-                >
-                  {isLoginLoading ? (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>처리 중...</span>
-                    </div>
-                  ) : (
-                    '로그인'
-                  )}
-                </Button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </Tabs>
-      </form>
-
-      <motion.div
-        key="login-separator"
-        className="relative my-4"
-        variants={animations.item}
+      <Button
+        variant="outline"
+        className="w-full flex items-center justify-center gap-2 h-11 mb-2 hover:shadow-sm"
+        style={{ borderColor: color, color }}
+        onClick={() => onClick(provider)}
+        disabled={disabled}
       >
-        <Separator />
-        <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
-          또는
-        </span>
-      </motion.div>
-
-      <motion.div
-        key="login-social"
-        className="space-y-2"
-        variants={animations.stagger}
-      >
-        <SocialLoginButton
-          provider="github"
-          icon="/icons/github.svg"
-          color="#24292e"
-          label="GitHub로 로그인"
-          onClick={handleSocialLogin}
-          disabled={isLoginLoading}
-          animate={!initialAnimationComplete}
-          keyPrefix="login"
+        <img
+          src={icon || '/placeholder.svg'}
+          alt={provider}
+          className="w-5 h-5"
         />
-        <SocialLoginButton
-          provider="google"
-          icon="/icons/google.svg"
-          color="#DB4437"
-          label="Google로 로그인"
-          onClick={handleSocialLogin}
-          disabled={isLoginLoading}
-          animate={!initialAnimationComplete}
-          keyPrefix="login"
-        />
-      </motion.div>
+        <span>{label}</span>
+      </Button>
     </motion.div>
-  );
+  ),
+);
+SocialLoginButton.displayName = 'SocialLoginButton';
 
-  // 회원가입 탭 렌더링
-  const renderSignupTab = () => (
-    <motion.div
-      key="signup-form-tab"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={animations.tabContent}
-      className="space-y-4"
-    >
-      <Tabs
-        defaultValue="key"
-        className="space-y-4"
-        value={signupTab}
-        onValueChange={setSignupTab}
-      >
-        <div key="key-signup-content">
-          <div className="space-y-4">
-            {/* 이메일 키 생성 폼 추가 */}
-            <motion.div key="create-email-key-form" variants={animations.item}>
-              <form onSubmit={handleCreateEmailKey} className="space-y-3">
-                <div>
-                  <Input
-                    type="email"
-                    placeholder="이메일 주소"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
-                    required
-                    disabled={isRegisterLoading}
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-                  disabled={isRegisterLoading || !email.trim()}
-                >
-                  {isRegisterLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      처리 중...
-                    </>
-                  ) : (
-                    <>
-                      <Key className="h-4 w-4 mr-2" />
-                      이메일로 키 만들기
-                    </>
-                  )}
-                </Button>
-              </form>
-            </motion.div>
-            {/* 익명 키 생성 버튼 */}
-            <motion.div
-              key="create-anonymous-key-button"
-              variants={animations.item}
-            >
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-                disabled={isRegisterLoading}
-                onClick={handleCreateAnonymousKey}
-              >
-                {isRegisterLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    처리 중...
-                  </>
-                ) : (
-                  <>
-                    <Key className="h-4 w-4 mr-2" />
-                    이메일 없이 키 만들기
-                  </>
-                )}
-              </Button>
-            </motion.div>
-
-            {/* 키 표시 - showKey 상태에 따라 표시 */}
-            {!!formattedKey && !!showKey && (
-              <KeyDisplay
-                formattedKey={formattedKey}
-                onCopy={() => copyToClipboard(formattedKey)}
-                copied={copiedKey}
-                autoCopy={true} // 자동 복사 활성화
-              />
-            )}
-          </div>
-        </div>
-      </Tabs>
-
-      {/* {!!userKey && !!showKey && (
-        <KeyDisplay
-          formattedKey={formattedKey || ''}
-          onCopy={copyToClipboard}
-          copied={copiedKey}
-        />
-      )} */}
-
-      <motion.div
-        key="signup-separator"
-        className="relative my-4"
-        variants={animations.item}
-      >
-        <Separator />
-        <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
-          또는
-        </span>
-      </motion.div>
-
-      <motion.div
-        key="signup-social"
-        className="space-y-2"
-        variants={animations.stagger}
-      >
-        <SocialLoginButton
-          provider="github"
-          icon="/icons/github.svg"
-          color="#24292e"
-          label="GitHub로 노트 만들기"
-          onClick={handleSocialLogin}
-          disabled={isRegisterLoading}
-          animate={!initialAnimationComplete}
-          keyPrefix="signup"
-        />
-        <SocialLoginButton
-          provider="google"
-          icon="/icons/google.svg"
-          color="#DB4437"
-          label="Google로 노트 만들기"
-          onClick={handleSocialLogin}
-          disabled={isRegisterLoading}
-          animate={!initialAnimationComplete}
-          keyPrefix="signup"
-        />
-      </motion.div>
-    </motion.div>
-  );
-
-  // 애니메이션 섹션 렌더링
-  const renderAnimationSection = () => (
+const AnimationSection = React.memo<{ initialAnimationComplete: boolean }>(
+  ({ initialAnimationComplete }) => (
     <motion.div
       className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
       initial={!initialAnimationComplete ? { opacity: 0, x: 20 } : false}
@@ -600,13 +91,12 @@ export const Login: React.FC = () => {
           }}
         >
           <DotLottieReact
-            src={animation}
+            src="/loginAnimation.lottie"
             loop
             autoplay
             className="drop-shadow-xl w-full h-full transform scale-150"
           />
         </motion.div>
-
         <motion.div
           className="text-center mt-6"
           initial={!initialAnimationComplete ? { opacity: 0, y: 20 } : false}
@@ -634,11 +124,513 @@ export const Login: React.FC = () => {
         </motion.div>
       </div>
     </motion.div>
+  ),
+);
+AnimationSection.displayName = 'AnimationSection';
+
+const LoginForm = React.memo<{
+  isLoginLoading: boolean;
+  onSocialLogin: (provider: 'github' | 'google') => void;
+  initialAnimationComplete: boolean;
+}>(({ isLoginLoading, onSocialLogin, initialAnimationComplete }) => (
+  <motion.div
+    key="login-form-tab"
+    initial="hidden"
+    animate="visible"
+    exit="exit"
+    variants={animations.tabContent}
+    className="space-y-4"
+  >
+    <form className="space-y-4 mb-6">
+      <div className="min-h-[120px]">
+        <motion.div
+          key="key-login-tab"
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          variants={animations.tabContent}
+          className="space-y-4"
+        >
+          <motion.div
+            key="key-input"
+            className="bg-[#f0faf7] p-4 rounded-lg"
+            variants={animations.item}
+          >
+            <InputOTPControlled />
+          </motion.div>
+          <motion.div key="key-button" variants={animations.item}>
+            <Button
+              type="submit"
+              className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+              disabled={isLoginLoading}
+            >
+              {isLoginLoading ? (
+                <div className="flex items-center justify-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span>처리 중...</span>
+                </div>
+              ) : (
+                '로그인'
+              )}
+            </Button>
+          </motion.div>
+        </motion.div>
+      </div>
+    </form>
+
+    <motion.div
+      key="login-separator"
+      className="relative my-4"
+      variants={animations.item}
+    >
+      <Separator />
+      <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
+        또는
+      </span>
+    </motion.div>
+
+    <motion.div
+      key="login-social"
+      className="space-y-2"
+      variants={animations.stagger}
+    >
+      <SocialLoginButton
+        provider="github"
+        icon="/icons/github.svg"
+        color="#24292e"
+        label="GitHub로 로그인"
+        onClick={onSocialLogin}
+        disabled={isLoginLoading}
+        animate={!initialAnimationComplete}
+        keyPrefix="login"
+      />
+      <SocialLoginButton
+        provider="google"
+        icon="/icons/google.svg"
+        color="#DB4437"
+        label="Google로 로그인"
+        onClick={onSocialLogin}
+        disabled={isLoginLoading}
+        animate={!initialAnimationComplete}
+        keyPrefix="login"
+      />
+    </motion.div>
+  </motion.div>
+));
+LoginForm.displayName = 'LoginForm';
+
+const SignupForm = React.memo<{
+  isRegisterLoading: boolean;
+  email: string;
+  setEmail: (email: string) => void;
+  termsAgreed: boolean;
+  setTermsAgreed: (agreed: boolean) => void;
+  privacyAgreed: boolean;
+  setPrivacyAgreed: (agreed: boolean) => void;
+  formattedKey: string | null;
+  showKey: boolean;
+  copiedKey: boolean;
+  handleCreateEmailKey: (e: React.FormEvent) => void;
+  handleCreateAnonymousKey: (e: React.FormEvent) => void;
+  copyToClipboard: (text: string) => void;
+  setShowTermsDialog: (show: boolean) => void;
+  setShowPrivacyDialog: (show: boolean) => void;
+  onSocialLogin: (provider: 'github' | 'google') => void;
+  initialAnimationComplete: boolean;
+}>(
+  ({
+    isRegisterLoading,
+    email,
+    setEmail,
+    termsAgreed,
+    setTermsAgreed,
+    privacyAgreed,
+    setPrivacyAgreed,
+    formattedKey,
+    showKey,
+    copiedKey,
+    handleCreateEmailKey,
+    handleCreateAnonymousKey,
+    copyToClipboard,
+    setShowTermsDialog,
+    setShowPrivacyDialog,
+    onSocialLogin,
+    initialAnimationComplete,
+  }) => (
+    <motion.div
+      key="signup-form-tab"
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      variants={animations.tabContent}
+      className="space-y-4"
+    >
+      <div className="space-y-4">
+        <motion.div key="create-email-key-form" variants={animations.item}>
+          <form onSubmit={handleCreateEmailKey} className="space-y-3">
+            <div>
+              <Input
+                type="email"
+                placeholder="이메일 주소"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
+                required
+                disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+              />
+            </div>
+            <div className="flex flex-col space-y-2 text-sm">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="terms"
+                  checked={termsAgreed}
+                  onCheckedChange={(checked) => setTermsAgreed(!!checked)}
+                  disabled={isRegisterLoading}
+                />
+                <Label htmlFor="terms">
+                  서비스 이용 약관 동의 (필수){' '}
+                  <span
+                    className="text-[#61C9A8] cursor-pointer hover:underline"
+                    onClick={() => setShowTermsDialog(true)}
+                  >
+                    [보기]
+                  </span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="privacy"
+                  checked={privacyAgreed}
+                  onCheckedChange={(checked) => setPrivacyAgreed(!!checked)}
+                  disabled={isRegisterLoading}
+                />
+                <Label htmlFor="privacy">
+                  개인정보 처리 방침 동의 (필수){' '}
+                  <span
+                    className="text-[#61C9A8] cursor-pointer hover:underline"
+                    onClick={() => setShowPrivacyDialog(true)}
+                  >
+                    [보기]
+                  </span>
+                </Label>
+              </div>
+            </div>
+            <Button
+              type="submit"
+              className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+              disabled={
+                isRegisterLoading ||
+                !email.trim() ||
+                !termsAgreed ||
+                !privacyAgreed
+              }
+            >
+              {isRegisterLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  처리 중...
+                </>
+              ) : (
+                <>
+                  <Key className="h-4 w-4 mr-2" />
+                  이메일로 키 만들기
+                </>
+              )}
+            </Button>
+          </form>
+        </motion.div>
+        <motion.div
+          key="create-anonymous-key-button"
+          variants={animations.item}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
+            disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+            onClick={handleCreateAnonymousKey}
+          >
+            {isRegisterLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              <>
+                <Key className="h-4 w-4 mr-2" />
+                이메일 없이 키 만들기
+              </>
+            )}
+          </Button>
+        </motion.div>
+
+        {!!formattedKey && !!showKey && (
+          <KeyDisplay
+            formattedKey={formattedKey}
+            onCopy={() => copyToClipboard(formattedKey)}
+            copied={copiedKey}
+            autoCopy
+          />
+        )}
+      </div>
+
+      <motion.div
+        key="signup-separator"
+        className="relative my-4"
+        variants={animations.item}
+      >
+        <Separator />
+        <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
+          또는
+        </span>
+      </motion.div>
+
+      <motion.div
+        key="signup-social"
+        className="space-y-2"
+        variants={animations.stagger}
+      >
+        <SocialLoginButton
+          provider="github"
+          icon="/icons/github.svg"
+          color="#24292e"
+          label="GitHub로 노트 만들기"
+          onClick={onSocialLogin}
+          disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+          animate={!initialAnimationComplete}
+          keyPrefix="signup"
+        />
+        <SocialLoginButton
+          provider="google"
+          icon="/icons/google.svg"
+          color="#DB4437"
+          label="Google로 노트 만들기"
+          onClick={onSocialLogin}
+          disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+          animate={!initialAnimationComplete}
+          keyPrefix="signup"
+        />
+      </motion.div>
+    </motion.div>
+  ),
+);
+SignupForm.displayName = 'SignupForm';
+
+// --- Main Component ---
+
+interface LocationState {
+  from?: {
+    pathname?: string;
+  };
+}
+
+export const Login: React.FC = () => {
+  const {
+    isAuthenticated,
+    formattedKey,
+    isRegisterLoading,
+    isLoginLoading,
+    loginWithSocial,
+    createAnonymousUserWithEdgeFunction,
+    createEmailUserWithEdgeFunction,
+  } = useAuthStore();
+
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [activeTab, setActiveTab] = useState('login');
+  const [initialAnimationComplete, setInitialAnimationComplete] =
+    useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const state = location.state as LocationState;
+      const from = state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, location]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialAnimationComplete(true);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    useAuthStore.getState().checkSession();
+  }, []);
+
+  const copyToClipboard = useCallback(
+    async (text: string) => {
+      try {
+        const cleanText = text.replace(/-/g, '');
+        await navigator.clipboard.writeText(cleanText);
+        setCopiedKey(true);
+        toast({
+          title: '클립보드에 복사됨',
+          description: '하이픈이 제거된 키가 클립보드에 복사되었습니다.',
+        });
+        setTimeout(() => setCopiedKey(false), 2000);
+      } catch (err) {
+        console.error('클립보드 복사 오류:', err);
+        toast({
+          title: '클립보드 복사 오류',
+          description: '클립보드에 복사하는 데 실패했습니다.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [toast],
+  );
+
+  const handleCreateEmailKey = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (formattedKey && showKey) {
+        toast({
+          title: '이미 키가 생성되어 있습니다',
+          description: '생성된 키를 복사해서 사용하세요.',
+        });
+        return;
+      }
+      if (!email || !email.includes('@')) {
+        toast({
+          title: '유효하지 않은 이메일',
+          description: '올바른 이메일 주소를 입력해주세요.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      try {
+        const key = generateRandomKey(16);
+        const formattedKeyValue = formatKey(key);
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const { ip } = await ipResponse.json();
+        const result = await createEmailUserWithEdgeFunction(
+          email,
+          formattedKeyValue,
+          ip,
+        );
+        if (result.success) {
+          useAuthStore.setState({
+            userKey: key,
+            formattedKey: formattedKeyValue,
+          });
+          setShowKey(true);
+          toast({
+            title: '키 생성 성공',
+            description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+          });
+          await supabase.from('creation_attempts').insert({ client_ip: ip });
+        } else {
+          let errorMessage = result.error || '알 수 없는 오류가 발생했습니다.';
+          if (result.code === 'EMAIL_EXISTS') {
+            errorMessage =
+              '이미 등록된 이메일입니다. 다른 이메일을 사용하세요.';
+          } else if (result.code === 'INVALID_PASSWORD') {
+            errorMessage =
+              '생성된 키가 보안 요구사항을 충족하지 않습니다. 다시 시도해주세요.';
+          }
+          toast({
+            title: '키 생성 실패',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+          setEmail('');
+        }
+      } catch (err) {
+        console.error('이메일 키 생성 오류:', err);
+        toast({
+          title: '키 생성 오류',
+          description:
+            '서버 연결 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          variant: 'destructive',
+        });
+        setEmail('');
+      }
+    },
+    [formattedKey, showKey, email, createEmailUserWithEdgeFunction, toast],
+  );
+
+  const handleSocialLogin = useCallback(
+    async (provider: 'github' | 'google') => {
+      await loginWithSocial(provider);
+    },
+    [loginWithSocial],
+  );
+
+  const handleCreateAnonymousKey = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (isRegisterLoading) return;
+      if (formattedKey && showKey) {
+        toast({
+          title: '이미 키가 생성되어 있습니다',
+          description: '생성된 키를 복사해서 사용하세요.',
+        });
+        return;
+      }
+      try {
+        setShowKey(false);
+        const key = generateRandomKey(16);
+        const formattedKeyValue = formatKey(key);
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const { ip } = await ipResponse.json();
+        const result = await createAnonymousUserWithEdgeFunction(
+          formattedKeyValue,
+          ip,
+        );
+        if (!result.success) {
+          const errorMessage =
+            result?.error || '알 수 없는 오류가 발생했습니다.';
+          toast({
+            title: '키 생성 실패',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+          return;
+        }
+        useAuthStore.setState({
+          userKey: key,
+          formattedKey: formattedKeyValue,
+        });
+        setShowKey(true);
+        toast({
+          title: '키 생성 성공',
+          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+        });
+        await supabase.from('creation_attempts').insert({ client_ip: ip });
+      } catch (err) {
+        console.error('익명 사용자 저장 오류:', err);
+        toast({
+          title: '키 생성 오류',
+          description:
+            err instanceof Error
+              ? err.message
+              : '키 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [
+      isRegisterLoading,
+      formattedKey,
+      showKey,
+      createAnonymousUserWithEdgeFunction,
+      toast,
+    ],
   );
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br overflow-hidden from-white to-[#e6f7f2]">
-      {/* 로그인 섹션 */}
       <Toaster />
       <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
         <motion.div
@@ -648,7 +640,6 @@ export const Login: React.FC = () => {
         >
           <Card className="relative w-full max-w-md shadow-lg border-[#d8f2ea] overflow-visible">
             <CardContent className="pt-8 pb-6">
-              {/* 로고 */}
               <motion.div
                 className="flex justify-center items-center mb-6"
                 initial={
@@ -667,11 +658,10 @@ export const Login: React.FC = () => {
                 </Link>
               </motion.div>
 
-              {/* 탭 컨테이너 */}
               <Tabs
-                defaultValue="login"
-                className="space-y-4"
+                value={activeTab}
                 onValueChange={setActiveTab}
+                className="space-y-4"
               >
                 <TabsList className="grid grid-cols-2 gap-4">
                   <TabsTrigger
@@ -694,12 +684,37 @@ export const Login: React.FC = () => {
                   </TabsTrigger>
                 </TabsList>
 
-                {/* 탭 내용 */}
                 <div
                   className="relative min-h-[280px]"
                   style={{ transformOrigin: 'top' }}
                 >
-                  {activeTab === 'login' ? renderLoginTab() : renderSignupTab()}
+                  {activeTab === 'login' ? (
+                    <LoginForm
+                      isLoginLoading={isLoginLoading}
+                      onSocialLogin={handleSocialLogin}
+                      initialAnimationComplete={initialAnimationComplete}
+                    />
+                  ) : (
+                    <SignupForm
+                      isRegisterLoading={isRegisterLoading}
+                      email={email}
+                      setEmail={setEmail}
+                      termsAgreed={termsAgreed}
+                      setTermsAgreed={setTermsAgreed}
+                      privacyAgreed={privacyAgreed}
+                      setPrivacyAgreed={setPrivacyAgreed}
+                      formattedKey={formattedKey}
+                      showKey={showKey}
+                      copiedKey={copiedKey}
+                      handleCreateEmailKey={handleCreateEmailKey}
+                      handleCreateAnonymousKey={handleCreateAnonymousKey}
+                      copyToClipboard={copyToClipboard}
+                      setShowTermsDialog={setShowTermsDialog}
+                      setShowPrivacyDialog={setShowPrivacyDialog}
+                      onSocialLogin={handleSocialLogin}
+                      initialAnimationComplete={initialAnimationComplete}
+                    />
+                  )}
                 </div>
               </Tabs>
             </CardContent>
@@ -707,8 +722,31 @@ export const Login: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* 애니메이션 섹션 */}
-      {renderAnimationSection()}
+      <AnimationSection initialAnimationComplete={initialAnimationComplete} />
+
+      <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>서비스 이용 약관</DialogTitle>
+            <DialogDescription>
+              Notia 서비스 이용을 위한 약관입니다.
+            </DialogDescription>
+          </DialogHeader>
+          <MarkdownPreview content={termsOfService} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPrivacyDialog} onOpenChange={setShowPrivacyDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>개인정보 처리 방침</DialogTitle>
+            <DialogDescription>
+              Notia 서비스의 개인정보 처리 방침입니다.
+            </DialogDescription>
+          </DialogHeader>
+          <MarkdownPreview content={privacyPolicy} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

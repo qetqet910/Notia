@@ -32,12 +32,11 @@ export const AuthCallback = () => {
           isRegisterLoading: false,
         });
 
-        // 리다이렉트 대상 결정 (저장된 경로 또는 대시보드)
+        console.log(localStorage.getItem('auth_redirect'));
         const redirectTo =
           localStorage.getItem('auth_redirect') || '/dashboard';
         localStorage.removeItem('auth_redirect'); // 사용 후 제거
 
-        // navigate 사용 (window.location 대신)
         navigate(redirectTo, { replace: true });
       } catch (err) {
         console.error('Auth callback 처리 오류:', err);

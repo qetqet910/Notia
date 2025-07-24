@@ -1,6 +1,6 @@
 import React from 'react';
-import { Header } from '@/layout/header';
-import { Footer } from '@/layout/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { motion } from 'framer-motion';
 

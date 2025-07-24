@@ -98,7 +98,7 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
   // 4. 시간만 명시
   match = timeStr.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
   if (match) {
-    let [, ampm, hourStr, minStr] = match;
+    const [, ampm, hourStr, minStr] = match;
     if (!hourStr) return undefined;
 
     let hour = parseInt(hourStr, 10);

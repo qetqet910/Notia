@@ -43,8 +43,6 @@ Notia의 핵심은 간단한 기호를 사용한 빠른 정리입니다.
 
 <br><br>
 
-![랜딩페이지 스크린샷](./src/assets/images/landing/randing5.png)
-
 ## 🛠️ 기술 스택
 
 - **Frontend**: React, TypeScript, TailwindCSS, shadcn/ui

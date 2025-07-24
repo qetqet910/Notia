@@ -11,7 +11,7 @@ export interface Note {
   updated_at: string;
   createdAt: Date;
   updatedAt: Date;
-  reminders?: EditorReminder[];
+  reminders?: Reminder[];
   content_preview: string;
 }
 
@@ -21,6 +21,8 @@ export interface EditorReminder {
   date: Date;
   completed: boolean;
   original_text: string;
+  updated_at?: string;
+  enabled?: boolean;
 }
 
 export interface Reminder {
@@ -44,6 +46,7 @@ export interface UserProfile {
   key?: string;
   created_at?: string;
   updated_at?: string;
+  terms_agreed: boolean;
 }
 
 export interface Achievement {
@@ -68,7 +71,7 @@ export interface Team {
   key: string;
   owner_id: string;
   created_at: string;
-  settings?: any;
+  settings?: Record<string, unknown>;
   description?: string;
   icon?: string;
 }
@@ -81,4 +84,9 @@ export interface TeamMember {
   created_at: string;
   joined_at: string;
   group_name?: string;
+  userProfile?: {
+    displayName?: string;
+    avatarUrl?: string;
+    email?: string;
+  };
 }

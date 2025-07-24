@@ -38,7 +38,7 @@ export const NoteList: React.FC<NoteListProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b">
+      <div className="p-3 border-b pt-4">
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -53,7 +53,7 @@ export const NoteList: React.FC<NoteListProps> = ({
 
       <ScrollArea className="flex-1">
         {filteredNotes.length > 0 ? (
-          <div className="divide-y">
+          <div className="divide-y border-b">
             {filteredNotes.map((note) => (
               <div
                 key={note.id}

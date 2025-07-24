@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, cubicBezier } from 'framer-motion';
 import {
   Feather,
   Rocket,
@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Header } from '@/layout/header';
-import { Footer } from '@/layout/footer';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 
 import landing1 from '@/assets/images/landing/landing1.png';
 import landing2 from '@/assets/images/landing/landing2.png';
@@ -79,17 +79,22 @@ const faqItems = [
   {
     question: '데이터는 안전하게 보관되나요?',
     answer:
-      '물론입니다. 모든 데이터는 안전한 클라우드 데이터베이스에 암호화되어 저장되며, 허가된 사용자 외에는 절대 접근할 수 없습니다.',
+      '물론입니다. 모든 데이터는 안전한 클라우드 데이터베이스에 암호화되어 저장되며, 저장된 개인정보를 안전하게 보관합니다.',
   },
   {
-    question: '군대 사지방 같은 저사양 PC에서도 잘 작동하나요?',
+    question: '저사양 PC에서도 잘 작동하나요?',
     answer:
       '네, 이 서비스는 개발자의 군 복무 경험을 바탕으로 탄생했습니다. 어떤 환경에서도 빠르고 가볍게 작동하도록 최적화에 많은 노력을 기울였습니다.',
   },
   {
     question: '어떤 목적으로 만들어진 서비스인가요?',
     answer:
-      '개발자 개인의 노트 정리와 리마인더 필요성에서 시작되었습니다. Obsidian처럼 자유로우면서도, 더 쉽고 빠른 리마인더 기능을 결합하여 생산성을 극대화하는 것을 목표로 합니다.',
+      'Obsidian처럼 자유롭고 체계적이고, Velog보다 가볍고 쉽고 빠른 리마인더 기능을 결합하여 생산성을 극대화하는 것을 목표로 합니다.',
+  },
+  {
+    question: 'TMI',
+    answer:
+      '군생활을 하며 세세한 모든 걸 기록하는 습관이 생겼어요, 부작용으로 기록하지 않으면 다 까먹는 것도 생겼답니다.',
   },
 ];
 
@@ -99,7 +104,7 @@ const fadeIn = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: 'easeInOut' },
+    transition: { duration: 0.6, ease: cubicBezier(0.42, 0, 0.58, 1) },
   },
 };
 
@@ -187,14 +192,19 @@ export const Home: React.FC = () => {
             className="text-center"
           >
             <motion.h1
-              variants={fadeIn}
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
               className="text-5xl md:text-6xl font-bold leading-tight tracking-tight"
             >
-              생각의 조각을 <span className="text-[#61C9A8]">#태그</span>로
-              엮고,
-              <br />
-              중요한 약속은 <span className="text-[#61C9A8]">@리마인더</span>로
-              깨우세요.
+              <motion.span variants={fadeIn} className="block">
+                생각의 조각을 <span className="text-[#61C9A8]">#태그</span>로
+                엮고,
+              </motion.span>
+              <motion.span variants={fadeIn} className="block">
+                중요한 약속은 <span className="text-[#61C9A8]">@리마인더</span>
+                로 깨우세요.
+              </motion.span>
             </motion.h1>
             <motion.p
               variants={fadeIn}

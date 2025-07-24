@@ -1,127 +1,68 @@
-import type React from 'react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   InputOTP,
   InputOTPGroup,
-  InputOTPSlot,
   InputOTPSeparator,
+  InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/useToast';
 import { Loader2 } from 'lucide-react';
 
-// 메모이제이션을 위해 함수를 컴포넌트 외부로 이동
-const debounce = <F extends (...args: any[]) => Promise<any>>(
-  func: F,
-  waitFor: number,
-) => {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  return (...args: Parameters<F>): Promise<ReturnType<F>> => {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-
-    return new Promise((resolve) => {
-      timeout = setTimeout(async () => {
-        const result = await func(...args);
-        resolve(result);
-        timeout = null;
-      }, waitFor);
-    }) as Promise<ReturnType<F>>;
-  };
-};
-
 export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = useState('');
-  const { loginWithKey, isLoginLoading } = useAuthStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { loginWithKey } = useAuthStore();
   const { toast } = useToast();
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleValueChange = useCallback(
-    (newValue: string) => {
-      if (isLoginLoading || isSubmitting) return;
-
-      const sanitizedValue = newValue
-        .replace(/[^a-zA-Z0-9-]/g, '')
-        .toUpperCase();
-      setValue(sanitizedValue);
-
-      // 하이픈 제거 후 16자리 키가 모두 입력되면 자동 로그인 시도
-      const cleanValue = newValue.replace(/-/g, '');
-      if (cleanValue.length === 16) {
-        void handleSubmit(cleanValue);
-      }
-    },
-    [isLoginLoading, isSubmitting],
-  );
-
-  // 로그인 처리 함수 - 디바운스 적용
   const handleSubmit = useCallback(
-    debounce(async (keyValue: string) => {
-      // 이미 처리 중이면 중복 요청 방지
-      if (isLoginLoading || isSubmitting) return { success: false };
-
-      try {
-        setIsSubmitting(true);
-
-        const result = await loginWithKey(keyValue);
-
-        if (!result.success) {
-          toast({
-            title: '로그인 실패',
-            description: result.message || '로그인에 실패했습니다.',
-            variant: 'destructive',
-          });
-
-          // 실패 시 입력값 초기화하고 포커스 설정
-          setValue('');
-          setTimeout(() => inputRef.current?.focus(), 100);
-        } else {
-          toast({
-            title: '로그인 성공',
-            description: '환영합니다! 대시보드로 이동합니다.',
-          });
-        }
-
-        return result;
-      } catch (error) {
-        console.error('로그인 오류:', error);
-
+    async (key: string) => {
+      if (key.length !== 16) {
         toast({
-          title: '로그인 오류',
-          description:
-            error instanceof Error
-              ? error.message
-              : '로그인 중 오류가 발생했습니다.',
+          title: '오류',
+          description: '16자리 키를 모두 입력해주세요.',
           variant: 'destructive',
         });
-
-        // 오류 발생 시 입력값 초기화
-        setValue('');
-        return { success: false, error };
-      } finally {
-        setIsSubmitting(false);
+        return;
       }
-    }, 300), // 300ms 디바운스로 빠른 연속 요청 방지
-    [loginWithKey, isLoginLoading, isSubmitting, toast],
+
+      setIsProcessing(true);
+      try {
+        const { success, message } = await loginWithKey(key);
+        if (!success) {
+          toast({
+            title: '로그인 실패',
+            description: message,
+            variant: 'destructive',
+          });
+          setValue('');
+          if (!success) throw message;
+        }
+      } catch (message) {
+        toast({
+          title: '로그인 오류',
+          description: message,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [loginWithKey, toast],
   );
 
-  // 컴포넌트 마운트 시 포커스
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  // 로딩 상태 메모이제이션
-  const isProcessing = isLoginLoading || isSubmitting;
+  const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter') {
+      handleSubmit(value);
+    }
+  };
 
   return (
-    <div className="space-y-4 w-full max-w-md mx-auto">
+    <div className="space-y-4 w-full max-w-md mx-auto" onKeyUp={handleKeyUp}>
       <InputOTP
-        ref={inputRef}
         value={value}
-        onChange={handleValueChange}
+        onChange={setValue}
+        onComplete={handleSubmit}
         disabled={isProcessing}
         maxLength={16}
         autoFocus
@@ -210,7 +151,6 @@ export const InputOTPControlled: React.FC = () => {
         </div>
       </InputOTP>
 
-      {/* 로딩 상태 표시 - 조건식 수정 */}
       {isProcessing && (
         <div className="flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />

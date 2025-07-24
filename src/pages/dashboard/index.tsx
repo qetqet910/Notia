@@ -17,7 +17,7 @@ import { GoalProgress } from '@/components/features/dashboard/goalProgress';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
-// import { TeamSpaceList } from '@/components/features/dashboard/teamSpace/teamSpaceList';
+import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import {
   PlusCircle,
   Calendar as CalendarIcon,
@@ -28,7 +28,7 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note } from '@/types';
+import { Note, EnrichedReminder } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,8 +40,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-import { EditorLoader } from '@/components/loader/EditorLoader';
 import { DashboardLoader } from '@/components/loader/DashboardLoader';
+import { EditorLoader } from '@/components/loader/EditorLoader';
+import { ReminderLoader } from '@/components/loader/ReminderLoader';
+import { CalendarLoader } from '@/components/loader/CalendarLoader';
+import { TimelineLoader } from '@/components/loader/TimelineLoader';
+import { NoteListLoader } from '@/components/loader/NoteListLoader';
 
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/noteList').then((module) => ({
@@ -93,19 +97,21 @@ const EmptyNoteState = ({
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { session, checkSession } = useAuthStore();
+  const { session } = useAuthStore();
   const {
     notes,
     loading: isNotesLoading,
     addNote,
     updateNote,
     deleteNote,
+    deleteReminder,
     updateReminderCompletion,
     updateReminderEnabled,
     fetchNoteContent,
   } = useNotes();
+  const { permission, requestPermission } = useNotificationPermission();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile] = useState(window.innerWidth < 768);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState('notes');
@@ -124,42 +130,29 @@ export const Dashboard: React.FC = () => {
     [],
   );
 
-  const allReminders = useMemo(() => {
+  const allReminders = useMemo((): EnrichedReminder[] => {
+    if (!notes || !Array.isArray(notes)) return [];
     return notes.flatMap((note) =>
-      (note.reminders || []).map((reminder: any) => ({
-        id: reminder.id,
-        note_id: note.id,
-        owner_id: note.owner_id,
-        reminder_text: reminder.text || reminder.reminder_text,
-        reminder_time: (reminder.date
-          ? new Date(reminder.date)
-          : new Date(reminder.reminder_time)
-        ).toISOString(),
-        completed: reminder.completed,
-        enabled: reminder.enabled ?? true,
-        created_at: reminder.created_at || new Date().toISOString(),
-        updated_at: reminder.updated_at || new Date().toISOString(),
-        original_text: reminder.original_text,
+      (note.reminders || []).map((reminder) => ({
+        ...reminder,
         noteId: note.id,
-        noteTitle: note.title,
-        noteContent:
-          note.content?.replace(/<[^>]*>/g, '').substring(0, 100) || '',
+        noteTitle: note.title || '제목 없음',
+        noteContent: note.content?.substring(0, 100) || '',
       })),
     );
   }, [notes]);
 
-  // --- useEffects ---
+  useEffect(() => {
+    if (permission === 'default') {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      const isAuth = await checkSession();
-      if (!isAuth) navigate('/login');
-    };
-    initializeAuth();
-  }, [navigate, checkSession]);
-
-  useEffect(() => {
-    if (selectedNote && !notes.some((note) => note.id === selectedNote.id)) {
+    if (
+      selectedNote &&
+      !(notes || []).some((note) => note && note.id === selectedNote.id)
+    ) {
       setSelectedNote(null);
       setIsEditing(false);
     }
@@ -170,25 +163,22 @@ export const Dashboard: React.FC = () => {
       setTimeout(() => {
         setIsEditing(true);
         newlyCreatedNoteId.current = null;
-      }, 50); // 짧은 딜레이로 안정성 확보
+      }, 50);
     }
   }, [selectedNote]);
-
-  // --- 핸들러 함수들 ---
 
   const handleSelectNote = useCallback(
     async (note: Note) => {
       setSelectedNote(note);
       setIsEditing(false);
 
-      if (!note.content) {
+      if (note && !note.content) {
         setIsNoteContentLoading(true);
         const content = await fetchNoteContent(note.id);
-        // content가 포함된 완전한 노트 객체로 상태 업데이트
-        setSelectedNote({ ...note, content: content || '' });
+        setSelectedNote((prev) =>
+          prev?.id === note.id ? { ...prev, content: content || '' } : prev,
+        );
         setIsNoteContentLoading(false);
-      } else {
-        setSelectedNote(note);
       }
     },
     [fetchNoteContent],
@@ -229,20 +219,6 @@ export const Dashboard: React.FC = () => {
     setIsDeleteDialogOpen(false);
   }, [deleteNote, selectedNote]);
 
-  const handleDeleteReminder = useCallback(
-    async (reminderId: string) => {
-      const targetNote = notes.find((n) =>
-        (n.reminders || []).some((r: any) => r.id === reminderId),
-      );
-      if (!targetNote) return;
-      const updatedReminders = (targetNote.reminders || []).filter(
-        (r: any) => r.id !== reminderId,
-      );
-      await updateNote({ ...targetNote, reminders: updatedReminders });
-    },
-    [notes, updateNote],
-  );
-
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
       const isCtrlCmd = e.ctrlKey || e.metaKey;
@@ -253,26 +229,23 @@ export const Dashboard: React.FC = () => {
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
 
-      // 입력 필드에서는 Ctrl/Cmd+S를 제외한 대부분의 단축키를 무시
       if (isInputElement && !(isCtrlCmd && e.key.toLowerCase() === 's')) {
-        // Tab 키는 항상 작동하도록 허용하지 않음 (필드 내 이동을 위해)
         if (e.key !== 'Tab') return;
       }
 
       const key = e.key === 'Tab' ? 'Tab' : e.key.toLowerCase();
 
-      // 단축키 매핑 객체
       const shortcuts: { [key: string]: (isCtrlCmd?: boolean) => void } = {
         n: () => handleCreateNote(),
         s: (isCtrlCmd) => {
-          if (isCtrlCmd && isEditing && editorRef.current)
+          if (isCtrlCmd && isEditing && editorRef.current) {
             editorRef.current.save();
+          }
         },
         '/': () => navigate('/dashboard/help?tab=overview'),
         '?': () => navigate('/dashboard/help?tab=overview'),
         t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
         Tab: () => {
-          // "Tab" 문자열은 소문자로 변환되지 않도록 위에서 처리
           setIsActiveTab((prev) => {
             const nextIndex = (prev + 1) % activeTabs.length;
             setActiveTab(activeTabs[nextIndex]);
@@ -318,15 +291,17 @@ export const Dashboard: React.FC = () => {
 
   if (isNotesLoading) return <DashboardLoader />;
 
-  // --- 메인 렌더링 ---
   const renderMainContent = () => {
     const filteredNotes = selectedTag
-      ? notes.filter((note) => (note.tags || []).includes(selectedTag))
-      : notes;
+      ? (notes || []).filter(
+          (note) => note && (note.tags || []).includes(selectedTag),
+        )
+      : notes || [];
+
     switch (activeTab) {
       case 'notes':
         return (
-          <div className="flex h-full">
+          <div className="flex h-full overflow-hidden">
             <AlertDialog
               open={isDeleteDialogOpen}
               onOpenChange={setIsDeleteDialogOpen}
@@ -352,91 +327,105 @@ export const Dashboard: React.FC = () => {
                 isEditing ? 'w-0 opacity-0' : 'w-full md:w-1/3'
               }`}
             >
-              {selectedTag && (
-                <div className="p-3 bg-muted border-b">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">
-                      #{selectedTag} 필터링 중
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedTag(null)}
-                      className="h-6 w-6 p-0"
-                    >
-                      ✕
-                    </Button>
+              <Suspense fallback={<NoteListLoader />}>
+                {selectedTag && (
+                  <div className="p-3 bg-muted border-b">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">
+                        #{selectedTag} 필터링 중
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedTag(null)}
+                        className="h-6 w-6 p-0"
+                      >
+                        ✕
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-              <NoteList
-                notes={filteredNotes}
-                onSelectNote={handleSelectNote}
-                selectedNote={selectedNote}
-              />
+                )}
+                <NoteList
+                  notes={filteredNotes}
+                  onSelectNote={handleSelectNote}
+                  selectedNote={selectedNote}
+                />
+              </Suspense>
             </div>
             <div
               className={`h-full transition-all duration-300 ease-in-out ${
                 isEditing ? 'w-full' : 'hidden md:block w-2/3'
               }`}
             >
-              {isNoteContentLoading ? (
-                <EditorLoader />
-              ) : selectedNote ? (
-                <Editor
-                  key={selectedNote.id}
-                  note={selectedNote}
-                  onSave={handleUpdateNote}
-                  onDeleteRequest={() => setIsDeleteDialogOpen(true)}
-                  isEditing={isEditing}
-                  onEnterEditMode={handleEnterEditMode}
-                  onCancelEdit={handleCancelEdit}
-                />
-              ) : (
-                <EmptyNoteState handleCreateNote={handleCreateNote} />
-              )}
+              <Suspense fallback={<EditorLoader />}>
+                {isNoteContentLoading ? (
+                  <EditorLoader />
+                ) : selectedNote ? (
+                  <Editor
+                    ref={editorRef}
+                    key={selectedNote.id}
+                    note={selectedNote}
+                    onSave={handleUpdateNote}
+                    onDeleteRequest={() => setIsDeleteDialogOpen(true)}
+                    isEditing={isEditing}
+                    onEnterEditMode={handleEnterEditMode}
+                    onCancelEdit={handleCancelEdit}
+                  />
+                ) : (
+                  <EmptyNoteState handleCreateNote={handleCreateNote} />
+                )}
+              </Suspense>
             </div>
           </div>
         );
       case 'reminder':
         return (
-          <ReminderView
-            reminders={allReminders}
-            // ✅ props를 새로운 함수로 교체합니다.
-            onToggleComplete={updateReminderCompletion}
-            onToggleEnable={updateReminderEnabled}
-            onDelete={handleDeleteReminder} // 삭제는 기존 로직 유지
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
+          <Suspense fallback={<ReminderLoader />}>
+            <ReminderView
+              reminders={allReminders}
+              onToggleComplete={updateReminderCompletion}
+              onToggleEnable={updateReminderEnabled}
+              onDelete={deleteReminder}
+              onOpenNote={(noteId) => {
+                const noteToOpen =
+                  (notes || []).find((note) => note && note.id === noteId) ||
+                  null;
+                if (noteToOpen) handleSelectNote(noteToOpen);
+                setActiveTab('notes');
+              }}
+            />
+          </Suspense>
         );
       case 'calendar':
         return (
-          <Calendar
-            notes={notes} // 캘린더는 노트와 리마인더 둘 다 필요
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
+          <Suspense fallback={<CalendarLoader />}>
+            <Calendar
+              reminders={allReminders}
+              onOpenNote={(noteId) => {
+                const noteToOpen =
+                  (notes || []).find((note) => note && note.id === noteId) ||
+                  null;
+                if (noteToOpen) handleSelectNote(noteToOpen);
+                setActiveTab('notes');
+              }}
+            />
+          </Suspense>
         );
       case 'timeline':
         return (
-          <TimelineView
-            notes={notes} // 타임라인도 노트와 리마인더 둘 다 필요
-            onOpenNote={(noteId) => {
-              const noteToOpen =
-                notes.find((note) => note.id === noteId) || null;
-              setSelectedNote(noteToOpen);
-              setActiveTab('notes');
-            }}
-          />
+          <Suspense fallback={<TimelineLoader />}>
+            <TimelineView
+              notes={notes || []}
+              reminders={allReminders}
+              onOpenNote={(noteId) => {
+                const noteToOpen =
+                  (notes || []).find((note) => note && note.id === noteId) ||
+                  null;
+                if (noteToOpen) handleSelectNote(noteToOpen);
+                setActiveTab('notes');
+              }}
+            />
+          </Suspense>
         );
       default:
         return null;
@@ -507,12 +496,20 @@ const Sidebar = ({
 }) => {
   const { notes } = useNotes();
   const popularTags = useMemo(() => {
+    if (!notes || !Array.isArray(notes)) return [];
     const tagCount: Record<string, number> = {};
-    notes.forEach((note) => {
-      (note.tags || []).forEach((tag) => {
-        tagCount[tag] = (tagCount[tag] || 0) + 1;
+    notes
+      .filter((note) => note && typeof note === 'object')
+      .forEach((note) => {
+        const tags = note.tags;
+        if (tags && Array.isArray(tags)) {
+          tags
+            .filter((tag) => typeof tag === 'string')
+            .forEach((tag) => {
+              tagCount[tag] = (tagCount[tag] || 0) + 1;
+            });
+        }
       });
-    });
     return Object.entries(tagCount)
       .map(([tag, count]) => ({ tag, count }))
       .sort((a, b) => b.count - a.count)
@@ -542,13 +539,6 @@ const Sidebar = ({
         })}
       </nav>
       <div>
-        {/* TODO: 팀 스페이스 구현 */}
-        {/* <div className="mt-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">
-            팀 스페이스
-          </h3>
-          <TeamSpaceList activeTab={activeTab} setActiveTab={setActiveTab} />
-        </div> */}
         {popularTags.length > 0 && (
           <div className="mt-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">
