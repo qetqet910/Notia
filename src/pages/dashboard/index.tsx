@@ -28,7 +28,7 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note, EnrichedReminder } from '@/types';
+import { Note, Reminder } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,22 +124,21 @@ export const Dashboard: React.FC = () => {
   const newlyCreatedNoteId = useRef<string | null>(null);
 
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
-  const [isActiveTab, setIsActiveTab] = useState(0);
   const activeTabs = useMemo(
     () => ['notes', 'reminder', 'calendar', 'timeline'],
     [],
   );
 
-  const allReminders = useMemo((): EnrichedReminder[] => {
+  const allReminders = useMemo(() => {
     if (!notes || !Array.isArray(notes)) return [];
     return notes.flatMap((note) =>
       (note.reminders || []).map((reminder) => ({
         ...reminder,
         noteId: note.id,
         noteTitle: note.title || '제목 없음',
-        noteContent: note.content?.substring(0, 100) || '',
+        noteContent: note.content_preview?.substring(0, 100) || '',
       })),
-    );
+    ) as (Reminder & { noteId: string; noteTitle: string; noteContent: string })[];
   }, [notes]);
 
   useEffect(() => {
@@ -246,11 +245,9 @@ export const Dashboard: React.FC = () => {
         '?': () => navigate('/dashboard/help?tab=overview'),
         t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
         Tab: () => {
-          setIsActiveTab((prev) => {
-            const nextIndex = (prev + 1) % activeTabs.length;
-            setActiveTab(activeTabs[nextIndex]);
-            return nextIndex;
-          });
+          const currentTabIndex = activeTabs.indexOf(activeTab);
+          const nextIndex = (currentTabIndex + 1) % activeTabs.length;
+          setActiveTab(activeTabs[nextIndex]);
         },
         b: () => setIsSidebarVisible((prev) => !prev),
         d: () => selectedNote && setIsDeleteDialogOpen(true),
@@ -275,6 +272,7 @@ export const Dashboard: React.FC = () => {
       isDeepDarkMode,
       activeTabs,
       selectedNote,
+      activeTab,
     ],
   );
 

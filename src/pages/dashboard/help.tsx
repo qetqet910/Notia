@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Accordion,
@@ -180,67 +181,36 @@ export default function HelpPage() {
 
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
-      const isCtrlCmd = e.ctrlKey || e.metaKey;
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable
       ) {
-        if (!(isCtrlCmd && e.key.toLowerCase() === 's')) return;
+        return;
       }
+
       const key = e.key.toLowerCase();
-      const globalShortcuts: { [key: string]: () => void } = {
-        n: () =>
-          document.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'n', bubbles: true }),
-          ),
-        d: () =>
-          document.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'd', bubbles: true }),
-          ),
-        delete: () =>
-          document.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'delete', bubbles: true }),
-          ),
-        b: () =>
-          document.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'b', bubbles: true }),
-          ),
-      };
-      if (isCtrlCmd && key === 's') {
-        e.preventDefault();
-        document.dispatchEvent(
-          new KeyboardEvent('keydown', {
-            key: 's',
-            ctrlKey: true,
-            bubbles: true,
-          }),
-        );
-        return;
-      }
-      if (globalShortcuts[key]) {
-        e.preventDefault();
-        globalShortcuts[key]();
-        return;
-      }
+
       const pageShortcuts: { [key: string]: () => void } = {
         t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
         m: () => navigate('/dashboard/myPage?tab=profile'),
         ',': () => navigate('/dashboard/myPage?tab=activity'),
         '.': () => navigate('/dashboard/myPage?tab=settings'),
-        '/': () => setActiveTab('shortcuts'),
-        '?': () => setActiveTab('shortcuts'),
+        '/': () => navigate('/dashboard/help?tab=overview'),
+        '?': () => navigate('/dashboard/help?tab=overview'),
         escape: () => navigate('/dashboard'),
       };
+
       if (key === 'tab') {
         e.preventDefault();
-        const tabs = ['overview', 'features', 'guide', 'shortcuts', 'faq'];
+        const tabs = ['overview', 'guide', 'shortcuts', 'faq'];
         const currentTabIndex = tabs.indexOf(activeTab);
         const nextTab = tabs[(currentTabIndex + 1) % tabs.length];
         setActiveTab(nextTab);
         return;
       }
+
       const handler = pageShortcuts[key];
       if (handler) {
         e.preventDefault();
@@ -252,8 +222,9 @@ export default function HelpPage() {
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyboardShortcuts);
-    return () =>
+    return () => {
       document.removeEventListener('keydown', handleKeyboardShortcuts);
+    };
   }, [handleKeyboardShortcuts]);
 
   const filteredShortcuts = useMemo(() => {
@@ -282,6 +253,7 @@ export default function HelpPage() {
         isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
       }`}
     >
+      <Toaster />
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold">도움말 센터</h1>
@@ -445,7 +417,13 @@ export default function HelpPage() {
               </>
             )}
             {activeTab === 'shortcuts' && (
-              <>
+              <div
+                className="space-y-6 custom-scrollbar"
+                style={{
+                  maxHeight: 'calc(100vh - 200px)',
+                  paddingRight: '1rem',
+                }}
+              >
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
@@ -492,7 +470,7 @@ export default function HelpPage() {
                     ))}
                   </div>
                 </HelpContentWrapper>
-              </>
+              </div>
             )}
             {activeTab === 'faq' && (
               <>

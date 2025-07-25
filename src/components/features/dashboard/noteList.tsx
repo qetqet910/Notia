@@ -24,12 +24,14 @@ export const NoteList: React.FC<NoteListProps> = ({
     .filter(
       (note) =>
         note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        note.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (note.content_preview || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         (note.tags || []).some((tag) =>
           tag.toLowerCase().includes(searchTerm.toLowerCase()),
         ),
     )
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); // ✅ 최신순 정렬 추가
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   const getContentPreview = (previewText: string | null) => {
     if (!previewText) return '미리보기 없음';
@@ -82,7 +84,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                   </div>
 
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(note.updatedAt, {
+                    {formatDistanceToNow(new Date(note.updated_at), {
                       addSuffix: true,
                       locale: ko,
                     })}

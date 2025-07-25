@@ -213,7 +213,10 @@ export const ProfileTab: React.FC<ProfileTabProps> = React.memo(
     }, [isEditing]);
 
     return (
-      <div className="space-y-6">
+      <div
+        className="space-y-6 custom-scrollbar"
+        style={{ maxHeight: 'calc(100vh - 200px)', paddingRight: '1rem' }}
+      >
         <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
           <CardHeader className="flex justify-between items-center flex-row">
             <CardTitle className="flex items-center">

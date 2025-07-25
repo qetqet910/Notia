@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   FileText,
@@ -12,6 +12,12 @@ import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
 import { ActivityData } from '@/types/index';
 import { useNotes } from '@/hooks/useNotes';
 import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ActivityTabProps {
   stats: {
@@ -42,7 +48,63 @@ export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
   }, []);
 
   const renderActivityHeatmap = useCallback(() => {
-    if (activityData.every((d) => d.count === 0)) {
+    const firstActivity = activityData.find(d => d.count > 0);
+
+    const weeks = useMemo(() => {
+      if (!firstActivity) return [];
+
+      const allDays = new Map<string, { count: number; level: number }>();
+      activityData.forEach(d => {
+        allDays.set(d.date, { count: d.count, level: d.level });
+      });
+
+      const startDate = new Date(firstActivity.date);
+      const endDate = new Date(startDate);
+      endDate.setFullYear(startDate.getFullYear() + 1);
+
+      const generatedWeeks: { date: string; count: number; level: number }[][] = [];
+      let currentDay = new Date(startDate);
+      currentDay.setDate(currentDay.getDate() - currentDay.getDay()); // Start week on Sunday
+
+      const totalDays = Math.ceil((endDate.getTime() - currentDay.getTime()) / (1000 * 3600 * 24));
+      const totalWeeks = Math.ceil(totalDays / 7);
+
+      for (let i = 0; i < totalWeeks; i++) {
+        const week: { date: string; count: number; level: number }[] = [];
+        for (let j = 0; j < 7; j++) {
+          const dateStr = currentDay.toISOString().split('T')[0];
+          if (currentDay >= startDate && currentDay <= endDate) {
+            const data = allDays.get(dateStr) || { count: 0, level: 0 };
+            week.push({ date: dateStr, ...data });
+          } else {
+            week.push({ date: dateStr, count: -1, level: -1 }); // Placeholder
+          }
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+        generatedWeeks.push(week);
+      }
+      return generatedWeeks;
+    }, [activityData, firstActivity]);
+
+    const monthLabels = useMemo(() => {
+      if (!weeks.length) return [];
+      const labels: { weekIndex: number; name: string }[] = [];
+      let lastMonth = -1;
+      weeks.forEach((week, weekIndex) => {
+        const firstDayOfWeek = new Date(week[0].date);
+        const month = firstDayOfWeek.getMonth();
+        if (month !== lastMonth) {
+          labels.push({
+            weekIndex,
+            name: new Intl.DateTimeFormat('ko-KR', { month: 'short' }).format(firstDayOfWeek),
+          });
+          lastMonth = month;
+        }
+      });
+      return labels;
+    }, [weeks]);
+
+    if (!firstActivity) {
       return (
         <div className="text-center py-8 text-muted-foreground">
           <Calendar className="mx-auto h-12 w-12" />
@@ -52,70 +114,64 @@ export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
       );
     }
 
-    const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
-    const weeklyGroupedData: ActivityData[][] = Array.from({ length: 7 }, () => []);
-    const firstDate = activityData[0] ? new Date(activityData[0].date) : new Date();
-    const daysToPad = firstDate.getDay();
-
-    for (let i = 0; i < daysToPad; i++) {
-      weeklyGroupedData[i].push({ date: '', count: 0, level: 0 });
-    }
-
-    activityData.forEach((day) => {
-      const dayOfWeek = new Date(day.date).getDay();
-      weeklyGroupedData[dayOfWeek].push(day);
-    });
-
-    const maxWeeks = Math.max(...weeklyGroupedData.map((week) => week.length));
-
-    weeklyGroupedData.forEach(week => {
-      while (week.length < maxWeeks) {
-        week.push({ date: '', count: 0, level: 0 });
-      }
-    });
-
     return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>지난 1년간 {stats.completedReminders}개의 리마인더 완료</span>
-          <div className="flex items-center gap-1 text-xs">
-            적음{' '}
-            {[0, 1, 2, 3, 4].map((level) => (
-              <div key={level} className={`w-2.5 h-2.5 rounded-sm ${getLevelColor(level)}`} />
-            ))}{' '}
-            많음
-          </div>
-        </div>
-        <div className="overflow-x-auto pb-2 custom-scrollbar">
-          <div className="flex">
-            <div className="flex flex-col gap-1 pr-2 text-xs text-muted-foreground pt-1">
-              {dayLabels.map((label, index) => (
-                <span key={index} className="h-3.5 flex items-center">
-                  {[0, 2, 4, 6].includes(index) ? label : ''}
-                </span>
-              ))}
+      <TooltipProvider delayDuration={100}>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>지난 1년간 {stats.completedReminders}개의 리마인더 완료</span>
+            <div className="flex items-center gap-1 text-xs">
+              적음{' '}
+              {[0, 1, 2, 3, 4].map((level) => (
+                <div key={level} className={`w-2.5 h-2.5 rounded-sm ${getLevelColor(level)} border border-black/10`} />
+              ))}{' '}
+              많음
             </div>
-            <div className="flex flex-grow overflow-x-auto gap-1">
-              {Array.from({ length: maxWeeks }).map((_, weekIndex) => (
-                <div key={weekIndex} className="flex flex-col gap-1">
-                  {weeklyGroupedData.map((dayRow, dayIndex) => {
-                    const day = dayRow[weekIndex];
-                    return day?.date ? (
-                      <div
-                        key={`${weekIndex}-${dayIndex}`}
-                        className={`w-3.5 h-3.5 rounded-sm ${getLevelColor(day.level)} hover:ring-2 hover:ring-primary cursor-pointer transition-all duration-100`}
-                        title={`${day.date}: ${day.count}개 완료`}
-                      />
-                    ) : (
-                      <div key={`${weekIndex}-${dayIndex}`} className="w-3.5 h-3.5 rounded-sm bg-transparent" />
-                    );
-                  })}
+          </div>
+          <div className="overflow-x-auto pb-2 custom-scrollbar">
+            <div className="inline-flex flex-col">
+              <div className="flex gap-1" style={{ paddingLeft: '2rem' }}>
+                {weeks.map((_, weekIndex) => (
+                  <div key={weekIndex} className="w-3.5 text-xs text-muted-foreground text-center">
+                    {monthLabels.find(m => m.weekIndex === weekIndex)?.name}
+                  </div>
+                ))}
+              </div>
+              <div className="flex">
+                <div className="flex flex-col gap-1 pr-2 text-xs text-muted-foreground pt-1">
+                  {['일', '', '수', '', '금', ''].map((label, index) => (
+                    <span key={index} className="h-3.5 flex items-center">
+                      {label}
+                    </span>
+                  ))}
                 </div>
-              ))}
+                <div className="flex gap-1">
+                  {weeks.map((week, weekIndex) => (
+                    <div key={weekIndex} className="flex flex-col gap-1">
+                      {week.map((day, dayIndex) => {
+                        if (day.count === -1) {
+                          return <div key={dayIndex} className="w-3.5 h-3.5" />;
+                        }
+                        return (
+                          <Tooltip key={dayIndex}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`w-3.5 h-3.5 rounded-sm border border-black/10 ${getLevelColor(day.level)} cursor-pointer`}
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{`${day.date}: ${day.count}개 완료`}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </TooltipProvider>
     );
   }, [activityData, stats.completedReminders, getLevelColor]);
 

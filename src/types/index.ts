@@ -47,6 +47,8 @@ export interface UserProfile {
   created_at?: string;
   updated_at?: string;
   terms_agreed: boolean;
+  weekly_note_goal?: number;
+  weekly_reminder_goal?: number;
 }
 
 export interface Achievement {

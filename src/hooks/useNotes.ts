@@ -26,37 +26,79 @@ const getStartOfWeek = () => {
 export const useNotes = () => {
   const { user } = useAuthStore();
   const allNotes = useDataStore((state) => state.notes);
-  const { initialize, unsubscribeAll, addNoteState, removeNoteState } = useDataStore.getState();
+  const { initialize, unsubscribeAll, addNoteState, removeNoteState } =
+    useDataStore.getState();
 
   const notes = useMemo(
     () =>
-      (allNotes || [])
-        .filter(note => note && typeof note === 'object' && note.owner_id === user?.id),
+      (allNotes || []).filter(
+        (note) =>
+          note && typeof note === 'object' && note.owner_id === user?.id,
+      ),
     [allNotes, user],
   );
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // 노트 추가
+  const addNote = useCallback(
+    async (newNoteData: Pick<Note, 'title' | 'content' | 'tags'>) => {
+      if (!user) return null;
+
+      try {
+        const { data, error } = await supabase
+          .from('notes')
+          .insert([
+            {
+              owner_id: user.id,
+              title: newNoteData.title,
+              content: newNoteData.content,
+              tags: newNoteData.tags,
+            },
+          ])
+          .select() // ⭐ 중요: 삽입된 전체 데이터를 반환받음
+          .single(); // 단일 객체로 받음
+
+        if (error) throw error;
+
+        const newNoteWithDate: Note = {
+          ...data,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+          reminders: [],
+        };
+
+        // ✅ DB로부터 받은 완전한 노트로 로컬 상태를 즉시 업데이트
+        addNoteState(newNoteWithDate);
+
+        return newNoteWithDate; // 완전한 노트를 반환
+      } catch (err) {
+        console.error('노트 추가 중 오류 발생:', err);
+        setError(
+          err instanceof Error ? err : new Error('노트 추가 중 오류 발생'),
+        );
+        return null;
+      }
+    },
+    [user, addNoteState],
+  );
+
   useEffect(() => {
-    // user가 존재하면 데이터 초기화를 시도합니다.
-    // initialize 함수 내부에 중복 실행 방지 로직이 이미 존재합니다.
     if (user) {
       setLoading(true);
       initialize(user.id).finally(() => {
         setLoading(false);
       });
     } else {
-      // user가 없으면 로딩을 중지하고, 모든 구독을 해지합니다.
       setLoading(false);
       unsubscribeAll();
     }
 
-    // 컴포넌트가 언마운트되거나, 사용자가 변경될 때(로그아웃 등) 모든 구독을 해지합니다.
     return () => {
       unsubscribeAll();
     };
-  }, [user?.id, initialize, unsubscribeAll]);
+  }, [user, initialize, unsubscribeAll]);
 
   const fetchNoteContent = useCallback(async (noteId: string) => {
     const localNote = useDataStore
@@ -93,8 +135,8 @@ export const useNotes = () => {
       };
     }
 
-    const noteGoal = user?.user_metadata?.reminderGoal ?? 10;
-    const reminderGoal = user?.user_metadata?.noteGoal ?? 5;
+    const noteGoal = user?.user_metadata?.noteGoal ?? 10;
+    const reminderGoal = user?.user_metadata?.reminderGoal ?? 5;
     const startOfWeek = getStartOfWeek();
 
     // 1. 주간 노트 작성 수
@@ -150,47 +192,6 @@ export const useNotes = () => {
       }
     },
     [],
-  );
-
-  // 노트 추가
-  const addNote = useCallback(
-    async (newNoteData: Pick<Note, 'title' | 'content' | 'tags'>) => {
-      if (!user) return null;
-
-      try {
-        const { data, error } = await supabase
-          .from('notes')
-          .insert([
-            {
-              owner_id: user.id,
-              title: newNoteData.title,
-              content: newNoteData.content,
-              tags: newNoteData.tags,
-            },
-          ])
-          .select() // ⭐ 중요: 삽입된 전체 데이터를 반환받음
-          .single(); // 단일 객체로 받음
-
-        if (error) throw error;
-
-        const newNoteWithDate: Note = {
-          ...data,
-          createdAt: new Date(data.created_at),
-          updatedAt: new Date(data.updated_at),
-          reminders: [],
-        };
-
-        // ✅ DB로부터 받은 완전한 노트로 로컬 상태를 즉시 업데이트
-        addNoteState(newNoteWithDate);
-
-        return newNoteWithDate; // 완전한 노트를 반환
-      } catch (err) {
-        console.error('노트 추가 중 오류 발생:', err);
-        setError(err instanceof Error ? err : new Error('노트 추가 중 오류 발생'));
-        return null;
-      }
-    },
-    [user, addNoteState],
   );
 
   const saveReminders = useCallback(
@@ -651,6 +652,5 @@ export const useNotes = () => {
     shareNoteWithTeam,
     unshareNoteWithTeam,
     getTeamsWithAccess,
-    
   };
 };
