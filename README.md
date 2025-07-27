@@ -1,182 +1,87 @@
-# Supabase CLI (v1)
+# Notia
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/46a1398f-b909-402f-946a-4e54be53e9f2/deploy-status)](https://app.netlify.com/projects/wedontlikeamnesia/deploys)
+<br>
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+<p align="center">
+  <img src="./src/assets/images/Logo.png" alt="Notia Logo" width="120">
+</p>
 
-This repository contains all the functionality for Supabase CLI.
+<p align="center">
+  <strong>생각의 조각을 #태그로 엮고, 중요한 약속은 @리마인더로 깨우세요.</strong>
+  <br>
+  마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며, 일상 속 중요한 약속까지 관리하는<br>가장 가볍고 빠른 당신의 새로운 생산성 도구입니다.
+</p>
+<p align="center">
+    <a href="https://notia.site"><strong>🔗 서비스 바로가기</strong></a>
+</p>
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
+## ✨ 핵심 기능
 
-## Getting started
+- **#태그 기반 노트 정리**: 모든 노트에 `#프로젝트`, `#아이디어` 등 자유로운 태그를 붙여 생각을 체계적으로 분류하고 연결합니다.
+- **@간편 리마인더**: 노트 작성 중 `@2시 10분 회의`처럼 약속을 기록하면, 해당 시간에 정확히 알려주는 스마트 리마인더입니다.
+- **마크다운 지원**: 표준 마크다운 문법과 Mermaid문법을 완벽하게 지원하여, 작성한 콘텐츠를 Obsidian, 블로그 등 다른 플랫폼으로 손쉽게 옮길 수 있습니다.
+- **빠른 속도와 접근성**: 군 복무 경험에서 착안하여, 어떤 저사양 환경에서도 빠르고 가볍게 작동하도록 최적화되었습니다. 별도 설치 없이 웹에서 바로 사용 가능합니다.
+- **실시간 동기화**: 모든 기기에서 작성한 내용이 실시간으로 안전하게 동기화됩니다.
+<!-- - **사용자 맞춤 플랫폼**: 사용자의 환경에 따라, 웹, 웹앱, 데스크탑 앱 등 알맞게 사용하세요. -->
 
-### Install the CLI
+<br>
 
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+## 📖 사용법
 
-```bash
-npm i supabase --save-dev
-```
+Notia의 핵심은 간단한 기호를 사용한 빠른 정리입니다.
 
-To install the beta release channel:
+- **태그 추가**: 노트 내용 어디에서든 `#` 기호 뒤에 원하는 단어를 입력하세요.
 
-```bash
-npm i supabase@beta --save-dev
-```
+  > `오늘 회의 내용 정리 #업무 #회의록`
 
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+- **리마인더 설정**: `@` 기호 뒤에 시간을 쓰고, 마침표(`.`)로 문장을 끝내세요.
 
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
+  > `내일 오후 3시에 클라이언트 미팅하기.` → `@내일 3시 클라이언트 미팅.`
 
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+  > `1시간 10분 뒤 회의 자료 확인하기.` → `@1시간 10분 회의 자료 확인하기.`
 
-<details>
-  <summary><b>macOS</b></summary>
+<br><br>
 
-  Available via [Homebrew](https://brew.sh). To install:
+## 🛠️ 기술 스택
 
-  ```sh
-  brew install supabase/tap/supabase
-  ```
+- **Frontend**: React, TypeScript, TailwindCSS, shadcn/ui
+- **State Management**: Zustand
+- **Backend & DB**: Supabase (PostgreSQL, Auth, Realtime)
+- **Animation**: Framer Motion
+- **Build Tool**: Vite
+- **Package Manager**: npm
 
-  To install the beta release channel:
-  
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-  
-  To upgrade:
+## 🚀 시작하기
 
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
+프로젝트를 로컬 환경에서 실행하려면 아래의 단계를 따라주세요.
 
-<details>
-  <summary><b>Windows</b></summary>
+1.  **저장소 복제**
 
-  Available via [Scoop](https://scoop.sh). To install:
+    ```bash
+    git clone [https://github.com/qetqet910/Notia.git](https://github.com/qetqet910/Notia.git)
+    cd Notia
+    ```
 
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
+2.  **의존성 패키지 설치**
 
-  To upgrade:
+    ```bash
+    npm install
+    ```
 
-  ```powershell
-  scoop update supabase
-  ```
-</details>
+3.  **환경 변수 설정**
 
-<details>
-  <summary><b>Linux</b></summary>
+    - 프로젝트 루트에 `.env` 파일을 생성하세요.
+    - Supabase 프로젝트의 URL과 ANON KEY를 아래와 같이 추가합니다.
+      ```
+      VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+      VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+      ```
 
-  Available via [Homebrew](https://brew.sh) and Linux packages.
+4.  **개발 서버 실행**
+    ```bash
+    npm run dev
+    ```
+    서버가 실행되면 `http://localhost:5173` 에서 앱을 확인할 수 있습니다.
 
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
-
-```bash
-supabase bootstrap
-```
-
-Or using npx:
-
-```bash
-npx supabase bootstrap
-```
-
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
-
-## Docs
-
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
-
-## Breaking changes
-
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
-
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
-
-## Developing
-
-To run from source:
-
-```sh
-# Go >= 1.22
-go run . help
-```
+[MIT License](./LICENSE) / [Contributing](./CONTRIBUTING.md) / [후원한잔](https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f)
