@@ -73,7 +73,10 @@ interface AuthStore extends AuthState {
     error?: string;
     code?: string;
   }>;
-  updateTermsAgreement: () => Promise<{ success: boolean; error?: Error | null }>;
+  updateTermsAgreement: () => Promise<{
+    success: boolean;
+    error?: Error | null;
+  }>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -117,7 +120,10 @@ export const useAuthStore = create<AuthStore>()(
       checkSession: async () => {
         try {
           set({ isSessionCheckLoading: true });
-          const { data: { session }, error } = await supabase.auth.getSession();
+          const {
+            data: { session },
+            error,
+          } = await supabase.auth.getSession();
           if (error) throw error;
 
           if (session) {
@@ -125,7 +131,12 @@ export const useAuthStore = create<AuthStore>()(
             await get().fetchUserProfile(session.user.id);
             return true;
           } else {
-            set({ user: null, session: null, isAuthenticated: false, userProfile: null });
+            set({
+              user: null,
+              session: null,
+              isAuthenticated: false,
+              userProfile: null,
+            });
             return false;
           }
         } catch (error) {
@@ -170,7 +181,10 @@ export const useAuthStore = create<AuthStore>()(
       restoreSession: async () => {
         try {
           // onRehydrateStorage는 isSessionCheckLoading의 초기값인 true를 그대로 사용합니다.
-          const { data: { session }, error } = await supabase.auth.getSession();
+          const {
+            data: { session },
+            error,
+          } = await supabase.auth.getSession();
           if (error) throw error;
 
           if (session) {
@@ -179,7 +193,12 @@ export const useAuthStore = create<AuthStore>()(
             await get().fetchUserProfile(session.user.id);
           } else {
             // 세션이 없으면, 인증되지 않은 상태로 확정합니다.
-            set({ user: null, session: null, isAuthenticated: false, userProfile: null });
+            set({
+              user: null,
+              session: null,
+              isAuthenticated: false,
+              userProfile: null,
+            });
           }
         } catch (error) {
           console.error('세션 복원 오류:', error);
@@ -202,21 +221,26 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoginLoading: true, error: null });
         try {
           const cleanKey = key.replace(/-/g, '').toUpperCase();
-          const { data: keyCheckData, error: keyCheckError } = await supabase.functions.invoke('login_with_key', {
-            body: { key: cleanKey },
-          });
+
+          // 1. Edge Function을 호출하여 키에 해당하는 이메일을 가져옵니다.
+          const { data: keyCheckData, error: keyCheckError } =
+            await supabase.functions.invoke('login_with_key', {
+              body: { key: cleanKey },
+            });
 
           if (keyCheckError || !keyCheckData?.success) {
             throw new Error(keyCheckData?.error || '유효하지 않은 키입니다.');
           }
 
           if (keyCheckData.email) {
+            // 2. 받아온 이메일과 키로 로그인을 시도합니다.
             const { data, error } = await supabase.auth.signInWithPassword({
               email: keyCheckData.email,
               password: cleanKey,
             });
 
-            if (error) throw error;
+            if (error)
+              throw new Error('유효하지 않은 키입니다. 다시 확인해 주세요.');
 
             if (data.user) {
               set({
@@ -227,17 +251,22 @@ export const useAuthStore = create<AuthStore>()(
                 formattedKey: formatKey(cleanKey),
               });
               await get().fetchUserProfile(data.user.id);
+              return { success: true, message: '로그인 성공', user: data.user };
             }
-            return { success: true, message: '로그인 성공', user: data.user };
-          } else {
-            throw new Error('이메일 정보가 없습니다.');
           }
+
+          throw new Error(
+            '로그인에 실패했습니다. 키와 연결된 이메일을 찾을 수 없습니다.',
+          );
         } catch (error) {
           console.error('로그인 중 오류 발생:', error);
           set({ error: error as Error });
           return {
             success: false,
-            message: error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다.',
+            message:
+              error instanceof Error
+                ? error.message
+                : '로그인 중 오류가 발생했습니다.',
             error: error as Error,
           };
         } finally {
@@ -283,20 +312,28 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      createAnonymousUserWithEdgeFunction: async (key: string, clientIP: string) => {
+      createAnonymousUserWithEdgeFunction: async (
+        key: string,
+        clientIP: string,
+      ) => {
         set({ isRegisterLoading: true, error: null });
         try {
-          const limitCheckResult = await checkCreationLimit(clientIP);
-          if (!limitCheckResult.allowed) {
-            return { success: false, error: limitCheckResult.error, code: 'RATE_LIMITED' };
-          }
-
-          const { data, error } = await supabase.functions.invoke('create_anonymous_user', {
-            body: { key: key.replace(/-/g, '').toUpperCase() },
-          });
+          const { data, error } = await supabase.functions.invoke(
+            'create_anonymous_user',
+            {
+              body: { key: key.replace(/-/g, '').toUpperCase(), clientIP },
+            },
+          );
 
           if (error || !data?.success) {
-            throw new Error(data?.error || '익명 사용자 생성에 실패했습니다.');
+            const errorMessage =
+              data?.error || '익명 사용자 생성에 실패했습니다.';
+            const errorCode = data?.code || 'UNEXPECTED_ERROR';
+            // 에러 객체를 생성하여 code 속성을 포함시킵니다.
+            const customError = new Error(errorMessage);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (customError as any).code = errorCode;
+            throw customError;
           }
 
           if (data.user) {
@@ -309,33 +346,55 @@ export const useAuthStore = create<AuthStore>()(
             await get().fetchUserProfile(data.user.id);
             return { success: true, user: data.user };
           }
-          return { success: false, error: '사용자 정보가 반환되지 않았습니다.', code: 'NO_USER_DATA' };
+          return {
+            success: false,
+            error: '사용자 정보가 반환되지 않았습니다.',
+            code: 'NO_USER_DATA',
+          };
         } catch (error) {
           console.error('익명 사용자 생성 중 오류:', error);
           return {
             success: false,
-            error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
-            code: 'UNEXPECTED_ERROR',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            error:
+              error instanceof Error
+                ? error.message
+                : '알 수 없는 오류가 발생했습니다.',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            code: (error as any)?.code || 'UNEXPECTED_ERROR',
           };
         } finally {
           set({ isRegisterLoading: false });
         }
       },
 
-      createEmailUserWithEdgeFunction: async (email: string, key: string, clientIP: string) => {
+      createEmailUserWithEdgeFunction: async (
+        email: string,
+        key: string,
+        clientIP: string,
+      ) => {
         set({ isRegisterLoading: true, error: null });
         try {
-          const limitCheckResult = await checkCreationLimit(clientIP);
-          if (!limitCheckResult.allowed) {
-            return { success: false, error: limitCheckResult.error, code: 'RATE_LIMITED' };
-          }
-
-          const { data, error } = await supabase.functions.invoke('create_email_user', {
-            body: { email, key: key.replace(/-/g, '').toUpperCase() },
-          });
+          const { data, error } = await supabase.functions.invoke(
+            'create_email_user',
+            {
+              body: {
+                email,
+                key: key.replace(/-/g, '').toUpperCase(),
+                clientIP,
+              },
+            },
+          );
 
           if (error || !data?.success) {
-            throw new Error(data?.error || '이메일 사용자 생성에 실패했습니다.');
+            const errorMessage =
+              data?.error || '이메일 사용자 생성에 실패했습니다.';
+            const errorCode = data?.code || 'UNEXPECTED_ERROR';
+            // 에러 객체를 생성하여 code 속성을 포함시킵니다.
+            const customError = new Error(errorMessage);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (customError as any).code = errorCode;
+            throw customError;
           }
 
           if (data.user) {
@@ -348,13 +407,22 @@ export const useAuthStore = create<AuthStore>()(
             await get().fetchUserProfile(data.user.id);
             return { success: true, user: data.user };
           }
-          return { success: false, error: '사용자 정보가 반환되지 않았습니다.', code: 'NO_USER_DATA' };
+          return {
+            success: false,
+            error: '사용자 정보가 반환되지 않았습니다.',
+            code: 'NO_USER_DATA',
+          };
         } catch (error) {
           console.error('이메일 사용자 생성 중 오류:', error);
           return {
             success: false,
-            error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
-            code: 'UNEXPECTED_ERROR',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            error:
+              error instanceof Error
+                ? error.message
+                : '알 수 없는 오류가 발생했습니다.',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            code: (error as any)?.code || 'UNEXPECTED_ERROR',
           };
         } finally {
           set({ isRegisterLoading: false });
@@ -388,8 +456,8 @@ Notia는 여러분의 생각을 정리하고, 일정을 관리하며, 생산성�
 - Notia가 자동으로 시간을 인식하여 캘린더에 추가하고, 시간에 맞춰 알림을 보내드립니다.
 
 ### 2. 자동 태그 분류
-- #기호로 노트를 쉽게 분류하고 관리하세요.
-- 예시: \`#프로젝트\` \`#아이디어\` \`#회의록\`
+- # 기호로 노트를 쉽게 분류하고 관리하세요.
+- 예시: \`#프로젝트 \`#아이디어 \`#회의록
 - 태그를 클릭하면 해당 태그가 포함된 모든 노트를 한눈에 볼 수 있습니다.
 
 ### 3. 마크다운 지원
@@ -414,15 +482,20 @@ Notia와 함께 생산적인 하루를 만들어보세요! 🌟`;
             tags: ['가이드'],
           };
 
-          const { error: noteError } = await supabase.from('notes').insert(guideNote);
+          const { error: noteError } = await supabase
+            .from('notes')
+            .insert(guideNote);
           if (noteError) throw noteError;
 
           // 3. 스토어의 프로필을 확실하게 다시 불러옵니다.
           await get().fetchUserProfile(user.id);
-          
+
           return { success: true };
         } catch (error) {
-          console.error('Error updating terms agreement and creating guide note:', error);
+          console.error(
+            'Error updating terms agreement and creating guide note:',
+            error,
+          );
           return { success: false, error: error as Error };
         } finally {
           set({ isTermsLoading: false });

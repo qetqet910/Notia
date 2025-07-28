@@ -223,18 +223,12 @@ const SignupForm = React.memo<{
   isRegisterLoading: boolean;
   email: string;
   setEmail: (email: string) => void;
-  termsAgreed: boolean;
-  setTermsAgreed: (agreed: boolean) => void;
-  privacyAgreed: boolean;
-  setPrivacyAgreed: (agreed: boolean) => void;
   formattedKey: string | null;
   showKey: boolean;
   copiedKey: boolean;
   handleCreateEmailKey: (e: React.FormEvent) => void;
   handleCreateAnonymousKey: (e: React.FormEvent) => void;
   copyToClipboard: (text: string) => void;
-  setShowTermsDialog: (show: boolean) => void;
-  setShowPrivacyDialog: (show: boolean) => void;
   onSocialLogin: (provider: 'github' | 'google') => void;
   initialAnimationComplete: boolean;
 }>(
@@ -242,18 +236,12 @@ const SignupForm = React.memo<{
     isRegisterLoading,
     email,
     setEmail,
-    termsAgreed,
-    setTermsAgreed,
-    privacyAgreed,
-    setPrivacyAgreed,
     formattedKey,
     showKey,
     copiedKey,
     handleCreateEmailKey,
     handleCreateAnonymousKey,
     copyToClipboard,
-    setShowTermsDialog,
-    setShowPrivacyDialog,
     onSocialLogin,
     initialAnimationComplete,
   }) => (
@@ -276,54 +264,13 @@ const SignupForm = React.memo<{
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-11 border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
                 required
-                disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+                disabled={isRegisterLoading}
               />
-            </div>
-            <div className="flex flex-col space-y-2 text-sm">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="terms"
-                  checked={termsAgreed}
-                  onCheckedChange={(checked) => setTermsAgreed(!!checked)}
-                  disabled={isRegisterLoading}
-                />
-                <Label htmlFor="terms">
-                  서비스 이용 약관 동의 (필수){' '}
-                  <span
-                    className="text-[#61C9A8] cursor-pointer hover:underline"
-                    onClick={() => setShowTermsDialog(true)}
-                  >
-                    [보기]
-                  </span>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="privacy"
-                  checked={privacyAgreed}
-                  onCheckedChange={(checked) => setPrivacyAgreed(!!checked)}
-                  disabled={isRegisterLoading}
-                />
-                <Label htmlFor="privacy">
-                  개인정보 처리 방침 동의 (필수){' '}
-                  <span
-                    className="text-[#61C9A8] cursor-pointer hover:underline"
-                    onClick={() => setShowPrivacyDialog(true)}
-                  >
-                    [보기]
-                  </span>
-                </Label>
-              </div>
             </div>
             <Button
               type="submit"
               className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
-              disabled={
-                isRegisterLoading ||
-                !email.trim() ||
-                !termsAgreed ||
-                !privacyAgreed
-              }
+              disabled={isRegisterLoading || !email.trim()}
             >
               {isRegisterLoading ? (
                 <>
@@ -347,7 +294,7 @@ const SignupForm = React.memo<{
             type="button"
             variant="outline"
             className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
-            disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+            disabled={isRegisterLoading}
             onClick={handleCreateAnonymousKey}
           >
             {isRegisterLoading ? (
@@ -396,7 +343,7 @@ const SignupForm = React.memo<{
           color="#24292e"
           label="GitHub로 노트 만들기"
           onClick={onSocialLogin}
-          disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+          disabled={isRegisterLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
@@ -406,7 +353,7 @@ const SignupForm = React.memo<{
           color="#DB4437"
           label="Google로 노트 만들기"
           onClick={onSocialLogin}
-          disabled={isRegisterLoading || !termsAgreed || !privacyAgreed}
+          disabled={isRegisterLoading}
           animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
@@ -442,10 +389,6 @@ export const Login: React.FC = () => {
   const [initialAnimationComplete, setInitialAnimationComplete] =
     useState(false);
   const [showKey, setShowKey] = useState(false);
-  const [termsAgreed, setTermsAgreed] = useState(false);
-  const [privacyAgreed, setPrivacyAgreed] = useState(false);
-  const [showTermsDialog, setShowTermsDialog] = useState(false);
-  const [showPrivacyDialog, setShowPrivacyDialog] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -699,18 +642,12 @@ export const Login: React.FC = () => {
                       isRegisterLoading={isRegisterLoading}
                       email={email}
                       setEmail={setEmail}
-                      termsAgreed={termsAgreed}
-                      setTermsAgreed={setTermsAgreed}
-                      privacyAgreed={privacyAgreed}
-                      setPrivacyAgreed={setPrivacyAgreed}
                       formattedKey={formattedKey}
                       showKey={showKey}
                       copiedKey={copiedKey}
                       handleCreateEmailKey={handleCreateEmailKey}
                       handleCreateAnonymousKey={handleCreateAnonymousKey}
                       copyToClipboard={copyToClipboard}
-                      setShowTermsDialog={setShowTermsDialog}
-                      setShowPrivacyDialog={setShowPrivacyDialog}
                       onSocialLogin={handleSocialLogin}
                       initialAnimationComplete={initialAnimationComplete}
                     />
@@ -723,30 +660,6 @@ export const Login: React.FC = () => {
       </div>
 
       <AnimationSection initialAnimationComplete={initialAnimationComplete} />
-
-      <Dialog open={showTermsDialog} onOpenChange={setShowTermsDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>서비스 이용 약관</DialogTitle>
-            <DialogDescription>
-              Notia 서비스 이용을 위한 약관입니다.
-            </DialogDescription>
-          </DialogHeader>
-          <MarkdownPreview content={termsOfService} />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showPrivacyDialog} onOpenChange={setShowPrivacyDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>개인정보 처리 방침</DialogTitle>
-            <DialogDescription>
-              Notia 서비스의 개인정보 처리 방침입니다.
-            </DialogDescription>
-          </DialogHeader>
-          <MarkdownPreview content={privacyPolicy} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

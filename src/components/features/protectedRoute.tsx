@@ -1,17 +1,16 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
+import { DashboardLoader } from '../loader/DashboardLoader';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   redirectTo?: string;
-  checkTerms?: boolean;
 }
 
 export const ProtectedRoute = ({
   children,
   redirectTo = '/login',
-  checkTerms = true,
 }: ProtectedRouteProps) => {
   const {
     isAuthenticated,
@@ -24,14 +23,7 @@ export const ProtectedRoute = ({
 
   // 1순위: 세션 또는 프로필 로딩 중일 때
   if (isSessionCheckLoading || isProfileLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-medium">사용자 정보 확인 중...</h2>
-          <div className="mt-4 animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
-        </div>
-      </div>
-    );
+    return <DashboardLoader />;
   }
 
   // 2순위: 인증되지 않았을 때
@@ -40,6 +32,7 @@ export const ProtectedRoute = ({
   }
 
   // 3순위: 프로필 정보가 없을 때 (로딩은 끝났지만 데이터가 null)
+  // 이 경우는 비정상적인 상태이므로, 에러 메시지를 보여주고 로그아웃 시킵니다.
   if (!userProfile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -56,8 +49,9 @@ export const ProtectedRoute = ({
     );
   }
 
-  // 4순위: 약관 동의 여부 확인 (checkTerms 플래그가 true일 때만)
-  if (checkTerms && !userProfile.terms_agreed) {
+  // 4순위: 약관 동의 여부 확인
+  // 현재 페이지가 약관 동의 페이지인 경우는 이 검사를 건너뜁니다. (무한 리디렉션 방지)
+  if (location.pathname !== '/terms-agreement' && !userProfile.terms_agreed) {
     return <Navigate to="/terms-agreement" state={{ from: location }} replace />;
   }
 
