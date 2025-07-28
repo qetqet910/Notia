@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Key, Loader2 } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, useAnimation } from 'framer-motion';
 import { supabase } from '@/services/supabaseClient';
 
 import { Toaster } from '@/components/ui/toaster';
@@ -14,21 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { InputOTPControlled } from '@/components/features/inputOtpControl';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { useAuthStore } from '@/stores/authStore';
 import { KeyDisplay } from '@/components/features/keyDisplay';
-import { MarkdownPreview } from '@/components/features/dashboard/MarkdownPreview';
 import { useToast } from '@/hooks/useToast';
 import { generateRandomKey, formatKey } from '@/utils/keyValidation';
-import { termsOfService, privacyPolicy } from '@/constants/terms';
 import { animations } from '@/constants/animations';
 
 import logoImage from '@/assets/images/Logo.png';
@@ -42,97 +31,91 @@ const SocialLoginButton = React.memo<{
   label: string;
   onClick: (provider: 'github' | 'google') => void;
   disabled: boolean;
-  animate: boolean;
   keyPrefix: string;
-}>(
-  ({ provider, icon, color, label, onClick, disabled, animate, keyPrefix }) => (
-    <motion.div
-      key={`${keyPrefix}-${provider}`}
-      initial={animate ? { opacity: 0, y: 10 } : false}
-      animate={animate ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.3 }}
+}>(({ provider, icon, color, label, onClick, disabled, keyPrefix }) => (
+  <motion.div
+    key={`${keyPrefix}-${provider}`}
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+  >
+    <Button
+      variant="outline"
+      className="w-full flex items-center justify-center gap-2 h-11 mb-2 hover:shadow-sm"
+      style={{ borderColor: color, color }}
+      onClick={() => onClick(provider)}
+      disabled={disabled}
     >
-      <Button
-        variant="outline"
-        className="w-full flex items-center justify-center gap-2 h-11 mb-2 hover:shadow-sm"
-        style={{ borderColor: color, color }}
-        onClick={() => onClick(provider)}
-        disabled={disabled}
-      >
-        <img
-          src={icon || '/placeholder.svg'}
-          alt={provider}
-          className="w-5 h-5"
-        />
-        <span>{label}</span>
-      </Button>
-    </motion.div>
-  ),
-);
+      <img
+        src={icon || '/placeholder.svg'}
+        alt={provider}
+        className="w-5 h-5"
+      />
+      <span>{label}</span>
+    </Button>
+  </motion.div>
+));
 SocialLoginButton.displayName = 'SocialLoginButton';
 
-const AnimationSection = React.memo<{ initialAnimationComplete: boolean }>(
-  ({ initialAnimationComplete }) => (
-    <motion.div
-      className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
-      initial={!initialAnimationComplete ? { opacity: 0, x: 20 } : false}
-      animate={!initialAnimationComplete ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.8, delay: 0.2 }}
-    >
-      <div className="w-full max-w-md">
-        <motion.div
-          className="w-full h-full mx-auto"
-          initial={!initialAnimationComplete ? { scale: 0.9 } : false}
-          animate={!initialAnimationComplete ? { scale: 1 } : {}}
-          transition={{
-            duration: 0.8,
-            type: 'spring',
-            bounce: 0.3,
-          }}
+const AnimationSection = React.memo(() => (
+  <motion.div
+    className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
+    initial={{ opacity: 0, x: 20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ duration: 0.8, delay: 0.2 }}
+  >
+    <div className="w-full max-w-md">
+      <motion.div
+        className="w-full h-full mx-auto"
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        transition={{
+          duration: 0.8,
+          type: 'spring',
+          bounce: 0.3,
+        }}
+      >
+        <DotLottieReact
+          src="/loginAnimation.lottie"
+          loop
+          autoplay
+          className="drop-shadow-xl w-full h-full transform scale-150"
+        />
+      </motion.div>
+      <motion.div
+        className="text-center mt-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <motion.h2
+          className="text-xl md:text-2xl font-bold text-[#61C9A8]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
         >
-          <DotLottieReact
-            src="/loginAnimation.lottie"
-            loop
-            autoplay
-            className="drop-shadow-xl w-full h-full transform scale-150"
-          />
-        </motion.div>
-        <motion.div
-          className="text-center mt-6"
-          initial={!initialAnimationComplete ? { opacity: 0, y: 20 } : false}
-          animate={!initialAnimationComplete ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.5 }}
+          순간을 기록하세요,
+        </motion.h2>
+        <motion.p
+          className="text-gray-600 mt-2 max-w-sm mx-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
         >
-          <motion.h2
-            className="text-xl md:text-2xl font-bold text-[#61C9A8]"
-            initial={!initialAnimationComplete ? { opacity: 0 } : false}
-            animate={!initialAnimationComplete ? { opacity: 1 } : {}}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
-            순간을 기록하세요,
-          </motion.h2>
-          <motion.p
-            className="text-gray-600 mt-2 max-w-sm mx-auto"
-            initial={!initialAnimationComplete ? { opacity: 0 } : false}
-            animate={!initialAnimationComplete ? { opacity: 1 } : {}}
-            transition={{ duration: 0.5, delay: 0.7 }}
-          >
-            중요한 순간으로 내일을 만들어 드릴게요.
-            <br />
-            언제, 어디서나 기록하세요.
-          </motion.p>
-        </motion.div>
-      </div>
-    </motion.div>
-  ),
-);
+          중요한 순간으로 내일을 만들어 드릴게요.
+          <br />
+          언제, 어디서나 기록하세요.
+        </motion.p>
+      </motion.div>
+    </div>
+  </motion.div>
+));
 AnimationSection.displayName = 'AnimationSection';
 
 const LoginForm = React.memo<{
   isLoginLoading: boolean;
   onSocialLogin: (provider: 'github' | 'google') => void;
-  initialAnimationComplete: boolean;
-}>(({ isLoginLoading, onSocialLogin, initialAnimationComplete }) => (
+}>(({ isLoginLoading, onSocialLogin }) => (
   <motion.div
     key="login-form-tab"
     initial="hidden"
@@ -201,7 +184,6 @@ const LoginForm = React.memo<{
         label="GitHub로 로그인"
         onClick={onSocialLogin}
         disabled={isLoginLoading}
-        animate={!initialAnimationComplete}
         keyPrefix="login"
       />
       <SocialLoginButton
@@ -211,7 +193,6 @@ const LoginForm = React.memo<{
         label="Google로 로그인"
         onClick={onSocialLogin}
         disabled={isLoginLoading}
-        animate={!initialAnimationComplete}
         keyPrefix="login"
       />
     </motion.div>
@@ -230,7 +211,6 @@ const SignupForm = React.memo<{
   handleCreateAnonymousKey: (e: React.FormEvent) => void;
   copyToClipboard: (text: string) => void;
   onSocialLogin: (provider: 'github' | 'google') => void;
-  initialAnimationComplete: boolean;
 }>(
   ({
     isRegisterLoading,
@@ -243,7 +223,6 @@ const SignupForm = React.memo<{
     handleCreateAnonymousKey,
     copyToClipboard,
     onSocialLogin,
-    initialAnimationComplete,
   }) => (
     <motion.div
       key="signup-form-tab"
@@ -344,7 +323,6 @@ const SignupForm = React.memo<{
           label="GitHub로 노트 만들기"
           onClick={onSocialLogin}
           disabled={isRegisterLoading}
-          animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
         <SocialLoginButton
@@ -354,7 +332,6 @@ const SignupForm = React.memo<{
           label="Google로 노트 만들기"
           onClick={onSocialLogin}
           disabled={isRegisterLoading}
-          animate={!initialAnimationComplete}
           keyPrefix="signup"
         />
       </motion.div>
@@ -386,11 +363,28 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
-  const [initialAnimationComplete, setInitialAnimationComplete] =
-    useState(false);
   const [showKey, setShowKey] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const controls = useAnimation();
+
+  // Page Visibility API를 사용하여 애니메이션 제어
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        controls.start('visible');
+      }
+    };
+
+    if (document.visibilityState === 'visible') {
+      controls.start('visible');
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [controls]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -399,13 +393,6 @@ export const Login: React.FC = () => {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialAnimationComplete(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     useAuthStore.getState().checkSession();
@@ -525,11 +512,8 @@ export const Login: React.FC = () => {
         setShowKey(false);
         const key = generateRandomKey(16);
         const formattedKeyValue = formatKey(key);
-        const ipResponse = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await ipResponse.json();
         const result = await createAnonymousUserWithEdgeFunction(
           formattedKeyValue,
-          ip,
         );
         if (!result.success) {
           const errorMessage =
@@ -550,7 +534,6 @@ export const Login: React.FC = () => {
           title: '키 생성 성공',
           description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
         });
-        await supabase.from('creation_attempts').insert({ client_ip: ip });
       } catch (err) {
         console.error('익명 사용자 저장 오류:', err);
         toast({
@@ -577,20 +560,16 @@ export const Login: React.FC = () => {
       <Toaster />
       <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
         <motion.div
-          initial={!initialAnimationComplete ? 'hidden' : false}
-          animate={!initialAnimationComplete ? 'visible' : {}}
+          initial="hidden"
+          animate={controls}
           variants={animations.card}
         >
           <Card className="relative w-full max-w-md shadow-lg border-[#d8f2ea] overflow-visible">
             <CardContent className="pt-8 pb-6">
               <motion.div
                 className="flex justify-center items-center mb-6"
-                initial={
-                  !initialAnimationComplete ? { scale: 0.9, opacity: 0 } : false
-                }
-                animate={
-                  !initialAnimationComplete ? { scale: 1, opacity: 1 } : {}
-                }
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5 }}
               >
                 <Link
@@ -635,7 +614,6 @@ export const Login: React.FC = () => {
                     <LoginForm
                       isLoginLoading={isLoginLoading}
                       onSocialLogin={handleSocialLogin}
-                      initialAnimationComplete={initialAnimationComplete}
                     />
                   ) : (
                     <SignupForm
@@ -649,7 +627,6 @@ export const Login: React.FC = () => {
                       handleCreateAnonymousKey={handleCreateAnonymousKey}
                       copyToClipboard={copyToClipboard}
                       onSocialLogin={handleSocialLogin}
-                      initialAnimationComplete={initialAnimationComplete}
                     />
                   )}
                 </div>
@@ -659,7 +636,7 @@ export const Login: React.FC = () => {
         </motion.div>
       </div>
 
-      <AnimationSection initialAnimationComplete={initialAnimationComplete} />
+      <AnimationSection />
     </div>
   );
 };

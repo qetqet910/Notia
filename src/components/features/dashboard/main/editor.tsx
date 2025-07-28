@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { useNoteParser } from '@/hooks/useNoteParser';
 import { useToast } from '@/hooks/useToast';
+import { useDataStore } from '@/stores/dataStore'; // dataStore import
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -83,6 +84,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const [isDirty, setIsDirty] = useState(false);
     const { toast } = useToast();
     const navigate = useNavigate();
+    const notesFromStore = useDataStore((state) => state.notes);
 
     const { tags: parsedTags, reminders: parsedReminders } =
       useNoteParser(content);
@@ -95,40 +97,30 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 
     const handleSave = useCallback(() => {
       const extractedTags = parsedTags.map((tag) => tag.text);
-      const existingRemindersMap = new Map<string, EditorReminder>(
-        (note.reminders || []).map((r) => [
-          r.original_text || `@${r.text || r.reminder_text}.`,
-          r,
-        ]),
-      );
-      const finalReminders: EditorReminder[] = parsedReminders.map((parsed) => {
-        const existing = existingRemindersMap.get(parsed.originalText);
-        if (existing) {
-          return {
-            ...existing,
-            text: parsed.reminderText!,
-            original_text: parsed.originalText,
-          };
-        }
+
+      const finalReminders: EditorReminder[] = parsedReminders
+        .filter(p => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
+        .map((parsed) => {
+        // 에디터에서 파싱된 최신 정보를 기반으로 리마인더 객체를 생성합니다.
+        // 기존 리마인더의 ID나 상태를 유지할 필요가 없습니다. 
+        // useNotes 훅이 DB 동기화 후 최종 상태를 결정합니다.
         return {
-          id: '',
+          id: `temp-${parsed.originalText}-${Date.now()}`, // 낙관적 업데이트를 위한 임시 ID
           text: parsed.reminderText!,
           date: parsed.parsedDate!,
-          completed: false,
+          completed: false, // 새로 파싱된 리마인더는 항상 '미완료'
+          enabled: true,   // 새로 파싱된 리마인더는 항상 '활성'
           original_text: parsed.originalText,
         };
       });
 
-      const noteToSave: Note = {
-        ...note,
+      onSave(note.id, {
         title,
         content,
         tags: extractedTags,
         reminders: finalReminders,
-        updatedAt: new Date(),
-      };
+      });
 
-      onSave(noteToSave);
       setIsDirty(false);
       onCancelEdit();
       toast({
@@ -136,7 +128,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         description: '노트가 성공적으로 저장되었습니다.',
       });
     }, [
-      note,
+      note.id,
       title,
       content,
       parsedTags,

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { supabase } from '@/services/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Note, Reminder, EditorReminder } from '@/types';
+import type { Note, Reminder } from '@/types';
+import { parseNoteContent } from '@/utils/noteParser'; // 파서 유틸리티 import
 
 interface DataState {
   notes: Note[];
@@ -9,6 +10,11 @@ interface DataState {
   channels: RealtimeChannel[];
   initialize: (userId: string) => Promise<void>;
   unsubscribeAll: () => Promise<void>;
+  createNote: (noteData: {
+    owner_id: string;
+    title: string;
+    content: string;
+  }) => Promise<void>;
   updateNoteState: (updatedNote: Note) => void;
   updateReminderState: (
     reminderId: string,
@@ -22,6 +28,68 @@ export const useDataStore = create<DataState>((set, get) => ({
   notes: [],
   isInitialized: false,
   channels: [],
+
+  createNote: async ({ owner_id, title, content }) => {
+    const { tags, reminders: parsedReminders } = parseNoteContent(content);
+    const tagTexts = tags.map(t => t.text);
+    
+    // 1. 낙관적 업데이트를 위한 임시 객체 생성
+    const tempNoteId = `temp-note-${Date.now()}`;
+    const tempReminders: Reminder[] = parsedReminders.map((r, index) => ({
+      id: `temp-reminder-${index}-${Date.now()}`,
+      note_id: tempNoteId,
+      owner_id: owner_id,
+      reminder_text: r.reminderText || '',
+      reminder_time: r.parsedDate?.toISOString() || new Date().toISOString(),
+      original_text: r.originalText,
+      completed: false,
+      enabled: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    const newNote: Note = {
+      id: tempNoteId,
+      owner_id,
+      title,
+      content,
+      tags: tagTexts,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      reminders: tempReminders, // 임시 리마인더를 포함
+      is_public: false,
+      parent_id: null,
+      note_type: 'note',
+      content_preview: content.substring(0, 100),
+    };
+
+    // 2. UI에 즉시 반영
+    get().addNoteState(newNote);
+
+    try {
+      // 3. DB에 데이터 전송
+      const reminderPayloads = tempReminders.map(r => ({
+        reminder_text: r.reminder_text,
+        reminder_time: r.reminder_time,
+        original_text: r.original_text,
+      }));
+
+      const { error } = await supabase.rpc('create_note_with_details', {
+        owner_id_param: owner_id,
+        title_param: title,
+        content_param: content,
+        tags_param: tagTexts,
+        reminders_param: reminderPayloads,
+      });
+
+      if (error) throw error;
+
+    } catch (err) {
+      console.error("Failed to create note:", err);
+      // 4. 실패 시, 낙관적 업데이트 롤백
+      get().removeNoteState(tempNoteId);
+    }
+  },
 
   updateNoteState: (updatedNote: Note) => {
     set((state) => ({
@@ -44,7 +112,8 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   addNoteState: (newNote: Note) => {
     set((state) => ({
-      notes: [newNote, ...state.notes],
+      // 중복 추가 방지
+      notes: state.notes.some(n => n.id === newNote.id) ? state.notes : [newNote, ...state.notes],
     }));
   },
 

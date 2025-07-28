@@ -5,6 +5,8 @@ import type { User, Session } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types';
 import { formatKey } from '@/utils/keyValidation';
 import { checkCreationLimit } from '@/utils/kegisterValidation';
+import { guideNoteContent } from '@/constants/basicNote';
+import { useDataStore } from './dataStore'; // dataStore import 추가
 
 interface AuthState {
   user: User | null;
@@ -371,7 +373,6 @@ export const useAuthStore = create<AuthStore>()(
       createEmailUserWithEdgeFunction: async (
         email: string,
         key: string,
-        clientIP: string,
       ) => {
         set({ isRegisterLoading: true, error: null });
         try {
@@ -381,7 +382,6 @@ export const useAuthStore = create<AuthStore>()(
               body: {
                 email,
                 key: key.replace(/-/g, '').toUpperCase(),
-                clientIP,
               },
             },
           );
@@ -432,10 +432,10 @@ export const useAuthStore = create<AuthStore>()(
       updateTermsAgreement: async () => {
         set({ isTermsLoading: true });
         try {
-          const { user } = get();
-          if (!user) throw new Error('User not authenticated');
+          const { user, userProfile } = get();
+          if (!user || !userProfile) throw new Error('User not authenticated');
 
-          // 1. 약관 동의 업데이트
+          // 1. 약관 동의 DB 업데이트
           const { error: termsError } = await supabase
             .from('users')
             .update({ terms_agreed: true })
@@ -443,52 +443,16 @@ export const useAuthStore = create<AuthStore>()(
 
           if (termsError) throw termsError;
 
-          // 2. 가이드 노트 생성
-          const guideNoteContent = `# Notia에 오신 것을 환영합니다!
+          // 2. 클라이언트 상태 즉시 업데이트 (낙관적 업데이트)
+          set({ userProfile: { ...userProfile, terms_agreed: true } });
 
-Notia는 여러분의 생각을 정리하고, 일정을 관리하며, 생산성을 높일 수 있도록 도와주는 똑똑한 노트 앱입니다.
-
-## 주요 기능 🚀
-
-### 1. 스마트 리마인더
-- 노트 내용에 '@' 기호를 사용하여 간편하게 리마인더를 설정해보세요.
-- 예시: \`@내일 오후 3시 프로젝트 보고서 제출하기.\`
-- Notia가 자동으로 시간을 인식하여 캘린더에 추가하고, 시간에 맞춰 알림을 보내드립니다.
-
-### 2. 자동 태그 분류
-- # 기호로 노트를 쉽게 분류하고 관리하세요.
-- 예시: \`#프로젝트 \`#아이디어 \`#회의록
-- 태그를 클릭하면 해당 태그가 포함된 모든 노트를 한눈에 볼 수 있습니다.
-
-### 3. 마크다운 지원
-- 직관적인 마크다운 문법으로 서식이 풍부한 노트를 작성할 수 있습니다.
-- \`**굵게**\`, \`*기울임꼴*\`, \`\`\`코드 블록\`\`\`, - 목록, [ ] 체크리스트 등 다양한 기능을 활용해보세요.
-
-### 4. 팀 스페이스 (출시 예정)
-- 팀을 만들어 동료들과 노트를 공유하고 함께 작업하는 기능이 곧 추가될 예정입니다.
-
-## 시작하기
-
-이 가이드 노트를 자유롭게 수정하거나 삭제하고, 여러분의 첫 노트를 작성해보세요!
-
-**궁금한 점이 있다면 언제든지 '도움말' 페이지를 참고해주세요.**
-
-Notia와 함께 생산적인 하루를 만들어보세요! 🌟`;
-
-          const guideNote = {
+          // 3. dataStore를 통해 환영 노트 생성
+          // 이 작업은 백그라운드에서 실행되며 페이지 전환을 막지 않음
+          useDataStore.getState().createNote({
             owner_id: user.id,
             title: '🎉 NOTIA 에 오신 것을 환영합니다! 🎉',
             content: guideNoteContent,
-            tags: ['가이드'],
-          };
-
-          const { error: noteError } = await supabase
-            .from('notes')
-            .insert(guideNote);
-          if (noteError) throw noteError;
-
-          // 3. 스토어의 프로필을 확실하게 다시 불러옵니다.
-          await get().fetchUserProfile(user.id);
+          });
 
           return { success: true };
         } catch (error) {

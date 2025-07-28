@@ -223,23 +223,27 @@ export const useNotes = () => {
 
         let upsertedData: Reminder[] = [];
         if (finalReminders.length > 0) {
-          const reminderData = finalReminders.map((reminder) => ({
-            note_id: noteId,
-            owner_id: user.id,
-            reminder_text: reminder.text,
-            reminder_time: new Date(reminder.date).toISOString(),
-            completed: reminder.completed || false,
-            enabled: reminder.enabled ?? true,
-            original_text: reminder.original_text,
-          }));
+          const reminderData = finalReminders
+            .filter(reminder => reminder.date instanceof Date && !isNaN(reminder.date.getTime()))
+            .map((reminder) => ({
+              note_id: noteId,
+              owner_id: user.id,
+              reminder_text: reminder.text,
+              reminder_time: new Date(reminder.date).toISOString(),
+              completed: reminder.completed || false,
+              enabled: reminder.enabled ?? true,
+              original_text: reminder.original_text,
+            }));
 
-          const { data, error: upsertError } = await supabase
-            .from('reminders')
-            .upsert(reminderData, { onConflict: 'note_id, original_text' })
-            .select();
+          if (reminderData.length > 0) {
+            const { data, error: upsertError } = await supabase
+              .from('reminders')
+              .upsert(reminderData, { onConflict: 'note_id, original_text' })
+              .select();
 
-          if (upsertError) throw upsertError;
-          upsertedData = data as Reminder[];
+            if (upsertError) throw upsertError;
+            upsertedData = data as Reminder[];
+          }
         }
 
         return upsertedData;
@@ -279,29 +283,46 @@ export const useNotes = () => {
 
   // 노트 업데이트 (리마인더 포함)
   const updateNote = useCallback(
-    async (updatedNote: Note) => {
+    async (noteId: string, updates: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'reminders'>>) => {
       if (!user) return false;
 
-      const { updateNoteState } = useDataStore.getState();
+      const { updateNoteState, notes } = useDataStore.getState();
+      const originalNote = notes.find(n => n.id === noteId);
+
+      if (!originalNote) {
+        console.error("업데이트할 노트를 찾을 수 없습니다.");
+        return false;
+      }
+
+      // 1. 전체 낙관적 업데이트: UI 상태를 즉시 변경
+      const updatedNote: Note = {
+        ...originalNote,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      updateNoteState(updatedNote);
 
       try {
+        // 2. DB에 노트 내용 업데이트
         const { error: noteError } = await supabase
           .from('notes')
           .update({
-            title: updatedNote.title,
-            content: updatedNote.content,
-            tags: updatedNote.tags,
+            title: updates.title,
+            content: updates.content,
+            tags: updates.tags,
             updated_at: getKoreaTimeAsUTC(),
           })
-          .eq('id', updatedNote.id)
+          .eq('id', noteId)
           .eq('owner_id', user.id);
         if (noteError) throw noteError;
 
+        // 3. DB에 리마인더 동기화
         const syncedReminders = await saveReminders(
-          updatedNote.id,
-          updatedNote.reminders || [],
+          noteId,
+          updates.reminders || [],
         );
 
+        // 4. 동기화된 리마인더(실제 ID 포함)로 최종 상태 업데이트
         const finalNote: Note = {
           ...updatedNote,
           reminders: syncedReminders.map(
@@ -316,15 +337,21 @@ export const useNotes = () => {
             }),
           ),
         };
-
         updateNoteState(finalNote);
 
         return true;
+
       } catch (err) {
         console.error('노트 업데이트 중 오류 발생:', err);
         setError(
           err instanceof Error ? err : new Error('노트 업데이트 중 오류 발생'),
         );
+        
+        // 5. 롤백: 오류 발생 시 원래 노트 상태로 복원
+        if (originalNote) {
+          updateNoteState(originalNote);
+        }
+        
         return false;
       }
     },
