@@ -1,7 +1,7 @@
 export interface Note {
   id: string;
   title: string;
-  content: string;
+  content?: string;
   owner_id: string;
   is_public: boolean;
   parent_id?: string;
@@ -11,7 +11,7 @@ export interface Note {
   updated_at: string;
   createdAt: Date;
   updatedAt: Date;
-  reminders?: Reminder[];
+  reminders: Reminder[];
   content_preview: string;
 }
 

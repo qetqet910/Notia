@@ -26,15 +26,20 @@ const getStartOfWeek = () => {
 export const useNotes = () => {
   const { user } = useAuthStore();
   const allNotes = useDataStore((state) => state.notes);
-  const { initialize, unsubscribeAll, addNoteState, removeNoteState } =
+  const { initialize, unsubscribeAll, removeNoteState } =
     useDataStore.getState();
 
   const notes = useMemo(
     () =>
-      (allNotes || []).filter(
-        (note) =>
-          note && typeof note === 'object' && note.owner_id === user?.id,
-      ),
+      Object.values(allNotes || {})
+        .filter(
+          (note) =>
+            note && typeof note === 'object' && note.owner_id === user?.id,
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        ),
     [allNotes, user],
   );
 
@@ -45,34 +50,14 @@ export const useNotes = () => {
   const addNote = useCallback(
     async (newNoteData: Pick<Note, 'title' | 'content' | 'tags'>) => {
       if (!user) return null;
-
       try {
-        const { data, error } = await supabase
-          .from('notes')
-          .insert([
-            {
-              owner_id: user.id,
-              title: newNoteData.title,
-              content: newNoteData.content,
-              tags: newNoteData.tags,
-            },
-          ])
-          .select() // ⭐ 중요: 삽입된 전체 데이터를 반환받음
-          .single(); // 단일 객체로 받음
-
-        if (error) throw error;
-
-        const newNoteWithDate: Note = {
-          ...data,
-          createdAt: new Date(data.created_at),
-          updatedAt: new Date(data.updated_at),
-          reminders: [],
-        };
-
-        // ✅ DB로부터 받은 완전한 노트로 로컬 상태를 즉시 업데이트
-        addNoteState(newNoteWithDate);
-
-        return newNoteWithDate; // 완전한 노트를 반환
+        const note = await useDataStore.getState().createNote({
+          title: newNoteData.title,
+          content: newNoteData.content || '', // content가 undefined일 경우 빈 문자열을 전달
+          tags: newNoteData.tags,
+          owner_id: user.id,
+        });
+        return note;
       } catch (err) {
         console.error('노트 추가 중 오류 발생:', err);
         setError(
@@ -81,7 +66,7 @@ export const useNotes = () => {
         return null;
       }
     },
-    [user, addNoteState],
+    [user],
   );
 
   useEffect(() => {
@@ -101,9 +86,7 @@ export const useNotes = () => {
   }, [user, initialize, unsubscribeAll]);
 
   const fetchNoteContent = useCallback(async (noteId: string) => {
-    const localNote = useDataStore
-      .getState()
-      .notes.find((n) => n.id === noteId);
+    const localNote = useDataStore.getState().notes[noteId];
     if (localNote && localNote.content) {
       return localNote.content;
     }
@@ -147,7 +130,7 @@ export const useNotes = () => {
     // 2. 주간 리마인더 완료 수
     const remindersCompletedThisWeek = notes.reduce((count, note) => {
       const completedInNote = (note.reminders || []).filter(
-        (reminder: EditorReminder) =>
+        (reminder: Reminder) =>
           reminder.completed &&
           reminder.updated_at && // completed_at 대신 updated_at 사용 가정
           new Date(reminder.updated_at) >= startOfWeek,
@@ -258,52 +241,52 @@ export const useNotes = () => {
     [user],
   );
 
-  const updateNoteOnly = useCallback(
-    async (updatedNote: Note) => {
-      if (!user) return false;
-
-      try {
-        const { error: noteError } = await supabase.from('notes').update({
-          title: updatedNote.title,
-          content: updatedNote.content,
-          tags: updatedNote.tags,
-          updated_at: getKoreaTimeAsUTC(),
-        });
-
-        if (noteError) throw noteError;
-
-        return true;
-      } catch (err) {
-        console.error('노트 업데이트 중 오류 발생:', err);
-        return false;
-      }
-    },
-    [user],
-  );
-
   // 노트 업데이트 (리마인더 포함)
   const updateNote = useCallback(
-    async (noteId: string, updates: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'reminders'>>) => {
+    async (
+      noteId: string,
+      updates: Partial<
+        Pick<Note, 'title' | 'content' | 'tags'> & {
+          reminders: EditorReminder[];
+        }
+      >,
+    ) => {
       if (!user) return false;
 
       const { updateNoteState, notes } = useDataStore.getState();
-      const originalNote = notes.find(n => n.id === noteId);
+      const originalNote = notes[noteId];
 
       if (!originalNote) {
-        console.error("업데이트할 노트를 찾을 수 없습니다.");
+        console.error('업데이트할 노트를 찾을 수 없습니다.');
         return false;
       }
 
       // 1. 전체 낙관적 업데이트: UI 상태를 즉시 변경
-      const updatedNote: Note = {
+      const optimisticallyUpdatedNote: Note = {
         ...originalNote,
-        ...updates,
+        title: updates.title ?? originalNote.title,
+        content: updates.content ?? originalNote.content,
+        tags: updates.tags ?? originalNote.tags,
+        reminders: (updates.reminders || []).map(
+          (er: EditorReminder): Reminder => ({
+            id: er.id,
+            note_id: originalNote.id,
+            owner_id: originalNote.owner_id,
+            reminder_text: er.text,
+            reminder_time: er.date.toISOString(),
+            completed: er.completed,
+            enabled: er.enabled ?? true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            original_text: er.original_text,
+          }),
+        ),
         updated_at: new Date().toISOString(),
       };
-      updateNoteState(updatedNote);
+      updateNoteState(optimisticallyUpdatedNote);
 
       try {
-        // 2. DB에 노트 내용 업데이트
+        // 2. DB에 노트 기본 정보 업데이트
         const { error: noteError } = await supabase
           .from('notes')
           .update({
@@ -312,8 +295,8 @@ export const useNotes = () => {
             tags: updates.tags,
             updated_at: getKoreaTimeAsUTC(),
           })
-          .eq('id', noteId)
-          .eq('owner_id', user.id);
+          .eq('id', noteId);
+
         if (noteError) throw noteError;
 
         // 3. DB에 리마인더 동기화
@@ -322,32 +305,20 @@ export const useNotes = () => {
           updates.reminders || [],
         );
 
-        // 4. 동기화된 리마인더(실제 ID 포함)로 최종 상태 업데이트
+        // 4. 동기화된 리마인더로 최종 상태 업데이트
         const finalNote: Note = {
-          ...updatedNote,
-          reminders: syncedReminders.map(
-            (r: Reminder): EditorReminder => ({
-              id: r.id,
-              text: r.reminder_text,
-              date: new Date(r.reminder_time),
-              completed: r.completed,
-              enabled: r.enabled,
-              original_text: r.original_text,
-              updated_at: r.updated_at,
-            }),
-          ),
+          ...optimisticallyUpdatedNote,
+          reminders: syncedReminders,
         };
         updateNoteState(finalNote);
 
         return true;
-
       } catch (err) {
         console.error('노트 업데이트 중 오류 발생:', err);
         setError(
           err instanceof Error ? err : new Error('노트 업데이트 중 오류 발생'),
         );
         
-        // 5. 롤백: 오류 발생 시 원래 노트 상태로 복원
         if (originalNote) {
           updateNoteState(originalNote);
         }
@@ -513,18 +484,7 @@ export const useNotes = () => {
               accessLevel:
                 groupNotesData.find((gn) => gn.note_id === note.id)
                   ?.access_level || 'read',
-              reminders:
-                note.reminders?.map(
-                  (reminder: Reminder): EditorReminder => ({
-                    id: reminder.id,
-                    text: reminder.reminder_text,
-                    date: new Date(reminder.reminder_time),
-                    completed: reminder.completed,
-                    enabled: reminder.enabled,
-                    original_text: `@${reminder.reminder_text}.`,
-                    updated_at: reminder.updated_at,
-                  }),
-                ) || [],
+              reminders: note.reminders || [],
             } as Note & { accessLevel: string }),
         );
 
@@ -665,7 +625,6 @@ export const useNotes = () => {
     goalStats,
     updateUserGoals,
     addNote,
-    updateNoteOnly,
     updateNote,
     deleteNote,
     deleteReminder,

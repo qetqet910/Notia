@@ -12,8 +12,11 @@ export interface ParsedReminder {
   reminderText?: string;
 }
 
-const parseTimeExpression = (timeText: string): Date | undefined => {
-  const now = new Date();
+const parseTimeExpression = (
+  timeText: string,
+  baseDate: Date = new Date(),
+): Date | undefined => {
+  const now = baseDate; // Use baseDate instead of new Date()
   const timeStr = timeText.trim().toLowerCase();
 
   const adjustForPastTime = (result: Date): Date => {
@@ -28,7 +31,7 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
   if (match) {
     const amount = parseInt(match[1], 10);
     const unit = match[2];
-    const result = new Date();
+    const result = new Date(now); // Use new Date(now) to create a mutable copy
     if (unit === '시간') {
       result.setHours(result.getHours() + amount);
     } else {
@@ -62,7 +65,7 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
   );
   if (match) {
     const [, dayWord, ampm, hourStr, minStr] = match;
-    const result = new Date();
+    const result = new Date(now); // Use new Date(now)
     result.setSeconds(0, 0);
 
     if (dayWord === '내일') result.setDate(result.getDate() + 1);
@@ -104,7 +107,7 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
       if (ampm === '오후' && hour !== 12) hour += 12;
     }
 
-    const result = new Date();
+    const result = new Date(now); // Use new Date(now)
     result.setHours(hour, minute, 0, 0);
     return adjustForPastTime(result);
   }
@@ -120,7 +123,10 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
   return undefined;
 };
 
-export const parseNoteContent = (content: string) => {
+export const parseNoteContent = (
+  content: string,
+  baseDate: Date = new Date(),
+) => {
   const reminders: ParsedReminder[] = [];
 
   // 1. 해시태그 파싱
@@ -163,7 +169,7 @@ export const parseNoteContent = (content: string) => {
     }
 
     if (timeText && reminderText) {
-      const parsedDate = parseTimeExpression(timeText);
+      const parsedDate = parseTimeExpression(timeText, baseDate); // Pass baseDate
       reminders.push({
         text: timeText,
         originalText: match[0],
@@ -174,4 +180,15 @@ export const parseNoteContent = (content: string) => {
   }
 
   return { tags, reminders };
+};
+
+export const parseReminder = (
+  text: string,
+  baseDate: Date = new Date(),
+): ParsedReminder | null => {
+  const result = parseNoteContent(`@${text}.`, baseDate); // Pass baseDate
+  if (result.reminders.length > 0) {
+    return result.reminders[0];
+  }
+  return null;
 };

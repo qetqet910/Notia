@@ -131,14 +131,23 @@ export const Dashboard: React.FC = () => {
 
   const allReminders = useMemo(() => {
     if (!notes || !Array.isArray(notes)) return [];
-    return notes.flatMap((note) =>
-      (note.reminders || []).map((reminder) => ({
-        ...reminder,
-        noteId: note.id,
-        noteTitle: note.title || '제목 없음',
-        noteContent: note.content_preview?.substring(0, 100) || '',
-      })),
-    ) as (Reminder & { noteId: string; noteTitle: string; noteContent: string })[];
+    const remindersMap = new Map<
+      string,
+      Reminder & { noteId: string; noteTitle: string; noteContent: string }
+    >();
+    notes.forEach((note) => {
+      (note.reminders || []).forEach((reminder) => {
+        if (!remindersMap.has(reminder.id)) {
+          remindersMap.set(reminder.id, {
+            ...reminder,
+            noteId: note.id,
+            noteTitle: note.title || '제목 없음',
+            noteContent: note.content_preview?.substring(0, 100) || '',
+          });
+        }
+      });
+    });
+    return Array.from(remindersMap.values());
   }, [notes]);
 
   useEffect(() => {
@@ -150,7 +159,7 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (
       selectedNote &&
-      !(notes || []).some((note) => note && note.id === selectedNote.id)
+      !notes.some((note) => note && note.id === selectedNote.id)
     ) {
       setSelectedNote(null);
       setIsEditing(false);
@@ -204,13 +213,6 @@ export const Dashboard: React.FC = () => {
       setActiveTab('notes');
     }
   }, [addNote, session?.user?.id]);
-
-  const handleUpdateNote = useCallback(
-    async (noteToUpdate: Note) => {
-      await updateNote(noteToUpdate);
-    },
-    [updateNote],
-  );
 
   const handleConfirmDelete = useCallback(async () => {
     if (!selectedNote) return;
@@ -363,7 +365,7 @@ export const Dashboard: React.FC = () => {
                     ref={editorRef}
                     key={selectedNote.id}
                     note={selectedNote}
-                    onSave={handleUpdateNote}
+                    onSave={updateNote}
                     onDeleteRequest={() => setIsDeleteDialogOpen(true)}
                     isEditing={isEditing}
                     onEnterEditMode={handleEnterEditMode}

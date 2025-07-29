@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { useNoteParser } from '@/hooks/useNoteParser';
 import { useToast } from '@/hooks/useToast';
-import { useDataStore } from '@/stores/dataStore'; // dataStore import
+import { parseNoteContent } from '@/utils/noteParser';
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -47,7 +47,14 @@ const MarkdownPreview = lazy(() =>
 
 interface EditorProps {
   note: Note;
-  onSave: (note: Note) => void;
+  onSave: (
+    noteId: string,
+    updates: Partial<
+      Pick<Note, 'title' | 'content' | 'tags'> & {
+        reminders: EditorReminder[];
+      }
+    >,
+  ) => void;
   onDeleteRequest: () => void;
   isEditing: boolean;
   onEnterEditMode: () => void;
@@ -84,7 +91,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const [isDirty, setIsDirty] = useState(false);
     const { toast } = useToast();
     const navigate = useNavigate();
-    const notesFromStore = useDataStore((state) => state.notes);
 
     const { tags: parsedTags, reminders: parsedReminders } =
       useNoteParser(content);
@@ -96,23 +102,25 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     }, [note]);
 
     const handleSave = useCallback(() => {
-      const extractedTags = parsedTags.map((tag) => tag.text);
+      // 저장 시점의 시간을 기준으로 리마인더 날짜를 고정
+      const saveTime = new Date();
+      const { tags: finalTags, reminders: finalRemindersRaw } =
+        parseNoteContent(content, saveTime);
 
-      const finalReminders: EditorReminder[] = parsedReminders
-        .filter(p => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
-        .map((parsed) => {
-        // 에디터에서 파싱된 최신 정보를 기반으로 리마인더 객체를 생성합니다.
-        // 기존 리마인더의 ID나 상태를 유지할 필요가 없습니다. 
-        // useNotes 훅이 DB 동기화 후 최종 상태를 결정합니다.
-        return {
-          id: `temp-${parsed.originalText}-${Date.now()}`, // 낙관적 업데이트를 위한 임시 ID
+      const extractedTags = finalTags.map((tag) => tag.text);
+
+      const finalReminders: EditorReminder[] = finalRemindersRaw
+        .filter(
+          (p) => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
+        )
+        .map((parsed) => ({
+          id: `temp-${parsed.originalText}-${Date.now()}`,
           text: parsed.reminderText!,
           date: parsed.parsedDate!,
-          completed: false, // 새로 파싱된 리마인더는 항상 '미완료'
-          enabled: true,   // 새로 파싱된 리마인더는 항상 '활성'
+          completed: false,
+          enabled: true,
           original_text: parsed.originalText,
-        };
-      });
+        }));
 
       onSave(note.id, {
         title,
@@ -127,16 +135,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         title: '저장 완료',
         description: '노트가 성공적으로 저장되었습니다.',
       });
-    }, [
-      note.id,
-      title,
-      content,
-      parsedTags,
-      parsedReminders,
-      onSave,
-      onCancelEdit,
-      toast,
-    ]);
+    }, [note.id, title, content, onSave, onCancelEdit, toast]);
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
@@ -154,7 +153,9 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-border">
           <div className="flex items-center">
-            <h2 className="text-lg font-semibold pl-3">{isEditing ? '편집 중' : '미리보기'}</h2>
+            <h2 className="text-lg font-semibold pl-3">
+              {isEditing ? '편집 중' : '미리보기'}
+            </h2>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="ml-1 h-8 w-8">
