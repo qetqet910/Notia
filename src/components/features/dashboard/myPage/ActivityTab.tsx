@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   FileText,
@@ -9,17 +9,18 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
-import { ActivityData } from '@/types/index';
 import { useNotes } from '@/hooks/useNotes';
 import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { ActivityData, Note, Reminder } from '@/types/index';
 
-interface ActivityTabProps {
+interface CalculationResult {
   stats: {
     totalNotes: number;
     totalReminders: number;
@@ -30,11 +31,46 @@ interface ActivityTabProps {
   activityData: ActivityData[];
 }
 
-export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
-  stats,
-  activityData,
-}) => {
-  const { goalStats } = useNotes();
+export const ActivityTab: React.FC = React.memo(() => {
+  const { notes, goalStats } = useNotes();
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [calculationResult, setCalculationResult] =
+    useState<CalculationResult | null>(null);
+
+  useEffect(() => {
+    setIsCalculating(true);
+    const worker = new Worker(
+      new URL('@/workers/activityCalculator.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+
+    worker.onmessage = (event: MessageEvent<CalculationResult>) => {
+      setCalculationResult(event.data);
+      setIsCalculating(false);
+    };
+
+    worker.postMessage(notes);
+
+    return () => {
+      worker.terminate();
+    };
+  }, [notes]);
+
+  const { stats, activityData } = useMemo(() => {
+    if (!calculationResult) {
+      return {
+        stats: {
+          totalNotes: 0,
+          totalReminders: 0,
+          completedReminders: 0,
+          completionRate: 0,
+          tagsUsed: 0,
+        },
+        activityData: [],
+      };
+    }
+    return calculationResult;
+  }, [calculationResult]);
 
   const getLevelColor = useCallback((level: number) => {
     const colors = [
@@ -47,62 +83,82 @@ export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
     return colors[level] || 'bg-muted';
   }, []);
 
-  const renderActivityHeatmap = useCallback(() => {
-    const firstActivity = activityData.find(d => d.count > 0);
+  const firstActivity = useMemo(
+    () => activityData.find((d) => d.count > 0),
+    [activityData],
+  );
 
-    const weeks = useMemo(() => {
-      if (!firstActivity) return [];
+  const weeks = useMemo(() => {
+    if (!firstActivity) return [];
 
-      const allDays = new Map<string, { count: number; level: number }>();
-      activityData.forEach(d => {
-        allDays.set(d.date, { count: d.count, level: d.level });
-      });
+    const allDays = new Map<string, { count: number; level: number }>();
+    activityData.forEach((d) => {
+      allDays.set(d.date, { count: d.count, level: d.level });
+    });
 
-      const startDate = new Date(firstActivity.date);
-      const endDate = new Date(startDate);
-      endDate.setFullYear(startDate.getFullYear() + 1);
+    const startDate = new Date(firstActivity.date);
+    const endDate = new Date(startDate);
+    endDate.setFullYear(startDate.getFullYear() + 1);
 
-      const generatedWeeks: { date: string; count: number; level: number }[][] = [];
-      let currentDay = new Date(startDate);
-      currentDay.setDate(currentDay.getDate() - currentDay.getDay()); // Start week on Sunday
+    const generatedWeeks: { date: string; count: number; level: number }[][] =
+      [];
+    let currentDay = new Date(startDate);
+    currentDay.setDate(currentDay.getDate() - currentDay.getDay()); // Start week on Sunday
 
-      const totalDays = Math.ceil((endDate.getTime() - currentDay.getTime()) / (1000 * 3600 * 24));
-      const totalWeeks = Math.ceil(totalDays / 7);
+    const totalDays = Math.ceil(
+      (endDate.getTime() - currentDay.getTime()) / (1000 * 3600 * 24),
+    );
+    const totalWeeks = Math.ceil(totalDays / 7);
 
-      for (let i = 0; i < totalWeeks; i++) {
-        const week: { date: string; count: number; level: number }[] = [];
-        for (let j = 0; j < 7; j++) {
-          const dateStr = currentDay.toISOString().split('T')[0];
-          if (currentDay >= startDate && currentDay <= endDate) {
-            const data = allDays.get(dateStr) || { count: 0, level: 0 };
-            week.push({ date: dateStr, ...data });
-          } else {
-            week.push({ date: dateStr, count: -1, level: -1 }); // Placeholder
-          }
-          currentDay.setDate(currentDay.getDate() + 1);
+    for (let i = 0; i < totalWeeks; i++) {
+      const week: { date: string; count: number; level: number }[] = [];
+      for (let j = 0; j < 7; j++) {
+        const dateStr = currentDay.toISOString().split('T')[0];
+        if (currentDay >= startDate && currentDay <= endDate) {
+          const data = allDays.get(dateStr) || { count: 0, level: 0 };
+          week.push({ date: dateStr, ...data });
+        } else {
+          week.push({ date: dateStr, count: -1, level: -1 }); // Placeholder
         }
-        generatedWeeks.push(week);
+        currentDay.setDate(currentDay.getDate() + 1);
       }
-      return generatedWeeks;
-    }, [activityData, firstActivity]);
+      generatedWeeks.push(week);
+    }
+    return generatedWeeks;
+  }, [activityData, firstActivity]);
 
-    const monthLabels = useMemo(() => {
-      if (!weeks.length) return [];
-      const labels: { weekIndex: number; name: string }[] = [];
-      let lastMonth = -1;
-      weeks.forEach((week, weekIndex) => {
-        const firstDayOfWeek = new Date(week[0].date);
-        const month = firstDayOfWeek.getMonth();
-        if (month !== lastMonth) {
-          labels.push({
-            weekIndex,
-            name: new Intl.DateTimeFormat('ko-KR', { month: 'short' }).format(firstDayOfWeek),
-          });
-          lastMonth = month;
-        }
-      });
-      return labels;
-    }, [weeks]);
+  const monthLabels = useMemo(() => {
+    if (!weeks.length) return [];
+    const labels: { weekIndex: number; name: string }[] = [];
+    let lastMonth = -1;
+    weeks.forEach((week, weekIndex) => {
+      const firstDayOfWeek = new Date(week[0].date);
+      const month = firstDayOfWeek.getMonth();
+      if (month !== lastMonth) {
+        labels.push({
+          weekIndex,
+          name: new Intl.DateTimeFormat('ko-KR', { month: 'short' }).format(
+            firstDayOfWeek,
+          ),
+        });
+        lastMonth = month;
+      }
+    });
+    return labels;
+  }, [weeks]);
+
+  const renderActivityHeatmap = () => {
+    if (isCalculating) {
+      return (
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <Skeleton className="h-32 w-full" />
+        </div>
+      );
+    }
 
     if (!firstActivity) {
       return (
@@ -118,11 +174,18 @@ export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
       <TooltipProvider delayDuration={100}>
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>지난 1년간 {stats.completedReminders}개의 리마인더 완료</span>
+            <span>
+              지난 1년간 {stats.completedReminders}개의 리마인더 완료
+            </span>
             <div className="flex items-center gap-1 text-xs">
               적음{' '}
               {[0, 1, 2, 3, 4].map((level) => (
-                <div key={level} className={`w-2.5 h-2.5 rounded-sm ${getLevelColor(level)} border border-black/10`} />
+                <div
+                  key={level}
+                  className={`w-2.5 h-2.5 rounded-sm ${getLevelColor(
+                    level,
+                  )} border border-black/10`}
+                />
               ))}{' '}
               많음
             </div>
@@ -131,8 +194,11 @@ export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
             <div className="inline-flex flex-col">
               <div className="flex gap-1" style={{ paddingLeft: '2rem' }}>
                 {weeks.map((_, weekIndex) => (
-                  <div key={weekIndex} className="w-3.5 text-xs text-muted-foreground text-center">
-                    {monthLabels.find(m => m.weekIndex === weekIndex)?.name}
+                  <div
+                    key={weekIndex}
+                    className="w-3.5 text-xs text-muted-foreground text-center"
+                  >
+                    {monthLabels.find((m) => m.weekIndex === weekIndex)?.name}
                   </div>
                 ))}
               </div>
@@ -149,13 +215,17 @@ export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
                     <div key={weekIndex} className="flex flex-col gap-1">
                       {week.map((day, dayIndex) => {
                         if (day.count === -1) {
-                          return <div key={dayIndex} className="w-3.5 h-3.5" />;
+                          return (
+                            <div key={dayIndex} className="w-3.5 h-3.5" />
+                          );
                         }
                         return (
                           <Tooltip key={dayIndex}>
                             <TooltipTrigger asChild>
                               <div
-                                className={`w-3.5 h-3.5 rounded-sm border border-black/10 ${getLevelColor(day.level)} cursor-pointer`}
+                                className={`w-3.5 h-3.5 rounded-sm border border-black/10 ${getLevelColor(
+                                  day.level,
+                                )} cursor-pointer`}
                               />
                             </TooltipTrigger>
                             <TooltipContent>
@@ -173,42 +243,102 @@ export const ActivityTab: React.FC<ActivityTabProps> = React.memo(({
         </div>
       </TooltipProvider>
     );
-  }, [activityData, stats.completedReminders, getLevelColor]);
+  };
+
+  const renderStats = () => {
+    if (isCalculating) {
+      return (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatItem
+          icon={<FileText className="h-7 w-7" />}
+          value={stats.totalNotes}
+          label="총 노트"
+          color="text-blue-500"
+        />
+        <StatItem
+          icon={<Bell className="h-7 w-7" />}
+          value={stats.totalReminders}
+          label="총 리마인더"
+          color="text-yellow-500"
+        />
+        <StatItem
+          icon={<CheckCircle className="h-7 w-7" />}
+          value={stats.completedReminders}
+          label="완료된 리마인더"
+          color="text-green-500"
+        />
+        <StatItem
+          icon={<Tag className="h-7 w-7" />}
+          value={stats.tagsUsed}
+          label="사용된 태그"
+          color="text-orange-500"
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
-        <CardHeader><CardTitle className="flex items-center"><Calendar className="h-5 w-5 mr-2" />활동 히트맵</CardTitle></CardHeader>
-        <CardContent className="custom-scrollbar">{renderActivityHeatmap()}</CardContent>
-      </Card>
-
-      <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
-        <CardHeader><CardTitle className="flex items-center"><TrendingUp className="h-5 w-5 mr-2" />상세 통계</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatItem icon={<FileText className="h-7 w-7" />} value={stats.totalNotes} label="총 노트" color="text-blue-500" />
-            <StatItem icon={<Bell className="h-7 w-7" />} value={stats.totalReminders} label="총 리마인더" color="text-yellow-500" />
-            <StatItem icon={<CheckCircle className="h-7 w-7" />} value={stats.completedReminders} label="완료된 리마인더" color="text-green-500" />
-            <StatItem icon={<Tag className="h-7 w-7" />} value={stats.tagsUsed} label="사용된 태그" color="text-orange-500" />
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Calendar className="h-5 w-5 mr-2" />
+            활동 히트맵
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="custom-scrollbar">
+          {renderActivityHeatmap()}
         </CardContent>
       </Card>
 
       <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
-        <CardHeader><CardTitle>목표 달성률 분석</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <TrendingUp className="h-5 w-5 mr-2" />
+            상세 통계
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{renderStats()}</CardContent>
+      </Card>
+
+      <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
+        <CardHeader>
+          <CardTitle>목표 달성률 분석</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm font-medium">주간 노트 작성</span>
-                <span className="text-sm font-bold">{goalStats.weeklyNote.percentage}%<span className="text-muted-foreground ml-1">({goalStats.weeklyNote.current}/{goalStats.weeklyNote.goal})</span></span>
+                <span className="text-sm font-bold">
+                  {goalStats.weeklyNote.percentage}%
+                  <span className="text-muted-foreground ml-1">
+                    ({goalStats.weeklyNote.current}/
+                    {goalStats.weeklyNote.goal})
+                  </span>
+                </span>
               </div>
               <CustomProgress value={goalStats.weeklyNote.percentage} />
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm font-medium">주간 리마인더 완료</span>
-                <span className="text-sm font-bold">{goalStats.weeklyReminder.percentage}%<span className="text-muted-foreground ml-1">({goalStats.weeklyReminder.current}/{goalStats.weeklyReminder.goal})</span></span>
+                <span className="text-sm font-bold">
+                  {goalStats.weeklyReminder.percentage}%
+                  <span className="text-muted-foreground ml-1">
+                    ({goalStats.weeklyReminder.current}/
+                    {goalStats.weeklyReminder.goal})
+                  </span>
+                </span>
               </div>
               <CustomProgress value={goalStats.weeklyReminder.percentage} />
             </div>

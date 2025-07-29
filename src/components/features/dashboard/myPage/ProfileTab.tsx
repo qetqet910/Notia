@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/services/supabaseClient';
+import { useNotes } from '@/hooks/useNotes';
 import {
   User,
   Settings,
@@ -27,49 +28,133 @@ import {
   Flame,
   Trophy,
   Loader2,
+  FileText,
+  Bell,
 } from 'lucide-react';
 import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
-import { Achievement, UserProfile } from '@/types/index';
+import { Achievement, UserProfile, Note, Reminder } from '@/types/index';
 
-interface ProfileTabProps {
-  stats: {
-    totalNotes: number;
-    completedReminders: number;
-    completionRate: number;
-    streak: number;
-    todayCompleted: number;
-    weeklyAverage: number;
-    tagsUsed: number;
-  };
-  achievements: Achievement[];
-}
+export const ProfileTab: React.FC = React.memo(() => {
+  const { notes } = useNotes();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { user, userProfile, fetchUserProfile } = useAuthStore();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-export const ProfileTab: React.FC<ProfileTabProps> = React.memo(
-  ({ stats, achievements }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const { user, userProfile, fetchUserProfile } = useAuthStore();
-    const { toast } = useToast();
-    const fileInputRef = useRef<HTMLInputElement>(null);
+  const [displayName, setDisplayName] = useState('');
+  const [tempAvatarUrl, setTempAvatarUrl] = useState('');
+  const [dbAvatarUrl, setDbAvatarUrl] = useState('');
 
-    const [displayName, setDisplayName] = useState('');
-    const [tempAvatarUrl, setTempAvatarUrl] = useState('');
-    const [dbAvatarUrl, setDbAvatarUrl] = useState('');
+  const stats = useMemo(() => {
+    const totalNotes = notes.length;
+    const allReminders = notes.flatMap((note: Note) => note.reminders);
+    const totalReminders = allReminders.length;
+    const completedReminders = allReminders.filter(
+      (r: Reminder) => r.completed,
+    ).length;
+    const completionRate =
+      totalReminders > 0 ? (completedReminders / totalReminders) * 100 : 0;
+    const tags = new Set(notes.flatMap((note: Note) => note.tags));
 
-    useEffect(() => {
-      if (user) {
-        const profileName =
-          userProfile?.display_name ||
-          user.user_metadata?.name ||
-          user.user_metadata?.full_name ||
-          '사용자';
-        const profileAvatar =
-          userProfile?.avatar_url || user.user_metadata?.avatar_url || '';
-        setDisplayName(profileName);
-        setTempAvatarUrl(profileAvatar);
-        setDbAvatarUrl(profileAvatar);
+    return {
+      totalNotes,
+      totalReminders,
+      completedReminders,
+      completionRate,
+      tagsUsed: tags.size,
+      streak: 0, // Placeholder
+      todayCompleted: 0, // Placeholder
+      weeklyAverage: 0, // Placeholder
+    };
+  }, [notes]);
+
+  const achievements: Achievement[] = useMemo(() => {
+    const achievementList: Omit<Achievement, 'unlocked'>[] = [
+      {
+        id: 'note-1',
+        title: '첫 노트 작성',
+        description: '첫 번째 노트를 작성했습니다!',
+        icon: <FileText />,
+        color: 'bg-blue-500',
+      },
+      {
+        id: 'note-10',
+        title: '노트 열혈가',
+        description: '10개의 노트를 작성했습니다.',
+        icon: <FileText />,
+        color: 'bg-blue-600',
+      },
+      {
+        id: 'reminder-1',
+        title: '첫 리마인더 완료',
+        description: '첫 번째 리마인더를 완료했습니다!',
+        icon: <Bell />,
+        color: 'bg-yellow-500',
+      },
+      {
+        id: 'reminder-20',
+        title: '리마인더 정복자',
+        description: '20개의 리마인더를 완료했습니다.',
+        icon: <Bell />,
+        color: 'bg-yellow-600',
+      },
+      {
+        id: 'completion-50',
+        title: '절반의 성공',
+        description: '리마인더 완료율 50% 달성',
+        icon: <CheckCircle />,
+        color: 'bg-green-500',
+      },
+      {
+        id: 'completion-100',
+        title: '완벽주의자',
+        description: '리마인더 완료율 100% 달성',
+        icon: <Trophy />,
+        color: 'bg-green-600',
+      },
+    ];
+
+    return achievementList.map((ach) => {
+      let unlocked = false;
+      switch (ach.id) {
+        case 'note-1':
+          unlocked = stats.totalNotes >= 1;
+          break;
+        case 'note-10':
+          unlocked = stats.totalNotes >= 10;
+          break;
+        case 'reminder-1':
+          unlocked = stats.completedReminders >= 1;
+          break;
+        case 'reminder-20':
+          unlocked = stats.completedReminders >= 20;
+          break;
+        case 'completion-50':
+          unlocked = stats.completionRate >= 50;
+          break;
+        case 'completion-100':
+          unlocked = stats.completionRate === 100;
+          break;
       }
-    }, [user, userProfile]);
+      return { ...ach, unlocked };
+    });
+  }, [stats]);
+
+  useEffect(() => {
+    if (user) {
+      const profileName =
+        userProfile?.display_name ||
+        user.user_metadata?.name ||
+        user.user_metadata?.full_name ||
+        '사용자';
+      const profileAvatar =
+        userProfile?.avatar_url || user.user_metadata?.avatar_url || '';
+      setDisplayName(profileName);
+      setTempAvatarUrl(profileAvatar);
+      setDbAvatarUrl(profileAvatar);
+    }
+  }, [user, userProfile]);
 
     const displayEmail = useMemo(() => {
       if (!user) return <Loader2 className="h-4 w-4 animate-spin" />;
@@ -213,10 +298,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = React.memo(
     }, [isEditing]);
 
     return (
-      <div
-        className="space-y-6 custom-scrollbar"
-        style={{ maxHeight: 'calc(100vh - 200px)', paddingRight: '1rem' }}
-      >
+      <div className="space-y-6">
         <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/20">
           <CardHeader className="flex justify-between items-center flex-row">
             <CardTitle className="flex items-center">

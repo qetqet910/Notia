@@ -1,12 +1,25 @@
 import { create } from 'zustand';
 import { supabase } from '@/services/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Note, Reminder } from '@/types';
+import type { Note, Reminder, ActivityData } from '@/types';
+
+interface CalculationResult {
+  stats: {
+    totalNotes: number;
+    totalReminders: number;
+    completedReminders: number;
+    completionRate: number;
+    tagsUsed: number;
+  };
+  activityData: ActivityData[];
+}
 
 interface DataState {
   notes: Record<string, Note>;
   isInitialized: boolean;
   channels: RealtimeChannel[];
+  activityCache: CalculationResult | null;
+  isCalculating: boolean;
   initialize: (userId: string) => Promise<void>;
   unsubscribeAll: () => Promise<void>;
   createNote: (
@@ -19,12 +32,51 @@ interface DataState {
   ) => void;
   addNoteState: (newNote: Note) => void;
   removeNoteState: (noteId: string) => void;
+  calculateActivityData: (notes: Note[]) => void;
 }
+
+let worker: Worker | null = null;
 
 export const useDataStore = create<DataState>((set, get) => ({
   notes: {},
   isInitialized: false,
   channels: [],
+  activityCache: null,
+  isCalculating: false,
+
+  calculateActivityData: (notes: Note[]) => {
+    if (get().isCalculating) return;
+
+    set({ isCalculating: true });
+
+    if (worker) {
+      worker.terminate();
+    }
+
+    worker = new Worker(
+      new URL('@/workers/activityCalculator.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+
+    worker.onmessage = (event: MessageEvent<CalculationResult>) => {
+      set({ activityCache: event.data, isCalculating: false });
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+    };
+
+    worker.onerror = (error) => {
+      console.error('Web worker error:', error);
+      set({ isCalculating: false });
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+    };
+
+    worker.postMessage(notes);
+  },
 
   createNote: async (
     noteData: Pick<Note, 'owner_id' | 'title' | 'content' | 'tags'>,
@@ -75,6 +127,11 @@ export const useDataStore = create<DataState>((set, get) => ({
             },
           };
         }
+      } else {
+        // Realtime INSERT 이벤트 등으로 노트가 새로 추가될 때
+        return {
+          notes: { ...state.notes, [updatedNote.id]: updatedNote },
+        };
       }
       return state;
     });
@@ -85,7 +142,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       const newNotes = { ...state.notes };
       for (const noteId in newNotes) {
         const note = newNotes[noteId];
-        const reminderIndex = note.reminders.findIndex(
+        const reminderIndex = (note.reminders || []).findIndex(
           (r) => r.id === reminderId,
         );
         if (reminderIndex > -1) {
@@ -147,45 +204,34 @@ export const useDataStore = create<DataState>((set, get) => ({
         },
         {} as Record<string, Note>,
       );
-      set({ notes: formattedNotes });
+      set({ notes: formattedNotes, activityCache: null }); // 초기화 시 캐시 비우기
     } catch (err) {
       console.error('Initialization failed:', err);
       set({ isInitialized: false });
       return;
     }
 
+    const handleNoteChange = (payload: any) => {
+      if (payload.eventType === 'INSERT') {
+        get().addNoteState({ ...(payload.new as Note), reminders: [] });
+      } else if (payload.eventType === 'UPDATE') {
+        get().updateNoteState(payload.new as Note);
+      } else if (payload.eventType === 'DELETE') {
+        get().removeNoteState(payload.old.id);
+      }
+    };
+
     const notesChannel = supabase
       .channel(`notes-changes-for-user-${userId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'notes',
           filter: `owner_id=eq.${userId}`,
         },
-        (payload) =>
-          get().addNoteState({ ...(payload.new as Note), reminders: [] }),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notes',
-          filter: `owner_id=eq.${userId}`,
-        },
-        (payload) => get().updateNoteState(payload.new as Note),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'notes',
-          filter: `owner_id=eq.${userId}`,
-        },
-        (payload) => get().removeNoteState(payload.old.id),
+        handleNoteChange,
       )
       .subscribe();
 
@@ -210,7 +256,7 @@ export const useDataStore = create<DataState>((set, get) => ({
                   ...state.notes,
                   [noteId]: {
                     ...targetNote,
-                    reminders: [...targetNote.reminders, newReminder],
+                    reminders: [...(targetNote.reminders || []), newReminder],
                   },
                 },
               };
@@ -238,7 +284,7 @@ export const useDataStore = create<DataState>((set, get) => ({
                   ...state.notes,
                   [noteId]: {
                     ...targetNote,
-                    reminders: targetNote.reminders.map((r) =>
+                    reminders: (targetNote.reminders || []).map((r) =>
                       r.id === updatedReminder.id ? updatedReminder : r,
                     ),
                   },
@@ -258,7 +304,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           filter: `owner_id=eq.${userId}`,
         },
         (payload) => {
-          const oldReminder = payload.old as Reminder;
+          const oldReminder = payload.old as any;
           const noteId = oldReminder.note_id;
           set((state) => {
             const targetNote = state.notes[noteId];
@@ -268,7 +314,7 @@ export const useDataStore = create<DataState>((set, get) => ({
                   ...state.notes,
                   [noteId]: {
                     ...targetNote,
-                    reminders: targetNote.reminders.filter(
+                    reminders: (targetNote.reminders || []).filter(
                       (r) => r.id !== oldReminder.id,
                     ),
                   },
@@ -285,6 +331,10 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   unsubscribeAll: async () => {
+    if (worker) {
+      worker.terminate();
+      worker = null;
+    }
     const { channels } = get();
     if (channels.length > 0) {
       await Promise.all(channels.map((c) => c.unsubscribe()));

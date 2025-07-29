@@ -167,3 +167,12 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--border)) hsl(var(--background));
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

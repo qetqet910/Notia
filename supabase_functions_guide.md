@@ -140,9 +140,11 @@ export const corsHeaders = {
 ```
 
 회원가입 해결 O
+(진짜 존나게 많고 복잡하고 그지같은 UX, 오류)잡다한 코드 해결
+
 반응형 최적화
-SEO 노출
-LightHouse 측정 후 개선
+Naver, Google SEO 노출 
+LightHouse 측정 후 개선 https://pagespeed.web.dev/
 랜딩페이지 사진 변경
 다른 플랫폼 개설 github codespace처럼
 
@@ -166,3 +168,50 @@ LightHouse 측정 후 개선
   해결되었을 것입니다. 확인 부탁드립니다.
 
 로그, 주석 제거
+
+╭──────────────────────────────────────────────────────────────────╮
+│  > @src/pages/dashboard/index.tsx 에서 shortcuts 말야 ctrl+s는   │
+│    수정 한 게 없어도 작동해 수정버튼 disabled 처럼 플래그를      │
+│    추가해서 수정한 게 없으면 저장할 수 없게 해주고 현재 다른     │
+│    수정중이라면 ctrl+s를 제외한 다른 단축키를 사용할 수 없게     │
+│    해주고 esc 누르면 취소 버튼 역할을 추가해줘                   │
+╰──────────────────────────────────────────────────────────────────╯
+
+ ╭──────────────────────────────────────────────────────────────────────╮
+ │ ✔  ReadManyFiles Will attempt to read and concatenate files using p… │
+ │                                                                      │
+ │    ### ReadManyFiles Result (Target Dir:                             │
+ │    `/workspaces/Notia`)                                              │
+ │                                                                      │
+ │    Successfully read and concatenated content from **1               │
+ │    file(s)**.                                                        │
+ │                                                                      │
+ │    **Processed Files:**                                              │
+ │    - `src/pages/dashboard/index.tsx`                                 │
+ ╰──────────────────────────────────────────────────────────────────────╯
+✦ 알겠습니다. 단축키 사용성과 관련된 좋은 개선 의견입니다.
+  dashboard/index.tsx의 handleKeyboardShortcuts 함수를 수정하여
+  요청하신 세 가지 기능을 모두 구현하겠습니다.
+
+  요구사항 정리:
+
+   1. `Ctrl+S` 개선: Editor에 수정된 내용이 있을 때만 저장 단축키가
+      동작하도록 변경.
+   2. 편집 모드 집중: isEditing 상태일 때는 Ctrl+S와 Esc를 제외한 다른
+      전역 단축키가 동작하지 않도록 변경.
+   3. `Esc` 키 추가: isEditing 상태에서 Esc 키를 누르면 '취소' 버튼처럼
+      동작하도록 변경.
+
+  해결 계획:
+
+   1. Editor 컴포넌트가 수정 여부(isDirty)를 부모인 Dashboard 컴포넌트로
+       알려줄 수 있는 방법이 필요합니다. onDirtyChange와 같은 콜백
+      prop을 Editor에 추가하겠습니다.
+   2. Dashboard 컴포넌트에 isDirty 상태를 추가하고, Editor로부터 받은
+      값으로 이 상태를 관리합니다.
+   3. handleKeyboardShortcuts 함수 내부 로직을 수정하여, isEditing과
+      isDirty 상태에 따라 단축키 동작을 분기 처리합니다.
+
+  먼저 Editor 컴포넌트가 수정 여부를 부모에게 알릴 수 있도록
+  editor.tsx 파일부터 수정하겠습니다. onDirtyChange prop을 추가하고,
+  내용이 변경될 때마다 이 콜백을 호출하도록 합니다.

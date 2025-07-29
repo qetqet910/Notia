@@ -477,7 +477,9 @@ export const Dashboard: React.FC = () => {
               isEditing={isEditing}
             />
           </div>
-          <main className="flex-1 overflow-hidden">{renderMainContent()}</main>
+          <main className="flex-1 overflow-auto no-scrollbar">
+            {renderMainContent()}
+          </main>
         </div>
       </div>
     </div>
