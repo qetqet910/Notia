@@ -119,6 +119,7 @@ export const Dashboard: React.FC = () => {
   const [isNoteContentLoading, setIsNoteContentLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const editorRef = useRef<{ save: () => void } | null>(null);
   const newlyCreatedNoteId = useRef<string | null>(null);
@@ -179,6 +180,7 @@ export const Dashboard: React.FC = () => {
     async (note: Note) => {
       setSelectedNote(note);
       setIsEditing(false);
+      setHasUnsavedChanges(false);
 
       if (note && !note.content) {
         setIsNoteContentLoading(true);
@@ -198,6 +200,7 @@ export const Dashboard: React.FC = () => {
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
+    setHasUnsavedChanges(false);
   }, []);
 
   const handleCreateNote = useCallback(async () => {
@@ -220,29 +223,46 @@ export const Dashboard: React.FC = () => {
     setIsDeleteDialogOpen(false);
   }, [deleteNote, selectedNote]);
 
+  const handleSaveNote = async (
+    noteToUpdate: Partial<Note> & { id: string },
+  ) => {
+    await updateNote(noteToUpdate);
+    setHasUnsavedChanges(false);
+  };
+
   const handleKeyboardShortcuts = useCallback(
     (e: KeyboardEvent) => {
       const isCtrlCmd = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
       const target = e.target as HTMLElement;
 
+      // When in editing mode
+      if (isEditing) {
+        if (isCtrlCmd && key === 's') {
+          e.preventDefault();
+          if (hasUnsavedChanges && editorRef.current) {
+            editorRef.current.save();
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          handleCancelEdit();
+        }
+        // Allow other keys to function normally for typing
+        return;
+      }
+
+      // When not in editing mode
       const isInputElement =
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
 
-      if (isInputElement && !(isCtrlCmd && e.key.toLowerCase() === 's')) {
-        if (e.key !== 'Tab') return;
+      if (isInputElement && e.key !== 'Tab') {
+        return;
       }
 
-      const key = e.key === 'Tab' ? 'Tab' : e.key.toLowerCase();
-
-      const shortcuts: { [key: string]: (isCtrlCmd?: boolean) => void } = {
-        n: () => handleCreateNote(),
-        s: (isCtrlCmd) => {
-          if (isCtrlCmd && isEditing && editorRef.current) {
-            editorRef.current.save();
-          }
-        },
+      const shortcuts: { [key: string]: () => void } = {
+        n: handleCreateNote,
         '/': () => navigate('/dashboard/help?tab=overview'),
         '?': () => navigate('/dashboard/help?tab=overview'),
         t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
@@ -259,22 +279,24 @@ export const Dashboard: React.FC = () => {
         '.': () => navigate('/dashboard/myPage?tab=settings'),
       };
 
-      const handler = shortcuts[key];
+      const handler = shortcuts[e.key === 'Tab' ? 'Tab' : key];
       if (handler) {
         e.preventDefault();
-        handler(isCtrlCmd);
+        handler();
       }
     },
     [
+      isEditing,
+      hasUnsavedChanges,
+      handleCancelEdit,
       handleCreateNote,
       navigate,
-      isEditing,
       setTheme,
       isDarkMode,
       isDeepDarkMode,
       activeTabs,
-      selectedNote,
       activeTab,
+      selectedNote,
     ],
   );
 
@@ -365,11 +387,13 @@ export const Dashboard: React.FC = () => {
                     ref={editorRef}
                     key={selectedNote.id}
                     note={selectedNote}
-                    onSave={updateNote}
+                    onSave={handleSaveNote}
                     onDeleteRequest={() => setIsDeleteDialogOpen(true)}
                     isEditing={isEditing}
                     onEnterEditMode={handleEnterEditMode}
                     onCancelEdit={handleCancelEdit}
+                    onContentChange={() => setHasUnsavedChanges(true)}
+                    hasUnsavedChanges={hasUnsavedChanges}
                   />
                 ) : (
                   <EmptyNoteState handleCreateNote={handleCreateNote} />

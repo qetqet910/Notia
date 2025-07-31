@@ -59,6 +59,8 @@ interface EditorProps {
   isEditing: boolean;
   onEnterEditMode: () => void;
   onCancelEdit: () => void;
+  onContentChange: () => void;
+  hasUnsavedChanges: boolean;
 }
 
 interface EditorRef {
@@ -83,12 +85,20 @@ const formatDate = (date: Date): string => {
 
 export const Editor = forwardRef<EditorRef, EditorProps>(
   (
-    { note, onSave, onDeleteRequest, isEditing, onEnterEditMode, onCancelEdit },
+    {
+      note,
+      onSave,
+      onDeleteRequest,
+      isEditing,
+      onEnterEditMode,
+      onCancelEdit,
+      onContentChange,
+      hasUnsavedChanges,
+    },
     ref,
   ) => {
     const [title, setTitle] = useState(note.title);
     const [content, setContent] = useState(note.content);
-    const [isDirty, setIsDirty] = useState(false);
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -98,7 +108,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     useEffect(() => {
       setTitle(note.title);
       setContent(note.content);
-      setIsDirty(false);
     }, [note]);
 
     const handleSave = useCallback(() => {
@@ -129,7 +138,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         reminders: finalReminders,
       });
 
-      setIsDirty(false);
       onCancelEdit();
       toast({
         title: '저장 완료',
@@ -142,7 +150,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const handleCancel = () => {
       setTitle(note.title);
       setContent(note.content);
-      setIsDirty(false);
       onCancelEdit();
     };
 
@@ -218,7 +225,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   variant="default"
                   size="sm"
                   onClick={handleSave}
-                  disabled={!isDirty}
+                  disabled={!hasUnsavedChanges}
                 >
                   <Save className="h-4 w-4 mr-1" />
                   저장
@@ -235,7 +242,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value);
-                setIsDirty(true);
+                onContentChange();
               }}
               placeholder="제목을 입력하세요"
               className="text-lg font-medium"
@@ -343,7 +350,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     value={content}
                     onChange={(e) => {
                       setContent(e.target.value);
-                      setIsDirty(true);
+                      onContentChange();
                     }}
                     placeholder="
           내용을 입력하세요...

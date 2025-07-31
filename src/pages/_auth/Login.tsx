@@ -21,6 +21,7 @@ import { generateRandomKey, formatKey } from '@/utils/keyValidation';
 import { animations } from '@/constants/animations';
 
 import logoImage from '@/assets/images/Logo.png';
+import loginAnimation from '/loginAnimation.lottie';
 
 // --- Memoized Sub-components ---
 
@@ -76,7 +77,7 @@ const AnimationSection = React.memo(() => (
         }}
       >
         <DotLottieReact
-          src="/loginAnimation.lottie"
+          src={loginAnimation}
           loop
           autoplay
           className="drop-shadow-xl w-full h-full transform scale-150"

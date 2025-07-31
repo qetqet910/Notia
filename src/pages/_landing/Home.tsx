@@ -177,7 +177,7 @@ export const Home: React.FC = () => {
   const landingImages = [landing1, landing2, landing3, landing4, landing5];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 overflow-hidden">
+    <div className="min-h-screen bg-white dark:bg-slate-950 overflow-hidden custom-scrollbar">
       <Toaster />
       <Header />
 
