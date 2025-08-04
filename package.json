@@ -1,8 +1,9 @@
 {
   "name": "notia",
   "homepage": "https://notia.site",
-  "private": true,
   "version": "1.2.1",
+  "license": "CC-BY-NC-SA-4.0",
+  "author": "HYEONMIN KIM",
   "type": "module",
   "scripts": {
     "dev": "vite",

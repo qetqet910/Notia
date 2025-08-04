@@ -84,4 +84,4 @@ Notia의 핵심은 간단한 기호를 사용한 빠른 정리입니다.
     ```
     서버가 실행되면 `http://localhost:5173` 에서 앱을 확인할 수 있습니다.
 
-[MIT License](./LICENSE) / [Contributing](./CONTRIBUTING.md) / [후원한잔](https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f)
+[CC BY-NC-SA 4.0 License](./LICENSE) / [Contributing](./CONTRIBUTING.md) / [후원한잔](https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f)
