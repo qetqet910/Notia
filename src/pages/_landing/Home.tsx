@@ -116,61 +116,20 @@ const staggerContainer = {
   },
 };
 
-// ---- ✨ 안정성을 위해 재작성된 이미지 컴포넌트 ----
-const FloatingImage = ({ image, index }: { image: string; index: number }) => {
-  // 각 이미지의 최종 위치와 회전값을 미리 계산합니다.
-  const finalX = (index - 2) * 180; // 중앙 이미지(index:2)가 x:0 에 위치
-  const finalY = (index % 2 === 0 ? -1 : 1) * 30;
-  const finalRotate = (index - 2) * 6;
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
-  return (
-    <motion.div
-      // ✨ variants를 직접 정의하여 타입 안정성을 높입니다.
-      initial={{
-        opacity: 0,
-        scale: 0.5,
-        x: 0,
-        y: 80,
-        rotate: 0,
-      }}
-      animate={{
-        opacity: 1,
-        scale: 1,
-        x: finalX,
-        y: finalY,
-        rotate: finalRotate,
-        transition: {
-          type: 'spring',
-          stiffness: 80,
-          damping: 10,
-          delay: index * 0.15,
-        },
-      }}
-      // ✨ 별도의 transition을 사용하여 무한 반복 애니메이션을 정의합니다.
-      transition={{
-        duration: 3 + Math.random() * 2,
-        repeat: Infinity,
-        repeatType: 'reverse',
-        ease: 'easeInOut',
-      }}
-      // 호버 애니메이션
-      // whileHover={{
-      //   y: finalY - 15,
-      //   scale: 1.1,
-      //   rotate: finalRotate > 0 ? finalRotate + 5 : finalRotate - 5,
-      //   zIndex: 10,
-      //   transition: { type: 'spring', stiffness: 300, damping: 10 },
-      // }}
-      className="absolute"
-    >
-      <img
-        src={image}
-        alt={`랜딩 이미지 ${index + 1}`}
-        className="w-96 h-auto rounded-lg shadow-2xl pointer-events-none border"
-      />
-    </motion.div>
-  );
-};
+// ... (imports)
+
+// ... (features, userProfiles, faqItems)
+
+// ---- 애니메이션 variants ----
+// ... (fadeIn, staggerContainer)
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -183,6 +142,7 @@ export const Home: React.FC = () => {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+        {/* ... (background and text content) */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-green-100/30 to-transparent dark:from-green-900/20 dark:to-transparent blur-3xl"></div>
         <div className="max-w-7xl mx-auto relative">
           <motion.div
@@ -225,17 +185,49 @@ export const Home: React.FC = () => {
             </motion.div>
           </motion.div>
 
-          {/* ✨ 수정된 이미지 렌더링 컨테이너 */}
-          <div className="mt-24 relative h-80 flex justify-center items-center">
-            {landingImages.map((image, index) => (
-              <FloatingImage key={index} image={image} index={index} />
-            ))}
-          </div>
+          {/* Carousel Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="mt-20"
+          >
+            <Carousel
+              opts={{
+                align: 'start',
+                loop: true,
+              }}
+              className="w-full max-w-6xl mx-auto"
+            >
+              <CarouselContent>
+                {landingImages.map((image, index) => (
+                  <CarouselItem
+                    key={index}
+                    className="basis-full md:basis-1/2 lg:basis-1/3"
+                  >
+                    <div className="p-1">
+                      <Card>
+                        <CardContent className="flex aspect-video items-center justify-center p-0 overflow-hidden rounded-lg">
+                          <img
+                            src={image}
+                            alt={`Notia 기능 시연 ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="hidden sm:flex" />
+              <CarouselNext className="hidden sm:flex" />
+            </Carousel>
+          </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-900">
+      {/* ... (rest of the sections: Features, Built For, Performance, FAQ) */}
+      <section className="py-10 bg-slate-50 dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             initial="hidden"
