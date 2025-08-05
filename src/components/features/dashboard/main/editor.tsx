@@ -161,7 +161,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                 original_text: parsed.originalText,
             }
         }));
-    }, [content, title, note.content, note.title, reminders]);
+    }, [content, title, note.content, note.title]);
 
     const handleSave = useCallback(() => {
       onSave(note.id, {
