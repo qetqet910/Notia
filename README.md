@@ -1,6 +1,5 @@
-# Notia
+# Notia [![Netlify Status](https://api.netlify.com/api/v1/badges/46a1398f-b909-402f-946a-4e54be53e9f2/deploy-status)](https://app.netlify.com/projects/wedontlikeamnesia/deploys)
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/46a1398f-b909-402f-946a-4e54be53e9f2/deploy-status)](https://app.netlify.com/projects/wedontlikeamnesia/deploys)
 <br>
 
 <p align="center">
@@ -81,12 +80,7 @@ Notia의 핵심은 간단한 기호를 사용한 빠른 정리입니다.
 
 3.  **환경 변수 설정**
 
-    - 프로젝트 루트에 `.env` 파일을 생성하세요.
-    - Supabase 프로젝트의 URL과 ANON KEY를 아래와 같이 추가합니다.
-      ```
-      VITE_SUPABASE_URL=YOUR_SUPABASE_URL
-      VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-      ```
+[env example](.env.example)
 
 4.  **개발 서버 실행**
     ```bash
