@@ -79,11 +79,14 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   createNote: async (
-    noteData: Pick<Note, 'owner_id' | 'title' | 'content' | 'tags'>,
+    noteData: Pick<Note, 'owner_id' | 'title' | 'content' | 'tags'> & {
+      reminders?: Omit<EditorReminder, 'id'>[];
+    },
   ): Promise<Note | null> => {
     const { addNoteState } = get();
     try {
-      const { data, error } = await supabase
+      // 1. 노트 생성
+      const { data: noteResult, error: noteError } = await supabase
         .from('notes')
         .insert([
           {
@@ -96,13 +99,43 @@ export const useDataStore = create<DataState>((set, get) => ({
         .select()
         .single();
 
-      if (error) throw error;
+      if (noteError) throw noteError;
+
+      let finalReminders: Reminder[] = [];
+
+      // 2. 리마인더가 있으면 DB 스키마에 맞게 변환하여 생성
+      if (noteData.reminders && noteData.reminders.length > 0) {
+        const reminderInserts = noteData.reminders
+          .filter(reminder => reminder.date instanceof Date && !isNaN(reminder.date.getTime()))
+          .map(reminder => ({
+            note_id: noteResult.id,
+            owner_id: noteData.owner_id,
+            reminder_text: reminder.text,
+            reminder_time: reminder.date.toISOString(),
+            completed: reminder.completed || false,
+            enabled: reminder.enabled ?? true,
+            original_text: reminder.original_text,
+          }));
+
+        if (reminderInserts.length > 0) {
+            const { data: reminderResult, error: reminderError } = await supabase
+              .from('reminders')
+              .insert(reminderInserts)
+              .select();
+            
+            if (reminderError) {
+              console.error('Failed to create reminders for new note:', reminderError);
+            } else {
+              finalReminders = reminderResult;
+            }
+        }
+      }
 
       const newNote: Note = {
-        ...data,
-        createdAt: new Date(data.created_at),
-        updatedAt: new Date(data.updated_at),
-        reminders: [],
+        ...noteResult,
+        createdAt: new Date(noteResult.created_at),
+        updatedAt: new Date(noteResult.updated_at),
+        reminders: finalReminders,
       };
 
       addNoteState(newNote);

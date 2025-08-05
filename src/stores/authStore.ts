@@ -2,33 +2,190 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
 import type { User, Session } from '@supabase/supabase-js';
-import type { UserProfile } from '@/types';
+import type { UserProfile, EditorReminder } from '@/types';
 import { formatKey } from '@/utils/keyValidation';
 import { checkCreationLimit } from '@/utils/kegisterValidation';
 import { guideNoteContent } from '@/constants/basicNote';
-import { useDataStore } from './dataStore'; // dataStore import 추가
+import { useDataStore } from './dataStore';
+
+// --- Note Parser Logic (from useNoteParser.ts) ---
+
+const parseTimeExpression = (timeText: string): Date | undefined => {
+  const now = new Date();
+  const timeStr = timeText.trim().toLowerCase();
+
+  const adjustForPastTime = (result: Date): Date => {
+    if (result <= now) {
+      result.setDate(result.getDate() + 1);
+    }
+    return result;
+  };
+
+  let match = timeStr.match(/^(\d+)\s*(시간|분)$/);
+  if (match) {
+    const amount = parseInt(match[1], 10);
+    const unit = match[2];
+    const result = new Date();
+    if (unit === '시간') {
+      result.setHours(result.getHours() + amount);
+    } else {
+      result.setMinutes(result.getMinutes() + amount);
+    }
+    return result;
+  }
+
+  match = timeStr.match(
+    /(\d{4})-(\d{1,2})-(\d{1,2})(?:\s*(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?)?/,
+  );
+  if (match) {
+    const [, year, month, day, ampm, hourStr, minStr] = match;
+    let hour = hourStr ? parseInt(hourStr, 10) : 9;
+    const minute = minStr ? parseInt(minStr, 10) : 0;
+    if (ampm === '오전' && hour === 12) hour = 0;
+    if (ampm === '오후' && hour !== 12) hour += 12;
+    return new Date(
+      parseInt(year, 10),
+      parseInt(month, 10) - 1,
+      parseInt(day, 10),
+      hour,
+      minute,
+    );
+  }
+
+  match = timeStr.match(
+    /(오늘|내일|모레)(?:\s*(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?)?/,
+  );
+  if (match) {
+    const [, dayWord, ampm, hourStr, minStr] = match;
+    const result = new Date();
+    result.setSeconds(0, 0);
+
+    if (dayWord === '내일') result.setDate(result.getDate() + 1);
+    if (dayWord === '모레') result.setDate(result.getDate() + 2);
+
+    let hour = hourStr ? parseInt(hourStr, 10) : 9;
+    const minute = minStr ? parseInt(minStr, 10) : 0;
+
+    if (ampm) {
+      if (ampm === '오전' && hour === 12) hour = 0;
+      if (ampm === '오후' && hour !== 12) hour += 12;
+    } else if (hourStr) {
+      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
+        if (hour !== 12) {
+          hour += 12;
+        }
+      }
+    }
+
+    result.setHours(hour, minute);
+    return dayWord === '오늘' ? adjustForPastTime(result) : result;
+  }
+  
+  match = timeStr.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
+  if (match) {
+    const [, ampm, hourStr, minStr] = match;
+    if (!hourStr) return undefined;
+
+    let hour = parseInt(hourStr, 10);
+    const minute = minStr ? parseInt(minStr, 10) : 0;
+
+    if (!ampm) {
+      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
+        if (hour !== 12) hour += 12;
+      }
+    } else {
+      if (ampm === '오전' && hour === 12) hour = 0;
+      if (ampm === '오후' && hour !== 12) hour += 12;
+    }
+
+    const result = new Date();
+    result.setHours(hour, minute, 0, 0);
+    return adjustForPastTime(result);
+  }
+
+  match = timeStr.match(/^(\d{1,2})-(\d{1,2})$/);
+  if (match) {
+    const now = new Date();
+    const month = parseInt(match[1], 10) - 1;
+    const day = parseInt(match[2], 10);
+    return new Date(now.getFullYear(), month, day, 9, 0, 0, 0);
+  }
+
+  return undefined;
+};
+
+const parseNoteContent = (content: string) => {
+    const hashtagRegex = /#([^\s#@]+)/g;
+    const uniqueTags = new Set<string>();
+    let match;
+
+    while ((match = hashtagRegex.exec(content)) !== null) {
+      uniqueTags.add(match[1]);
+    }
+    const tags = Array.from(uniqueTags);
+
+    const reminders: Omit<EditorReminder, 'id'>[] = [];
+    const reminderRegex = /@([^@#\n]+?)\./g;
+    while ((match = reminderRegex.exec(content)) !== null) {
+      const fullText = match[1].trim();
+      let timeText = '';
+      let reminderText = '';
+
+      const timePatterns = [
+        /^(\d{4}-\d{1,2}-\d{1,2}(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
+        /^((?:오늘|내일|모레)(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
+        /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
+        /^(\d+\s*(?:시간|분))/, 
+        /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
+        /^(\d{1,2}-\d{1,2})/, 
+      ];
+
+      for (const pattern of timePatterns) {
+        const timeMatch = fullText.match(pattern);
+        if (timeMatch) {
+          timeText = timeMatch[1].trim();
+          reminderText = fullText.substring(timeMatch[0].length).trim();
+          break;
+        }
+      }
+
+      if (timeText && reminderText) {
+        const parsedDate = parseTimeExpression(timeText);
+        if (parsedDate) {
+            reminders.push({
+              text: reminderText,
+              original_text: match[0],
+              date: parsedDate,
+              completed: false,
+              enabled: true,
+            });
+        }
+      }
+    }
+
+    return { tags, reminders };
+}
+
+
+// --- Zustand Store ---
 
 interface AuthState {
   user: User | null;
   session: Session | null;
   userProfile: UserProfile | null;
   isAuthenticated: boolean;
-
   userKey: string | null;
   formattedKey: string | null;
-
   isRegisterLoading: boolean;
   isLoginLoading: boolean;
   isLogoutLoading: boolean;
   isSessionCheckLoading: boolean;
   isProfileLoading: boolean;
   isTermsLoading: boolean;
-
   error: Error | null;
 }
 
 interface AuthStore extends AuthState {
-  // 기본 상태 관리 메서드
   setUserKey: (key: string | null) => void;
   setFormattedKey: (key: string | null) => void;
   setUser: (user: User | null) => void;
@@ -36,19 +193,14 @@ interface AuthStore extends AuthState {
   setError: (error: Error | null) => void;
   clearState: () => void;
   clearUserKey: () => void;
-
-  // 인증 메서드
   loginWithKey: (key: string) => Promise<{
     success: boolean;
     message?: string;
     user?: User | null;
     error?: Error | null;
   }>;
-
   loginWithSocial: (provider: 'github' | 'google') => Promise<void>;
   signOut: () => Promise<{ success: boolean; error?: Error | null }>;
-
-  // 세션 관리
   checkSession: () => Promise<boolean>;
   fetchUserProfile: (userId: string) => Promise<UserProfile | null>;
   restoreSession: () => Promise<boolean>;
@@ -61,7 +213,7 @@ interface AuthStore extends AuthState {
     clientIP: string,
   ) => Promise<{
     success: boolean;
-    user?: User; // Edge Function에서 반환하는 user 객체
+    user?: User;
     error?: string;
     code?: string;
   }>;
@@ -71,7 +223,7 @@ interface AuthStore extends AuthState {
     clientIP: string,
   ) => Promise<{
     success: boolean;
-    user?: User; // Edge Function에서 반환하는 user 객체
+    user?: User;
     error?: string;
     code?: string;
   }>;
@@ -91,14 +243,13 @@ export const useAuthStore = create<AuthStore>()(
       isRegisterLoading: false,
       isLoginLoading: false,
       isLogoutLoading: false,
-      isSessionCheckLoading: true, // 앱 시작 시 항상 세션 체크를 하므로 true로 시작
-      isProfileLoading: true, // 프로필 로딩도 함께 시작
+      isSessionCheckLoading: true,
+      isProfileLoading: true,
       isTermsLoading: false,
       userKey: null,
       formattedKey: null,
       error: null,
 
-      // 첫 번째 코드의 기본 메서드
       setUserKey: (key) => set({ userKey: key }),
       setFormattedKey: (key) => set({ formattedKey: key }),
       setUser: (user) => set({ user }),
@@ -111,7 +262,7 @@ export const useAuthStore = create<AuthStore>()(
           user: null,
           isAuthenticated: false,
           error: null,
-          userProfile: null, // userProfile도 초기화
+          userProfile: null,
         }),
       clearUserKey: () => set({ userKey: null }),
 
@@ -160,7 +311,6 @@ export const useAuthStore = create<AuthStore>()(
             .single();
 
           if (error) {
-            // 'No rows found'는 에러가 아니라 프로필이 아직 없는 상태일 수 있음
             if (error.code === 'PGRST116') {
               set({ userProfile: null });
               return null;
@@ -179,10 +329,8 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      // 세션 복원
       restoreSession: async () => {
         try {
-          // onRehydrateStorage는 isSessionCheckLoading의 초기값인 true를 그대로 사용합니다.
           const {
             data: { session },
             error,
@@ -191,10 +339,8 @@ export const useAuthStore = create<AuthStore>()(
 
           if (session) {
             set({ user: session.user, session, isAuthenticated: true });
-            // fetchUserProfile이 isProfileLoading을 관리합니다.
             await get().fetchUserProfile(session.user.id);
           } else {
-            // 세션이 없으면, 인증되지 않은 상태로 확정합니다.
             set({
               user: null,
               session: null,
@@ -204,7 +350,6 @@ export const useAuthStore = create<AuthStore>()(
           }
         } catch (error) {
           console.error('세션 복원 오류:', error);
-          // 오류 발생 시에도 인증되지 않은 상태로 확정합니다.
           set({
             error: error as Error,
             isAuthenticated: false,
@@ -213,18 +358,15 @@ export const useAuthStore = create<AuthStore>()(
             userProfile: null,
           });
         } finally {
-          // 어떤 경우에도 세션 확인과 프로필 로딩 상태를 false로 설정하여 로딩을 종료합니다.
           set({ isSessionCheckLoading: false, isProfileLoading: false });
         }
-        return false; // 반환값은 중요하지 않습니다.
+        return false;
       },
 
       loginWithKey: async (key: string) => {
         set({ isLoginLoading: true, error: null });
         try {
           const cleanKey = key.replace(/-/g, '').toUpperCase();
-
-          // 1. Edge Function을 호출하여 키에 해당하는 이메일을 가져옵니다.
           const { data: keyCheckData, error: keyCheckError } =
             await supabase.functions.invoke('login_with_key', {
               body: { key: cleanKey },
@@ -235,7 +377,6 @@ export const useAuthStore = create<AuthStore>()(
           }
 
           if (keyCheckData.email) {
-            // 2. 받아온 이메일과 키로 로그인을 시도합니다.
             const { data, error } = await supabase.auth.signInWithPassword({
               email: keyCheckData.email,
               password: cleanKey,
@@ -331,9 +472,7 @@ export const useAuthStore = create<AuthStore>()(
             const errorMessage =
               data?.error || '익명 사용자 생성에 실패했습니다.';
             const errorCode = data?.code || 'UNEXPECTED_ERROR';
-            // 에러 객체를 생성하여 code 속성을 포함시킵니다.
             const customError = new Error(errorMessage);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (customError as any).code = errorCode;
             throw customError;
           }
@@ -357,12 +496,10 @@ export const useAuthStore = create<AuthStore>()(
           console.error('익명 사용자 생성 중 오류:', error);
           return {
             success: false,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             error:
               error instanceof Error
                 ? error.message
                 : '알 수 없는 오류가 발생했습니다.',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             code: (error as any)?.code || 'UNEXPECTED_ERROR',
           };
         } finally {
@@ -390,9 +527,7 @@ export const useAuthStore = create<AuthStore>()(
             const errorMessage =
               data?.error || '이메일 사용자 생성에 실패했습니다.';
             const errorCode = data?.code || 'UNEXPECTED_ERROR';
-            // 에러 객체를 생성하여 code 속성을 포함시킵니다.
             const customError = new Error(errorMessage);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (customError as any).code = errorCode;
             throw customError;
           }
@@ -416,12 +551,10 @@ export const useAuthStore = create<AuthStore>()(
           console.error('이메일 사용자 생성 중 오류:', error);
           return {
             success: false,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             error:
               error instanceof Error
                 ? error.message
                 : '알 수 없는 오류가 발생했습니다.',
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             code: (error as any)?.code || 'UNEXPECTED_ERROR',
           };
         } finally {
@@ -435,7 +568,6 @@ export const useAuthStore = create<AuthStore>()(
           const { user, userProfile } = get();
           if (!user || !userProfile) throw new Error('User not authenticated');
 
-          // 1. 약관 동의 DB 업데이트
           const { error: termsError } = await supabase
             .from('users')
             .update({ terms_agreed: true })
@@ -443,15 +575,16 @@ export const useAuthStore = create<AuthStore>()(
 
           if (termsError) throw termsError;
 
-          // 2. 클라이언트 상태 즉시 업데이트 (낙관적 업데이트)
           set({ userProfile: { ...userProfile, terms_agreed: true } });
 
-          // 3. dataStore를 통해 환영 노트 생성
-          // 이 작업은 백그라운드에서 실행되며 페이지 전환을 막지 않음
+          const { tags, reminders } = parseNoteContent(guideNoteContent);
+
           useDataStore.getState().createNote({
             owner_id: user.id,
             title: '🎉 NOTIA 에 오신 것을 환영합니다! 🎉',
             content: guideNoteContent,
+            tags: tags,
+            reminders: reminders,
           });
 
           return { success: true };

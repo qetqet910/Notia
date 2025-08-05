@@ -1,4 +1,5 @@
 // src/utils/noteParser.ts
+import { EditorReminder } from '@/types';
 
 // 타입 정의 - 외부에서도 사용할 수 있도록 export
 export interface ParsedTag {
@@ -126,8 +127,12 @@ const parseTimeExpression = (
 export const parseNoteContent = (
   content: string,
   baseDate: Date = new Date(),
+  existingReminders: EditorReminder[] = [],
 ) => {
   const reminders: ParsedReminder[] = [];
+  const existingRemindersMap = new Map(
+    existingReminders.map((r) => [r.original_text, r.date])
+  );
 
   // 1. 해시태그 파싱
   const hashtagRegex = /#([^\s#@]+)/g;
@@ -147,6 +152,7 @@ export const parseNoteContent = (
   const reminderRegex = /@([^@#\n]+?)\./g;
   while ((match = reminderRegex.exec(content)) !== null) {
     const fullText = match[1].trim();
+    const originalText = match[0];
     let timeText = '';
     let reminderText = '';
 
@@ -155,8 +161,8 @@ export const parseNoteContent = (
       /^((?:오늘|내일|모레)(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
       /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
       /^(\d+\s*(?:시간|분))/,
-      /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-      /^(\d{1,2}-\d{1,2})/,
+      /^(\d{1,2}\s*시(?:\s*(\d{1,2})\s*분)?)/,
+      /^(\d{1,2}-\d{1,2})/, 
     ];
 
     for (const pattern of timePatterns) {
@@ -169,10 +175,12 @@ export const parseNoteContent = (
     }
 
     if (timeText && reminderText) {
-      const parsedDate = parseTimeExpression(timeText, baseDate); // Pass baseDate
+      const existingDate = existingRemindersMap.get(originalText);
+      const parsedDate = existingDate ?? parseTimeExpression(timeText, baseDate); 
+      
       reminders.push({
         text: timeText,
-        originalText: match[0],
+        originalText: originalText,
         parsedDate,
         reminderText,
       });
@@ -186,7 +194,7 @@ export const parseReminder = (
   text: string,
   baseDate: Date = new Date(),
 ): ParsedReminder | null => {
-  const result = parseNoteContent(`@${text}.`, baseDate); // Pass baseDate
+  const result = parseNoteContent(`@${text}.`, baseDate);
   if (result.reminders.length > 0) {
     return result.reminders[0];
   }
