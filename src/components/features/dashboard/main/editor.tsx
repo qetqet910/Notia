@@ -1,13 +1,13 @@
 import React, {
   useState,
   useEffect,
+  useMemo,
   forwardRef,
   useImperativeHandle,
   useCallback,
   Suspense,
   lazy,
 } from 'react';
-import { useNoteParser } from '@/hooks/useNoteParser';
 import { useToast } from '@/hooks/useToast';
 import { parseNoteContent } from '@/utils/noteParser';
 import {
@@ -37,7 +37,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Note, EditorReminder } from '@/types';
+import { Note, EditorReminder, Reminder } from '@/types';
 
 const MarkdownPreview = lazy(() =>
   import('@/components/features/dashboard/MarkdownPreview').then((module) => ({
@@ -99,51 +99,83 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
   ) => {
     const [title, setTitle] = useState(note.title);
     const [content, setContent] = useState(note.content);
+    const [tags, setTags] = useState<string[]>([]);
+    const [reminders, setReminders] = useState<EditorReminder[]>([]);
     const { toast } = useToast();
     const navigate = useNavigate();
-
-    const { tags: parsedTags, reminders: parsedReminders } =
-      useNoteParser(content);
 
     useEffect(() => {
       setTitle(note.title);
       setContent(note.content);
+
+      const existingEditorReminders: EditorReminder[] = (note.reminders || []).map((r: Reminder) => ({
+        id: r.id,
+        text: r.reminder_text,
+        date: new Date(r.reminder_time),
+        completed: r.completed,
+        enabled: r.enabled,
+        original_text: r.original_text,
+      }));
+
+      const { tags: initialTags, reminders: initialReminders } =
+        parseNoteContent(
+          note.content,
+          new Date(),
+          existingEditorReminders, 
+        );
+      
+      setTags(initialTags.map(t => t.text));
+      setReminders(initialReminders
+        .filter(p => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
+        .map((parsed) => {
+            const existing = existingEditorReminders.find(er => er.original_text === parsed.originalText);
+            return {
+                id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
+                text: parsed.reminderText!,
+                date: parsed.parsedDate!,
+                completed: existing?.completed || false,
+                enabled: existing?.enabled ?? true,
+                original_text: parsed.originalText,
+            }
+        }));
     }, [note]);
 
-    const handleSave = useCallback(() => {
-      // 저장 시점의 시간을 기준으로 리마인더 날짜를 고정
-      const saveTime = new Date();
-      const { tags: finalTags, reminders: finalRemindersRaw } =
-        parseNoteContent(content, saveTime);
+    useEffect(() => {
+      if (content === note.content && title === note.title) return;
 
-      const extractedTags = finalTags.map((tag) => tag.text);
+      const { tags: currentTags, reminders: currentRemindersRaw } = 
+        parseNoteContent(content, new Date(), reminders);
 
-      const finalReminders: EditorReminder[] = finalRemindersRaw
-        .filter(
-          (p) => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
-        )
-        .map((parsed) => ({
-          id: `temp-${parsed.originalText}-${Date.now()}`,
-          text: parsed.reminderText!,
-          date: parsed.parsedDate!,
-          completed: false,
-          enabled: true,
-          original_text: parsed.originalText,
+      setTags(currentTags.map(t => t.text));
+      
+      setReminders(currentRemindersRaw
+        .filter(p => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
+        .map((parsed) => {
+            const existing = reminders.find(r => r.original_text === parsed.originalText);
+            return {
+                id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
+                text: parsed.reminderText!,
+                date: parsed.parsedDate!,
+                completed: existing?.completed || false,
+                enabled: existing?.enabled ?? true,
+                original_text: parsed.originalText,
+            }
         }));
+    }, [content, title, note.content, note.title, reminders]);
 
+    const handleSave = useCallback(() => {
       onSave(note.id, {
         title,
         content,
-        tags: extractedTags,
-        reminders: finalReminders,
+        tags,
+        reminders,
       });
-
       onCancelEdit();
       toast({
         title: '저장 완료',
         description: '노트가 성공적으로 저장되었습니다.',
       });
-    }, [note.id, title, content, onSave, onCancelEdit, toast]);
+    }, [note.id, title, content, tags, reminders, onSave, onCancelEdit, toast]);
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
@@ -154,6 +186,14 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     };
 
     const navigateHandler = () => navigate('/dashboard/help?tab=shortcuts');
+    
+    const displayTags = useMemo(() => tags.map(t => ({ text: t })), [tags]);
+    const displayReminders = useMemo(() => reminders.map(r => ({
+        reminderText: r.text,
+        parsedDate: r.date,
+        text: r.original_text.match(/@(.*)\./)?.[1] || '',
+        originalText: r.original_text
+    })), [reminders]);
 
     return (
       <div className="flex flex-col h-full">
@@ -257,20 +297,20 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         )}
 
         {/* Tags and Reminders */}
-        {(parsedTags.length > 0 || parsedReminders.length > 0) && (
+        {(displayTags.length > 0 || displayReminders.length > 0) && (
           <div
             className={`border-b border-border bg-muted/30 transition-all duration-300 ease-in-out ${
               isEditing ? 'p-2' : 'p-4'
             }`}
           >
-            {parsedTags.length > 0 && (
+            {displayTags.length > 0 && (
               <div className={`mb-3 ${isEditing ? 'pl-5' : ''}`}>
                 <div className="flex items-center mb-2">
                   <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
                   <span className="text-sm font-medium">태그</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {parsedTags.map((tag, index) => (
+                  {displayTags.map((tag, index) => (
                     <Badge key={index} variant="secondary">
                       #{tag.text}
                     </Badge>
@@ -279,7 +319,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               </div>
             )}
 
-            {parsedReminders.length > 0 && (
+            {displayReminders.length > 0 && (
               <div className={`mt-3 ${isEditing ? 'pl-5' : ''}`}>
                 <div className="flex items-center mb-2">
                   <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -298,7 +338,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     });
                   }}
                 >
-                  {parsedReminders.map((reminder, index) => (
+                  {displayReminders.map((reminder, index) => (
                     <div
                       key={index}
                       className="flex-shrink-0 flex items-center gap-2 p-2 bg-background rounded-lg border border-border min-w-fit"
