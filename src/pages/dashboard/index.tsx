@@ -224,9 +224,10 @@ export const Dashboard: React.FC = () => {
   }, [deleteNote, selectedNote]);
 
   const handleSaveNote = async (
-    noteToUpdate: Partial<Note> & { id: string },
+    noteId: string,
+    updates: Partial<Note> & { reminders: EditorReminder[] },
   ) => {
-    await updateNote(noteToUpdate);
+    await updateNote(noteId, updates);
     setHasUnsavedChanges(false);
   };
 
