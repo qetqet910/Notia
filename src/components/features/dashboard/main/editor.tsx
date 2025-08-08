@@ -38,6 +38,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Note, EditorReminder, Reminder } from '@/types';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from '@/components/ui/carousel';
 
 const MarkdownPreview = lazy(() =>
   import('@/components/features/dashboard/MarkdownPreview').then((module) => ({
@@ -108,7 +113,9 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       setTitle(note.title);
       setContent(note.content);
 
-      const existingEditorReminders: EditorReminder[] = (note.reminders || []).map((r: Reminder) => ({
+      const existingEditorReminders: EditorReminder[] = (
+        note.reminders || []
+      ).map((r: Reminder) => ({
         id: r.id,
         text: r.reminder_text,
         date: new Date(r.reminder_time),
@@ -118,50 +125,62 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       }));
 
       const { tags: initialTags, reminders: initialReminders } =
-        parseNoteContent(
-          note.content,
-          new Date(),
-          existingEditorReminders, 
-        );
-      
-      setTags(initialTags.map(t => t.text));
-      setReminders(initialReminders
-        .filter(p => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
-        .map((parsed) => {
-            const existing = existingEditorReminders.find(er => er.original_text === parsed.originalText);
+        parseNoteContent(note.content, new Date(), existingEditorReminders);
+
+      setTags(initialTags.map((t) => t.text));
+      setReminders(
+        initialReminders
+          .filter(
+            (p) =>
+              p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
+          )
+          .map((parsed) => {
+            const existing = existingEditorReminders.find(
+              (er) => er.original_text === parsed.originalText,
+            );
             return {
-                id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
-                text: parsed.reminderText!,
-                date: parsed.parsedDate!,
-                completed: existing?.completed || false,
-                enabled: existing?.enabled ?? true,
-                original_text: parsed.originalText,
-            }
-        }));
+              id:
+                existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
+              text: parsed.reminderText!,
+              date: parsed.parsedDate!,
+              completed: existing?.completed || false,
+              enabled: existing?.enabled ?? true,
+              original_text: parsed.originalText,
+            };
+          }),
+      );
     }, [note]);
 
     useEffect(() => {
       if (content === note.content && title === note.title) return;
 
-      const { tags: currentTags, reminders: currentRemindersRaw } = 
+      const { tags: currentTags, reminders: currentRemindersRaw } =
         parseNoteContent(content, new Date(), reminders);
 
-      setTags(currentTags.map(t => t.text));
-      
-      setReminders(currentRemindersRaw
-        .filter(p => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
-        .map((parsed) => {
-            const existing = reminders.find(r => r.original_text === parsed.originalText);
+      setTags(currentTags.map((t) => t.text));
+
+      setReminders(
+        currentRemindersRaw
+          .filter(
+            (p) =>
+              p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
+          )
+          .map((parsed) => {
+            const existing = reminders.find(
+              (r) => r.original_text === parsed.originalText,
+            );
             return {
-                id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
-                text: parsed.reminderText!,
-                date: parsed.parsedDate!,
-                completed: existing?.completed || false,
-                enabled: existing?.enabled ?? true,
-                original_text: parsed.originalText,
-            }
-        }));
-    }, [content, title, note.content, note.title]);
+              id:
+                existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
+              text: parsed.reminderText!,
+              date: parsed.parsedDate!,
+              completed: existing?.completed || false,
+              enabled: existing?.enabled ?? true,
+              original_text: parsed.originalText,
+            };
+          }),
+      );
+    }, [content, title, note.content, note.title, reminders]);
 
     const handleSave = useCallback(() => {
       onSave(note.id, {
@@ -175,7 +194,16 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         title: '저장 완료',
         description: '노트가 성공적으로 저장되었습니다.',
       });
-    }, [note.id, title, content, tags, reminders, onSave, onCancelEdit, toast]);
+    }, [
+      note.id,
+      title,
+      content,
+      tags,
+      reminders,
+      onSave,
+      onCancelEdit,
+      toast,
+    ]);
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
@@ -186,14 +214,18 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     };
 
     const navigateHandler = () => navigate('/dashboard/help?tab=shortcuts');
-    
-    const displayTags = useMemo(() => tags.map(t => ({ text: t })), [tags]);
-    const displayReminders = useMemo(() => reminders.map(r => ({
-        reminderText: r.text,
-        parsedDate: r.date,
-        text: r.original_text.match(/@(.*)\./)?.[1] || '',
-        originalText: r.original_text
-    })), [reminders]);
+
+    const displayTags = useMemo(() => tags.map((t) => ({ text: t })), [tags]);
+    const displayReminders = useMemo(
+      () =>
+        reminders.map((r) => ({
+          reminderText: r.text,
+          parsedDate: r.date,
+          text: r.original_text.match(/@(.*)\./)?.[1] || '',
+          originalText: r.original_text,
+        })),
+      [reminders],
+    );
 
     return (
       <div className="flex flex-col h-full">
@@ -309,13 +341,24 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
                   <span className="text-sm font-medium">태그</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {displayTags.map((tag, index) => (
-                    <Badge key={index} variant="secondary">
-                      #{tag.text}
-                    </Badge>
-                  ))}
-                </div>
+                <Carousel
+                  opts={{
+                    align: 'start',
+                    loop: false,
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent className="-ml-0">
+                    {displayTags.map((tag, index) => (
+                      <CarouselItem
+                        key={index}
+                        className="basis-auto pl-1 pr-1"
+                      >
+                        <Badge variant="secondary">#{tag.text}</Badge>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
               </div>
             )}
 
@@ -325,52 +368,50 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                   <span className="text-sm font-medium">리마인더</span>
                 </div>
-                <div
-                  className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 custom-scrollbar"
-                  style={{
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
+                <Carousel
+                  opts={{
+                    align: 'start',
+                    loop: false,
                   }}
-                  onWheel={(e) => {
-                    e.currentTarget.scrollBy({
-                      left: e.deltaY > 0 ? 120 : -120,
-                      behavior: 'smooth',
-                    });
-                  }}
+                  className="w-full"
                 >
-                  {displayReminders.map((reminder, index) => (
-                    <div
-                      key={index}
-                      className="flex-shrink-0 flex items-center gap-2 p-2 bg-background rounded-lg border border-border min-w-fit"
-                    >
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      <div className="flex-1 whitespace-nowrap">
-                        <div className="font-medium text-sm">
-                          {reminder.reminderText}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {reminder.parsedDate ? (
-                            <span className="text-green-600 dark:text-green-400">
-                              {formatDate(reminder.parsedDate)}
-                            </span>
-                          ) : (
-                            <span className="text-orange-600 dark:text-orange-400">
-                              시간 파싱 실패
-                            </span>
+                  <CarouselContent className="-ml-0">
+                    {displayReminders.map((reminder, index) => (
+                      <CarouselItem
+                        key={index}
+                        className="basis-auto pl-1 pr-1"
+                      >
+                        <div className="flex-shrink-0 flex items-center gap-2 p-2 bg-background rounded-lg border border-border min-w-fit">
+                          <Clock className="h-4 w-4 text-blue-500" />
+                          <div className="flex-1 whitespace-nowrap">
+                            <div className="font-medium text-sm">
+                              {reminder.reminderText}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {reminder.parsedDate ? (
+                                <span className="text-green-600 dark:text-green-400">
+                                  {formatDate(reminder.parsedDate)}
+                                </span>
+                              ) : (
+                                <span className="text-orange-600 dark:text-orange-400">
+                                  시간 파싱 실패
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {reminder.parsedDate && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs whitespace-nowrap"
+                            >
+                              {reminder.text}
+                            </Badge>
                           )}
                         </div>
-                      </div>
-                      {reminder.parsedDate && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs whitespace-nowrap"
-                        >
-                          {reminder.text}
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
               </div>
             )}
           </div>
