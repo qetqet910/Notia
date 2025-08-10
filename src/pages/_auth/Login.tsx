@@ -21,7 +21,7 @@ import { generateRandomKey, formatKey } from '@/utils/keyValidation';
 import { animations } from '@/constants/animations';
 
 import logoImage from '@/assets/images/Logo.png';
-import loginAnimation from '/loginAnimation.lottie';
+import loginAnimation from '/lottie/loginAnimation.lottie';
 
 // --- Memoized Sub-components ---
 
