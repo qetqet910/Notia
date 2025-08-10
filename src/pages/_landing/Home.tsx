@@ -1,15 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, cubicBezier } from 'framer-motion';
-import {
-  Feather,
-  Rocket,
-  Hash,
-  AtSign,
-  PenSquare,
-  Users,
-  BrainCircuit,
-} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import {
   Accordion,
@@ -17,218 +9,97 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
-
-import landing1 from '@/assets/images/landing/landing1.png';
-import landing2 from '@/assets/images/landing/landing2.png';
-import landing3 from '@/assets/images/landing/landing3.png';
-import landing4 from '@/assets/images/landing/landing4.png';
-import landing5 from '@/assets/images/landing/landing5.png';
-
-const features = [
-  {
-    icon: <Hash className="w-10 h-10 text-[#61C9A8]" />,
-    title: '#태그로 완성하는 생각의 지도',
-    description:
-      '모든 노트에 #태그를 붙여 주제별로 손쉽게 분류하고 연결하세요. 흩어져 있던 아이디어가 한눈에 들어오는 지도가 펼쳐집니다.',
-  },
-  {
-    icon: <AtSign className="w-10 h-10 text-[#61C9A8]" />,
-    title: '@리마인더로 놓치지 않는 약속',
-    description:
-      '노트 작성 중 ‘@내일 3시’처럼 간단하게 리마인더를 설정하세요. 중요한 약속과 할 일을 정확한 시간에 알려드립니다.',
-  },
-  {
-    icon: <PenSquare className="w-10 h-10 text-[#61C9A8]" />,
-    title: '마크다운으로 쓰는 모든 것',
-    description:
-      '표준 마크다운을 지원하여, 작성한 콘텐츠를 블로그나 다른 문서 도구로 손쉽게 옮길 수 있습니다. 당신의 기록은 온전히 당신의 것입니다.',
-  },
-];
-
-const userProfiles = [
-  {
-    icon: <BrainCircuit className="w-8 h-8 text-[#61C9A8]" />,
-    title: '콘텐츠 크리에이터',
-    description:
-      '마크다운으로 초안을 작성하고 #주제별로 아이디어를 관리하세요. 작성한 내용은 바로 블로그나 다른 플랫폼으로 옮길 수 있습니다.',
-  },
-  {
-    icon: <Users className="w-8 h-8 text-[#61C9A8]" />,
-    title: '프로젝트 관리자',
-    description:
-      '회의록을 작성하며 #프로젝트 태그를 달고, ‘@담당자 내일까지’와 같이 바로 할 일을 리마인더로 지정하여 효율적으로 팀을 관리하세요.',
-  },
-  {
-    icon: <Feather className="w-8 h-8 text-[#61C9A8]" />,
-    title: '열정적인 학습자',
-    description:
-      '강의 내용을 #과목별로 정리하고, ‘@시험일’ 리마인더로 중요한 일정을 놓치지 마세요. 가볍고 빨라 어떤 환경에서도 학습에만 집중할 수 있습니다.',
-  },
-];
-
-const faqItems = [
-  {
-    question: '무료로 이용할 수 있나요?',
-    answer:
-      '네, 현재 제공되는 모든 기능은 무료입니다. 개인적인 기록부터 업무 관리까지, 자유롭게 서비스를 이용해 보세요.',
-  },
-  {
-    question: '데이터는 안전하게 보관되나요?',
-    answer:
-      '물론입니다. 모든 데이터는 안전한 클라우드 데이터베이스에 암호화되어 저장되며, 저장된 개인정보를 안전하게 보관합니다.',
-  },
-  {
-    question: '저사양 PC에서도 잘 작동하나요?',
-    answer:
-      '네, 이 서비스는 개발자의 군 복무 경험을 바탕으로 탄생했습니다. 어떤 환경에서도 빠르고 가볍게 작동하도록 최적화에 많은 노력을 기울였습니다.',
-  },
-  {
-    question: '어떤 목적으로 만들어진 서비스인가요?',
-    answer:
-      'Obsidian처럼 자유롭고 체계적이고, Velog보다 가볍고 쉽고 빠른 리마인더 기능을 결합하여 생산성을 극대화하는 것을 목표로 합니다.',
-  },
-  {
-    question: 'TMI',
-    answer:
-      '군생활을 하며 세세한 모든 걸 기록하는 습관이 생겼어요, 부작용으로 기록하지 않으면 다 까먹는 것도 생겼답니다.',
-  },
-];
-
-// ---- 애니메이션 variants ----
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: cubicBezier(0.42, 0, 0.58, 1) },
-  },
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2, delayChildren: 0.1 },
-  },
-};
-
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import landingAnimation from '/lottie/landingAnimation.lottie';
+import rocketAnimation from '/lottie/rocketAnimation.lottie';
+import bottomArrow from '/lottie/bottomArrow.lottie';
+import '@/styles/LandingTextAnimation.css';
+import { LandingEditor } from '@/components/features/landing/LandingEditor';
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
-
-// ... (imports)
-
-// ... (features, userProfiles, faqItems)
-
-// ---- 애니메이션 variants ----
-// ... (fadeIn, staggerContainer)
+  features,
+  userProfiles,
+  faqItems,
+  fadeIn,
+  staggerContainer,
+} from '@/constants/home.tsx';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const landingImages = [landing1, landing2, landing3, landing4, landing5];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 overflow-hidden custom-scrollbar">
+    <div className="min-h-screen bg-white text-gray-800 overflow-hidden custom-scrollbar">
       <Toaster />
       <Header />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
-        {/* ... (background and text content) */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-green-100/30 to-transparent dark:from-green-900/20 dark:to-transparent blur-3xl"></div>
-        <div className="max-w-7xl mx-auto relative">
+      <section className="relative h-screen flex items-center px-6 lg:px-12 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-green-100 via-white to-transparent blur-3xl"></div>
+        <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
-            className="text-center"
+            className="text-center md:text-left"
           >
             <motion.h1
-              initial="hidden"
-              animate="visible"
-              variants={staggerContainer}
-              className="text-5xl md:text-6xl font-bold leading-tight tracking-tight"
+              variants={fadeIn(0)}
+              className="text-5xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight"
             >
-              <motion.span variants={fadeIn} className="block">
-                생각의 조각을 <span className="text-[#61C9A8]">#태그</span>로
-                엮고,
-              </motion.span>
-              <motion.span variants={fadeIn} className="block">
-                중요한 약속은 <span className="text-[#61C9A8]">@리마인더</span>
-                로 깨우세요.
-              </motion.span>
+              <span className="block mb-2">생각의 조각을</span>
+              <span className="block text-shadows">#태그와 @리마인더로</span>
+              <span className="block mt-3">완성하세요</span>
             </motion.h1>
             <motion.p
-              variants={fadeIn}
-              className="mt-6 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto"
+              variants={fadeIn(0.2)}
+              className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0"
             >
-              마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며, 일상
-              속 중요한 약속까지 관리하세요. 당신의 생산성을 위한 가장 가볍고
-              빠른 도구입니다.
+              마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며,
+              <br />
+              일상속 중요한 약속까지 관리하세요. <br />
+              당신의 생산성을 위한 가장 가볍고 빠른 도구입니다.
             </motion.p>
-            <motion.div variants={fadeIn} className="mt-8">
+            <motion.div variants={fadeIn(0.4)} className="mt-8">
               <Button
-                className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 hover:scale-105 transition-all text-white shadow-lg shadow-[#61C9A8]/30"
+                className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 text-white font-bold shadow-lg shadow-[#61C9A8]/30 transform hover:scale-105 transition-all duration-300"
                 size="lg"
                 onClick={() => navigate('/login')}
               >
-                지금 바로 생각 정리하기
+                지금 바로 시작하기 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </motion.div>
           </motion.div>
-
-          {/* Carousel Section */}
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="mt-20"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
+            className="hidden md:flex items-center justify-center"
           >
-            <Carousel
-              opts={{
-                align: 'start',
-                loop: true,
-              }}
-              className="w-full max-w-6xl mx-auto"
-            >
-              <CarouselContent>
-                {landingImages.map((image, index) => (
-                  <CarouselItem
-                    key={index}
-                    className="basis-full md:basis-1/2 lg:basis-1/3"
-                  >
-                    <div className="p-1">
-                      <Card>
-                        <CardContent className="flex aspect-video items-center justify-center p-0 overflow-hidden rounded-lg">
-                          <img
-                            src={image}
-                            alt={`Notia 기능 시연 ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="hidden sm:flex" />
-              <CarouselNext className="hidden sm:flex" />
-            </Carousel>
+            <DotLottieReact
+              src={landingAnimation}
+              loop
+              autoplay
+              className="w-[600px] h-[600px]"
+            />
           </motion.div>
         </div>
+        <motion.a
+          href="#interactive-demo"
+          className="absolute bottom-10 left-0 right-0 mx-auto w-12 h-12 cursor-pointer z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1, duration: 0.8 }}
+          whileHover={{ scale: 1.1 }}
+        >
+          <DotLottieReact src={bottomArrow} loop autoplay />
+        </motion.a>
       </section>
 
-      {/* ... (rest of the sections: Features, Built For, Performance, FAQ) */}
-      <section className="py-10 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* Features Section */}
+      <section className="py-24 dark-dot-pattern text-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -237,94 +108,132 @@ export const Home: React.FC = () => {
             className="grid md:grid-cols-3 gap-8"
           >
             {features.map((feature, index) => (
-              <motion.div variants={fadeIn} key={index}>
-                <Card className="text-center hover:shadow-xl hover:-translate-y-2 transition-all duration-300 h-full p-6">
-                  <div className="flex justify-center mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-semibold mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </Card>
+              <motion.div variants={fadeIn(index * 0.1)} key={index}>
+                <div className="p-8 rounded-2xl h-full border border-gray-700/50 hover:border-[#61C9A8]/50 hover:bg-white transition-all duration-300">
+                  <div className="flex flex-col items-center">
+                    <div className="bg-[#61C9A8] w-16 h-16 rounded-full flex items-center justify-center mb-6 shadow-lg">
+                      {feature.icon}
+                    </div>
+                    <h3 className="text-xl font-bold mb-3 text-black">
+                      {feature.title}
+                    </h3>
+                  </div>
+                  <p className="text-gray-400">{feature.description}</p>
+                </div>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* Built For Section */}
-      <section className="py-24 px-6">
+      {/* Built For & Performance Section */}
+      <section className="py-24 px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.5 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl font-bold mb-4">
-              이런 분들을 위해 만들었습니다
+            <h2 className="text-4xl font-extrabold mb-4 tracking-tight">
+              당신의 생산성을 위한 모든 것
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              다양한 역할 속에서 생산성을 높이고 싶은 모든 분들을 위한 최적의
-              도구입니다.
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된
+              기능을 제공하며 어떤 환경에서도 최고의 성능을 보장합니다.
             </p>
           </motion.div>
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={staggerContainer}
-            className="grid md:grid-cols-3 gap-8"
-          >
-            {userProfiles.map((profile, index) => (
-              <motion.div key={index} variants={fadeIn}>
-                <Card className="text-center hover:shadow-lg transition-shadow duration-300 h-full">
-                  <CardContent className="pt-8 pb-6">
-                    <div className="flex justify-center mb-4">
-                      {profile.icon}
+
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              variants={staggerContainer}
+              className="space-y-8"
+            >
+              {userProfiles.map((profile, index) => (
+                <motion.div key={index} variants={fadeIn(index * 0.1)}>
+                  <div className="flex items-start gap-6">
+                    <div className="flex-shrink-0">{profile.icon}</div>
+                    <div>
+                      <h3 className="text-xl font-bold mb-2">
+                        {profile.title}
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {profile.description}
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold mb-3">
-                      {profile.title}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {profile.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </motion.div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+              <div className="p-10 rounded-2xl text-center">
+                <div className="flex justify-center mb-6">
+                  <DotLottieReact
+                    src={rocketAnimation}
+                    loop
+                    autoplay
+                    className="w-24 h-24 scale-150"
+                  />
+                </div>
+                <h3 className="text-2xl font-bold mb-4">
+                  성능에 타협은 없습니다
+                </h3>
+                <p className="text-lg text-muted-foreground">
+                  어떤 환경에서도 즉각적인 반응 속도를 경험하세요. 불필요한
+                  기능은 덜어내고, 오직 핵심에만 집중하여 놀랍도록 가볍고 빠르게
+                  만들었습니다.
+                </p>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Performance Section */}
-      <section className="py-24">
-        <div className="max-w-4xl mx-auto px-6">
+      {/* Interactive Demo Section */}
+      <section
+        id="interactive-demo"
+        className="py-24 px-6 lg:px-12 dark-dot-pattern"
+      >
+        <div className="max-w-7xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-            className="flex flex-col md:flex-row items-center gap-8 bg-slate-50 dark:bg-slate-900 p-10 rounded-2xl border border-dashed"
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
           >
-            <div className="text-center md:text-left">
-              <Rocket className="w-12 h-12 text-[#61C9A8] mb-4 mx-auto md:mx-0" />
-              <h2 className="text-3xl font-bold mb-4">
-                성능에 타협은 없습니다
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                어떤 환경에서도 즉각적인 반응 속도를 경험하세요. 불필요한 기능은
-                덜어내고, 오직 핵심에만 집중하여 놀랍도록 가볍고 빠르게
-                만들었습니다.
-              </p>
-            </div>
+            <h2 className="text-4xl font-extrabold mb-4 tracking-tight text-gray-900">
+              미리보기
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              아래 편집기에서 직접 #태그와 @리마인더 기능을 사용해보세요.
+              <br />
+              입력하는 대로 실시간으로 분석하고 똑똑하게 정리합니다.
+            </p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+          >
+            <LandingEditor />
           </motion.div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 px-6 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-4xl mx-auto">
+      <section className="py-24">
+        <div className="max-w-4xl mx-auto px-6 lg:px-12">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -332,7 +241,7 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl font-bold mb-4">자주 묻는 질문</h2>
+            <h2 className="text-4xl font-extrabold mb-4 tracking-tight">FAQ</h2>
           </motion.div>
           <motion.div
             initial="hidden"
@@ -340,14 +249,17 @@ export const Home: React.FC = () => {
             viewport={{ once: true, amount: 0.2 }}
             variants={staggerContainer}
           >
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="single" collapsible className="w-full space-y-2">
               {faqItems.map((item, index) => (
-                <motion.div key={index} variants={fadeIn}>
-                  <AccordionItem value={`item-${index}`}>
+                <motion.div key={index} variants={fadeIn(index * 0.1)}>
+                  <AccordionItem
+                    value={`item-${index}`}
+                    className="shadow border-b-0 rounded-xl px-6"
+                  >
                     <AccordionTrigger className="text-lg font-medium text-left hover:no-underline">
                       {item.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-base text-muted-foreground pt-2">
+                    <AccordionContent className="text-base text-muted-foreground pt-2 pb-4">
                       {item.answer}
                     </AccordionContent>
                   </AccordionItem>
