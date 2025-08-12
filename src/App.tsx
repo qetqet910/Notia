@@ -1,9 +1,10 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from 'react-router-dom';
 import { LandingPageLoader } from '@/components/loader/LandingPageLoader';
 import { DonwloadPage } from '@/components/loader/LandingLoader';
@@ -28,9 +29,28 @@ import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
 import { ThemeProvider } from '@/components/features/themeProvider';
 
+const ScrollToTop = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100); // 100ms 지연을 주어 렌더링 시간을 확보합니다.
+    }
+  }, [location]);
+
+  return null;
+};
+
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <ThemeProvider>
         <Routes>
           {/* 공개 라우트 */}

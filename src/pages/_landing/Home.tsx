@@ -29,8 +29,18 @@ import {
 export const Home: React.FC = () => {
   const navigate = useNavigate();
 
+  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
+    e.preventDefault();
+    const targetId = e.currentTarget.href.split('#')[1];
+    const targetElement = document.getElementById(targetId);
+
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-white text-gray-800 overflow-hidden custom-scrollbar">
+    <div className="min-h-screen bg-white text-gray-800 overflow-hidden">
       <Toaster />
       <Header />
 
@@ -87,6 +97,7 @@ export const Home: React.FC = () => {
         </div>
         <motion.a
           href="#interactive-demo"
+          onClick={handleScroll}
           className="absolute bottom-10 left-0 right-0 mx-auto w-12 h-12 cursor-pointer z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
