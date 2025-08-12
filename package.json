@@ -15,7 +15,10 @@
     "preview": "vite preview",
     "analyze": "vite build --report",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "tauri": ". $HOME/.cargo/env && tauri",
+    "tauri:dev": "export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig && . $HOME/.cargo/env && tauri dev",
+    "tauri:build": ". $HOME/.cargo/env && tauri build"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.13.5",
@@ -65,6 +68,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
+    "@tauri-apps/cli": "^2.7.1",
     "@types/chrome": "^0.0.309",
     "@types/node": "^20.10.0",
     "@types/react": "^19.1.8",
