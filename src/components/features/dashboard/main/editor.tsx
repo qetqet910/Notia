@@ -139,8 +139,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               (er) => er.original_text === parsed.originalText,
             );
             return {
-              id:
-                existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
+              id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
               text: parsed.reminderText!,
               date: parsed.parsedDate!,
               completed: existing?.completed || false,
@@ -170,8 +169,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               (r) => r.original_text === parsed.originalText,
             );
             return {
-              id:
-                existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
+              id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
               text: parsed.reminderText!,
               date: parsed.parsedDate!,
               completed: existing?.completed || false,
@@ -194,16 +192,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         title: '저장 완료',
         description: '노트가 성공적으로 저장되었습니다.',
       });
-    }, [
-      note.id,
-      title,
-      content,
-      tags,
-      reminders,
-      onSave,
-      onCancelEdit,
-      toast,
-    ]);
+    }, [note.id, title, content, tags, reminders, onSave, onCancelEdit, toast]);
 
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
@@ -221,7 +210,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         reminders.map((r) => ({
           reminderText: r.text,
           parsedDate: r.date,
-          text: r.original_text.match(/@(.*)\./)?.[1] || '',
+          // text: r.original_text.match(/@(.*)\./)?.[1] || '',
           originalText: r.original_text,
         })),
       [reminders],
@@ -381,7 +370,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                         key={index}
                         className="basis-auto pl-1 pr-1"
                       >
-                        <div className="flex-shrink-0 flex items-center gap-2 p-2 bg-background rounded-lg border border-border min-w-fit">
+                        <div className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-background rounded-lg border border-border min-w-fit">
                           <Clock className="h-4 w-4 text-blue-500" />
                           <div className="flex-1 whitespace-nowrap">
                             <div className="font-medium text-sm">
@@ -399,14 +388,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                               )}
                             </div>
                           </div>
-                          {reminder.parsedDate && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs whitespace-nowrap"
-                            >
-                              {reminder.text}
-                            </Badge>
-                          )}
                         </div>
                       </CarouselItem>
                     ))}

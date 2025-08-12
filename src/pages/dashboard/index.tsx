@@ -237,6 +237,14 @@ export const Dashboard: React.FC = () => {
       const key = e.key.toLowerCase();
       const target = e.target as HTMLElement;
 
+      if (isDeleteDialogOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setIsDeleteDialogOpen(false);
+        }
+        return;
+      }
+
       // When in editing mode
       if (isEditing) {
         if (isCtrlCmd && key === 's') {
@@ -298,6 +306,7 @@ export const Dashboard: React.FC = () => {
       activeTabs,
       activeTab,
       selectedNote,
+      isDeleteDialogOpen,
     ],
   );
 

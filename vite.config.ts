@@ -35,16 +35,25 @@ export default defineConfig({
         description:
           '마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며, 일상 속 중요한 약속까지 관리하세요. 당신의 생산성을 위한 가장 가볍고 빠른 도구입니다.',
         theme_color: '#cec',
+        start_url: '/dashboard',
+        scope: '/',
+        display: 'standalone',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'icons/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'icons/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
+          },
+          {
+            src: 'icons/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
           },
         ],
       },
