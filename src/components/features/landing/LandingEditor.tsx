@@ -5,14 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tag, Calendar, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const initialContent = `Notia의 스마트한 기능을 경험해보세요.
-
-#프로젝트 아이디어를 #회의록과 함께 정리하고, 중요한 일정은 @내일 2시 HM마포 개발사 미팅. 처럼 바로 리마인더로 추가할 수 있습니다.
-#아이디어
-
-@모레 1시 밥먹기.
-`;
+import { initialContent } from '@/constants/home';
 
 const formatDate = (date: Date): string => {
   if (!date || !(date instanceof Date)) return '날짜 정보 없음';

@@ -217,6 +217,40 @@ html {
   .dark-dot-pattern {
     background-image: radial-gradient(#cecece 1px, transparent 1px);
     background-size: 5px 5px;
+    position: relative;
+  }
+
+  .dark-dot-pattern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 150px;
+    background: linear-gradient(to bottom, hsl(var(--background)), transparent);
+    pointer-events: none;
+  }
+
+  .dark-dot-pattern::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 150px;
+    background: linear-gradient(to top, hsl(var(--background)), transparent);
+    pointer-events: none;
+  }
+
+  .hero-section {
+    position: relative;
+    z-index: 1;
+  }
+
+  .features-section {
+    margin-top: -60px;
+    position: relative;
+    z-index: 0;
   }
 
   @keyframes melt {

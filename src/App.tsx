@@ -6,8 +6,8 @@ import {
   Navigate,
   useLocation,
 } from 'react-router-dom';
-import { LandingPageLoader } from '@/components/loader/LandingPageLoader';
-import { DonwloadPage } from '@/components/loader/LandingLoader';
+import { LandingPageLoader } from '@/components/loader/changeLogLoader';
+import { DownloadPageLoader } from '@/components/loader/DownloadPageLoader';
 import {
   TermsLoader,
   LoginPageLoader,
@@ -73,7 +73,7 @@ function App() {
           <Route
             path="/terms-agreement"
             element={
-              <ProtectedRoute checkTerms={false}>
+              <ProtectedRoute>
                 <Suspense fallback={<TermsLoader />}>
                   <TermsAgreement />
                 </Suspense>
@@ -83,7 +83,7 @@ function App() {
           <Route
             path="/download"
             element={
-              <Suspense fallback={<DonwloadPage />}>
+              <Suspense fallback={<DownloadPageLoader />}>
                 <DownloadPage />
               </Suspense>
             }

@@ -45,8 +45,8 @@ export const Home: React.FC = () => {
       <Header />
 
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center px-6 lg:px-12 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-green-100 via-white to-transparent blur-3xl"></div>
+      <section className="relative h-screen flex items-center px-6 lg:px-12 overflow-hidden hero-section">
+        <div className="absolute inset-0 bg-gradient-to-br from-green-100 via-white to-transparent blur-3xl"></div>
         <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <motion.div
             initial="hidden"
@@ -109,7 +109,7 @@ export const Home: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 dark-dot-pattern text-white">
+      <section className="py-24 dark-dot-pattern text-white features-section">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <motion.div
             initial="hidden"

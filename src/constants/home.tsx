@@ -74,6 +74,19 @@ export const faqItems = [
   },
 ];
 
+export const initialContent = `# 어제자 회의 정리본
+
+## 새 기술 스택 도입 관련
+#React #Vite #Tauri #Nest
+
+> 데스크탑 앱 관련하여 Electron보다 Tauri가 이 프로젝트에 적합하다는 판단.
+[첨부파일](https://naver.com)
+
+@모레 2시 최종 판단 회의.
+@2025-09-09 00시 내 생일.
+
+`;
+
 // ---- Animation Variants ----
 export const fadeIn = (delay = 0.2) => ({
   hidden: { opacity: 0, y: 20 },
