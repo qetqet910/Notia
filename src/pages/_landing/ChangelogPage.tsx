@@ -3,8 +3,19 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { motion } from 'framer-motion';
-import { changelogData } from '@/constants/changeLog';
+import { changelogData, ChangeCategory } from '@/constants/changeLog';
 import { fadeIn } from '@/constants/animations';
+import { Badge } from '@/components/ui/badge';
+
+const categoryStyles: Record<ChangeCategory, string> = {
+  '✨ 기능': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  '🐛 버그 수정': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  '🚀 성능': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+  '💅 디자인': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300',
+  '🔧 리팩토링': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+  '📝 문서': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  '⚙️ 기타': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+};
 
 export const ChangelogPage: React.FC = () => {
   return (
@@ -16,58 +27,44 @@ export const ChangelogPage: React.FC = () => {
           initial="initial"
           animate="animate"
           variants={fadeIn}
-          className="text-center mb-8"
+          className="text-center mb-12"
         >
           <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
             업데이트 내역
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            최신 변경 사항과 개선된 기능을 확인하세요.
+            Notia의 발전 과정을 확인해 보세요.
           </p>
         </motion.div>
 
-        <div className="space-y-8">
-          {changelogData.map((release) => (
+        <div className="space-y-12">
+          {changelogData.map((release, index) => (
             <motion.div
               key={release.version}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.4,
-                delay: changelogData.indexOf(release) * 0.1,
-              }}
-              className="bg-white dark:bg-slate-800 rounded-md shadow-md p-6"
+              transition={{ duration: 0.5, delay: index * 0.1 }}
             >
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {release.version}
-              </h2>
-              <p className="text-gray-500 dark:text-gray-300 text-sm mb-4">
-                {release.date}
-              </p>
-              {release.features && release.features.length > 0 && (
-                <div className="mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                    주요 기능
-                  </h3>
-                  <ul className="list-disc list-inside text-gray-700 dark:text-gray-300">
-                    {release.features.map((feature, index) => (
-                      <li key={index}>{feature}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {release.fixes && release.fixes.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-1">
-                    수정 사항
-                  </h3>
-                  <ul className="list-disc list-inside text-gray-700 dark:text-gray-300">
-                    {release.fixes.map((fix, index) => (
-                      <li key={index}>{fix}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <div className="flex items-baseline space-x-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {release.version}
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  {release.date}
+                </p>
+              </div>
+              <div className="mt-4 space-y-3 border-l-2 border-slate-200 dark:border-slate-700 pl-6 ml-1">
+                {release.changes.map((change, changeIndex) => (
+                  <div key={changeIndex} className="flex items-start space-x-3">
+                    <Badge className={`${categoryStyles[change.category]} mt-1`}>
+                      {change.category.split(' ')[0]}
+                    </Badge>
+                    <p className="text-gray-700 dark:text-gray-300 flex-1">
+                      {change.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           ))}
         </div>
