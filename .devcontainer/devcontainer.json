@@ -1,15 +1,13 @@
 {
-  "name": "Notia",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  "name": "Notia (Tauri)",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-bullseye",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts"
     }
   },
-  "forwardPorts": [5173],
-
-  "postCreateCommand": "npm install && echo \"alias treex='tree -I \\\"node_modules|dist|.git|.vscode|.devcontainer|coverage\\\"'\" >> ~/.bashrc",
-
+  "forwardPorts": [5173, 1420],
+  "postCreateCommand": ".devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -17,8 +15,16 @@
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss",
         "PKief.material-icon-theme",
-        "akamud.vscode-theme-onedark"
-      ]
+        "akamud.vscode-theme-onedark",
+        "tauri-apps.tauri-vscode",
+        "rust-lang.rust-analyzer"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "[rust]": {
+          "editor.formatOnSave": true
+        }
+      }
     }
   }
 }
