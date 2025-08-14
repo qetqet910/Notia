@@ -154,18 +154,18 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       if (content === note.content && title === note.title) return;
 
       const { tags: currentTags, reminders: currentRemindersRaw } =
-        parseNoteContent(content, new Date(), reminders);
+        parseNoteContent(content, new Date());
 
       setTags(currentTags.map((t) => t.text));
 
-      setReminders(
-        currentRemindersRaw
+      setReminders((prevReminders) => {
+        return currentRemindersRaw
           .filter(
             (p) =>
               p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
           )
           .map((parsed) => {
-            const existing = reminders.find(
+            const existing = prevReminders.find(
               (r) => r.original_text === parsed.originalText,
             );
             return {
@@ -176,9 +176,9 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               enabled: existing?.enabled ?? true,
               original_text: parsed.originalText,
             };
-          }),
-      );
-    }, [content, title, note.content, note.title, reminders]);
+          });
+      });
+    }, [content, title, note.content, note.title]);
 
     const handleSave = useCallback(() => {
       onSave(note.id, {

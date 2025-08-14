@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
@@ -17,13 +17,11 @@ const Loader = () => (
 const DynamicSyntaxHighlighterComponent: React.FC<
   DynamicSyntaxHighlighterProps
 > = ({ language, children, ...props }) => {
-  const [isReady, setIsReady] = useState(false);
+  const [, forceUpdate] = useState(0);
+  const isLanguageRegistered = registeredLanguages.has(language);
 
   useEffect(() => {
-    // 언어가 유효하고, 아직 등록되지 않았다면 동적으로 불러옵니다.
-    if (language && !registeredLanguages.has(language)) {
-      setIsReady(false); // 새로운 언어 로딩 시작
-
+    if (language && !isLanguageRegistered) {
       import(
         /* @vite-ignore */ `react-syntax-highlighter/dist/esm/languages/hljs/${language}`
       )
@@ -32,23 +30,21 @@ const DynamicSyntaxHighlighterComponent: React.FC<
           registeredLanguages.add(language);
         })
         .catch(() => {
+          // 실패한 경우에도 다시 시도하지 않도록 'text'로 등록
           console.warn(
-            `Language '${language}' not found, falling back to plaintext.`,
+            `Language '${language}' not found, falling back to plaintext.`, 
           );
-          // 실패한 경우에도 다시 시도하지 않도록 등록
-          registeredLanguages.add(language);
+          registeredLanguages.add(language); // 실패 기록
         })
         .finally(() => {
-          // 성공하든 실패하든 렌더링 준비 완료
-          setIsReady(true);
+          // 언어 로딩(성공 또는 실패)이 완료되었으므로, 리렌더링을 강제하여 UI를 업데이트
+          forceUpdate((n) => n + 1);
         });
-    } else {
-      setIsReady(true);
     }
-  }, [language]);
+  }, [language, isLanguageRegistered]);
 
-  if (!isReady) {
-    return <Loader />;
+  if (!isLanguageRegistered) {
+    return <Loader />; 
   }
 
   return (

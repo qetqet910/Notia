@@ -115,7 +115,11 @@ export const Dashboard: React.FC = () => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState('notes');
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const selectedNote = useMemo(
+    () => notes.find((note) => note.id === selectedNoteId) || null,
+    [notes, selectedNoteId],
+  );
   const [isNoteContentLoading, setIsNoteContentLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -158,36 +162,31 @@ export const Dashboard: React.FC = () => {
   }, [permission, requestPermission]);
 
   useEffect(() => {
-    if (
-      selectedNote &&
-      !notes.some((note) => note && note.id === selectedNote.id)
-    ) {
-      setSelectedNote(null);
+    // notes 배열에서 더 이상 존재하지 않는 노트를 보고 있다면 선택 해제
+    if (selectedNoteId && !notes.some((note) => note.id === selectedNoteId)) {
+      setSelectedNoteId(null);
       setIsEditing(false);
     }
-  }, [notes, selectedNote]);
+  }, [notes, selectedNoteId]);
 
   useEffect(() => {
-    if (selectedNote && selectedNote.id === newlyCreatedNoteId.current) {
+    if (selectedNoteId && selectedNoteId === newlyCreatedNoteId.current) {
       setTimeout(() => {
         setIsEditing(true);
         newlyCreatedNoteId.current = null;
       }, 50);
     }
-  }, [selectedNote]);
+  }, [selectedNoteId]);
 
   const handleSelectNote = useCallback(
     async (note: Note) => {
-      setSelectedNote(note);
+      setSelectedNoteId(note.id);
       setIsEditing(false);
       setHasUnsavedChanges(false);
 
       if (note && !note.content) {
         setIsNoteContentLoading(true);
-        const content = await fetchNoteContent(note.id);
-        setSelectedNote((prev) =>
-          prev?.id === note.id ? { ...prev, content: content || '' } : prev,
-        );
+        await fetchNoteContent(note.id);
         setIsNoteContentLoading(false);
       }
     },
@@ -212,16 +211,16 @@ export const Dashboard: React.FC = () => {
     });
     if (newNote) {
       newlyCreatedNoteId.current = newNote.id;
-      setSelectedNote(newNote);
+      setSelectedNoteId(newNote.id);
       setActiveTab('notes');
     }
   }, [addNote, session?.user?.id]);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!selectedNote) return;
-    await deleteNote(selectedNote.id);
+    if (!selectedNoteId) return;
+    await deleteNote(selectedNoteId);
     setIsDeleteDialogOpen(false);
-  }, [deleteNote, selectedNote]);
+  }, [deleteNote, selectedNoteId]);
 
   const handleSaveNote = async (
     noteId: string,
@@ -281,8 +280,8 @@ export const Dashboard: React.FC = () => {
           setActiveTab(activeTabs[nextIndex]);
         },
         b: () => setIsSidebarVisible((prev) => !prev),
-        d: () => selectedNote && setIsDeleteDialogOpen(true),
-        delete: () => selectedNote && setIsDeleteDialogOpen(true),
+        d: () => selectedNoteId && setIsDeleteDialogOpen(true),
+        delete: () => selectedNoteId && setIsDeleteDialogOpen(true),
         m: () => navigate('/dashboard/myPage?tab=profile'),
         ',': () => navigate('/dashboard/myPage?tab=activity'),
         '.': () => navigate('/dashboard/myPage?tab=settings'),
@@ -305,7 +304,7 @@ export const Dashboard: React.FC = () => {
       isDeepDarkMode,
       activeTabs,
       activeTab,
-      selectedNote,
+      selectedNoteId,
       isDeleteDialogOpen,
     ],
   );
