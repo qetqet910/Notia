@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
-import { DashboardLoader } from '../loader/DashboardLoader';
+import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -23,7 +23,7 @@ export const ProtectedRoute = ({
 
   // 1순위: 세션 또는 프로필 로딩 중일 때
   if (isSessionCheckLoading || isProfileLoading) {
-    return <DashboardLoader />;
+    return <DashboardPageLoader />;
   }
 
   // 2순위: 인증되지 않았을 때

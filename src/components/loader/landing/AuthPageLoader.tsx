@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const TermsLoader = () => {
+export const TermsPageLoader = () => {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="rounded-xl shadow w-full max-w-3xl">

@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
-import { NoteListLoader } from '@/components/loader/NoteListLoader';
-import { EmptyEditorLoader } from '@/components/loader/EditorLoader';
+import { NoteListLoader } from '@/components/loader/dashboard/NoteListLoader';
+import { EmptyEditorLoader } from '@/components/loader/dashboard/EditorLoader';
 
 const HeaderLoader = () => {
   return (
@@ -42,7 +42,7 @@ const SidebarLoader = () => {
   );
 };
 
-export const DashboardLoader = () => {
+export const DashboardPageLoader = () => {
   return (
     <div className="flex flex-col h-screen">
       <HeaderLoader />

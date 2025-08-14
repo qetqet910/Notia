@@ -40,12 +40,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-import { DashboardLoader } from '@/components/loader/DashboardLoader';
-import { EditorLoader } from '@/components/loader/EditorLoader';
-import { ReminderLoader } from '@/components/loader/ReminderLoader';
-import { CalendarLoader } from '@/components/loader/CalendarLoader';
-import { TimelineLoader } from '@/components/loader/TimelineLoader';
-import { NoteListLoader } from '@/components/loader/NoteListLoader';
+import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
+import { EditorLoader } from '@/components/loader/dashboard/EditorLoader';
+import { ReminderLoader } from '@/components/loader/dashboard/ReminderLoader';
+import { CalendarLoader } from '@/components/loader/dashboard/CalendarLoader';
+import { TimelineLoader } from '@/components/loader/dashboard/TimelineLoader';
+import { NoteListLoader } from '@/components/loader/dashboard/NoteListLoader';
 
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/noteList').then((module) => ({
@@ -321,7 +321,7 @@ export const Dashboard: React.FC = () => {
     [isDarkMode, isDeepDarkMode],
   );
 
-  if (isNotesLoading) return <DashboardLoader />;
+  if (isNotesLoading) return <DashboardPageLoader />;
 
   const renderMainContent = () => {
     const filteredNotes = selectedTag

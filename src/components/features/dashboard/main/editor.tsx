@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
-import { MarkdownPreviewLoader } from '@/components/loader/MarkdownPreviewLoader';
+import { MarkdownPreviewLoader } from '@/components/loader/dashboard/MarkdownPreviewLoader';
 import {
   Trash2,
   Save,

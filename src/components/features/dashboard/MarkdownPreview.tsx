@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import ReactMarkdown, { type CodeProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { DynamicSyntaxHighlighter } from '@/components/features/dashboard/DynamicSyntaxHighlighter';
-import { MermaidLoader } from '@/components/loader/MermaidLoader';
+import { MermaidDiagramLoader } from '@/components/loader/dashboard/MermaidDiagramLoader';
 
 const MermaidComponent = lazy(() =>
   import('@/components/features/dashboard/MermaidComponent').then((module) => ({
@@ -32,7 +32,7 @@ const CodeBlock: React.FC<CodeProps> = ({ className, children, ...props }) => {
 
   if (language === 'mermaid') {
     return (
-      <Suspense fallback={<MermaidLoader />}>
+      <Suspense fallback={<MermaidDiagramLoader />}>
         <MermaidComponent
           chart={String(children).replace(/\n$/, '')}
           isEditing={false} // isEditing prop is passed down
