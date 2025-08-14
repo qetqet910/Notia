@@ -6,14 +6,15 @@ import {
   Navigate,
   useLocation,
 } from 'react-router-dom';
-import { LandingPageLoader } from '@/components/loader/changeLogLoader';
-import { DownloadPageLoader } from '@/components/loader/DownloadPageLoader';
+import { LandingPageLoader } from '@/components/loader/landing/LandingPageLoader';
+import { ChangelogPageLoader } from '@/components/loader/landing/ChangelogPageLoader';
+import { DownloadPageLoader } from '@/components/loader/landing/DownloadPageLoader';
 import {
-  TermsLoader,
+  TermsPageLoader,
   LoginPageLoader,
-} from '@/components/loader/LoginPageLoader';
-import { NotFoundPageLoader } from '@/components/loader/NotFoundPageLoader';
-import { DashboardLoader } from '@/components/loader/DashboardLoader';
+} from '@/components/loader/landing/AuthPageLoader';
+import { NotFoundPageLoader } from '@/components/loader/landing/NotFoundPageLoader';
+import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
 import HelpPage from '@/pages/dashboard/help';
 import MyPage from '@/pages/dashboard/myPage';
 
@@ -28,6 +29,7 @@ const NotFound = lazy(() => import('@/pages/NotFoundPage'));
 import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
 import { ThemeProvider } from '@/components/features/themeProvider';
+import { usePwaStore } from './stores/pwaStore';
 
 const ScrollToTop = () => {
   const location = useLocation();
@@ -48,6 +50,26 @@ const ScrollToTop = () => {
 };
 
 function App() {
+  const { setDeferredPrompt } = usePwaStore();
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener(
+        'beforeinstallprompt',
+        handleBeforeInstallPrompt,
+      );
+    };
+  }, [setDeferredPrompt]);
+
   return (
     <Router>
       <ScrollToTop />
@@ -74,7 +96,7 @@ function App() {
             path="/terms-agreement"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<TermsLoader />}>
+                <Suspense fallback={<TermsPageLoader />}>
                   <TermsAgreement />
                 </Suspense>
               </ProtectedRoute>
@@ -92,7 +114,7 @@ function App() {
           <Route
             path="/changelog"
             element={
-              <Suspense fallback={<LandingPageLoader />}>
+              <Suspense fallback={<ChangelogPageLoader />}>
                 <ChangelogPage />
               </Suspense>
             }
@@ -102,7 +124,7 @@ function App() {
             path="/dashboard/*"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<DashboardLoader />}>
+                <Suspense fallback={<DashboardPageLoader />}>
                   <Dashboard />
                 </Suspense>
               </ProtectedRoute>

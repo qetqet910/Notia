@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
+import { usePwaStore } from '@/stores/pwaStore';
 
 // OS 아이콘 컴포넌트
 const OsIcon = ({ name }: { name: string }) => {
@@ -32,7 +33,7 @@ const platformData = [
   {
     id: 'Windows',
     label: 'Windows',
-    version: 'v1.2.0',
+    version: 'v1.3.0',
     lastUpdate: '2025년 7월 8일',
     description:
       'Windows 10/11에 최적화된 데스크톱 앱으로 가장 강력한 기능을 모두 사용해 보세요.',
@@ -46,7 +47,7 @@ const platformData = [
   {
     id: 'macOS',
     label: 'macOS',
-    version: 'v1.2.0',
+    version: 'v1.3.0',
     lastUpdate: '2025년 7월 8일',
     description:
       'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
@@ -60,7 +61,7 @@ const platformData = [
   {
     id: 'Linux',
     label: 'Linux',
-    version: 'v1.2.0',
+    version: 'v1.3.0',
     lastUpdate: '2025년 7월 8일',
     description:
       '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. AppImage 또는 .deb 패키지로 제공됩니다.',
@@ -74,7 +75,7 @@ const platformData = [
   {
     id: 'PWA',
     label: 'PWA',
-    version: 'v1.2.0',
+    version: 'v1.3.0',
     lastUpdate: '2025년 7월 8일',
     description:
       '설치 없이 웹에서 바로 사용하거나, 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.',
@@ -83,7 +84,7 @@ const platformData = [
       '홈 화면에 추가하여 사용',
       '오프라인 사용 지원',
     ],
-    download: { label: '웹 앱 실행', link: '/login' },
+    download: { label: '앱 설치', link: '#' },
   },
 ];
 
@@ -123,8 +124,29 @@ const Checkmark = () => (
   </div>
 );
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: Array<string>;
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 export const DownloadPage: React.FC = () => {
   const [selectedId, setSelectedId] = React.useState(platformData[0].id);
+  const { deferredPrompt, setDeferredPrompt } = usePwaStore();
+
+  const handlePwaInstall = async () => {
+    if (deferredPrompt) {
+      const promptEvent = deferredPrompt as BeforeInstallPromptEvent;
+      await promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -231,11 +253,19 @@ export const DownloadPage: React.FC = () => {
                         <Button
                           size="lg"
                           className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 w-full max-w-xs"
-                          asChild={platform.id === 'PWA'}
+                          onClick={
+                            platform.id === 'PWA' ? handlePwaInstall : undefined
+                          }
+                          asChild={platform.id !== 'PWA'}
+                          disabled={platform.id === 'PWA' && !deferredPrompt}
                         >
-                          <a href={platform.download.link}>
-                            {platform.download.label}
-                          </a>
+                          {platform.id === 'PWA' ? (
+                            <span>{platform.download.label}</span>
+                          ) : (
+                            <a href={platform.download.link}>
+                              {platform.download.label}
+                            </a>
+                          )}
                         </Button>
                       </div>
                     </CardContent>
