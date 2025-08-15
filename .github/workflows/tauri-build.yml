@@ -41,6 +41,7 @@ jobs:
           ninja -C _build
           sudo ninja -C _build install
           sudo ldconfig
+          echo "PKG_CONFIG_PATH=/usr/local/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
 
       - name: Install Node.js
         uses: actions/setup-node@v4
