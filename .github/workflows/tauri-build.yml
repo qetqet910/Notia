@@ -30,9 +30,10 @@ jobs:
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
+          sudo add-apt-repository ppa:gnome-team/ppa
           sudo add-apt-repository ppa:webkit-team/ppa
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libglib2.0-dev libwebkit2gtk-4.0-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install Node.js
         uses: actions/setup-node@v4
