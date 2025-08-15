@@ -30,6 +30,8 @@ jobs:
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
           sudo add-apt-repository ppa:gnome-team/ppa
           sudo add-apt-repository ppa:webkit-team/ppa
           sudo apt-get update
