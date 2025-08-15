@@ -1,0 +1,17 @@
+# Use the official Tauri build image
+FROM ghcr.io/tauri-apps/tauri-build:latest
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the entire project into the image
+COPY . .
+
+# Install frontend dependencies
+RUN npm install
+
+# Expose the Vite development port
+EXPOSE 5174
+
+# Set the entrypoint to run the Tauri dev server
+CMD ["npm", "run", "tauri:dev"]

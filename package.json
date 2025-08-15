@@ -17,7 +17,7 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "tauri": ". $HOME/.cargo/env && tauri",
-    "tauri:dev": "export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig && . $HOME/.cargo/env && tauri dev",
+    "tauri:dev": "export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig && . $HOME/.cargo/env && tauri dev",
     "tauri:build": ". $HOME/.cargo/env && tauri build"
   },
   "dependencies": {

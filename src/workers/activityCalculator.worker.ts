@@ -1,4 +1,3 @@
-// src/workers/activityCalculator.worker.ts
 import type { Note, Reminder } from '@/types';
 
 interface Stats {
