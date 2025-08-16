@@ -73,7 +73,3 @@ jobs:
           releaseBody: "See the assets to download this version."
           releaseDraft: true
           prerelease: false
-          files: |
-            artifacts/tauri-build-macos-latest/
-            artifacts/tauri-build-ubuntu-22.04/
-            artifacts/tauri-build-windows-latest/
