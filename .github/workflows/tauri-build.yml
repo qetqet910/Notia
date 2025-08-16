@@ -66,8 +66,12 @@ jobs:
         with:
           path: artifacts
 
+      - name: Move artifacts
+        run: |
+          mkdir -p src-tauri/target/release/bundle/
+          find artifacts -type f -name "*.*" -exec mv {} src-tauri/target/release/bundle/ \;
+
       - name: Create Release
-        working-directory: .
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
