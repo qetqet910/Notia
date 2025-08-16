@@ -27,10 +27,6 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Setup MSVC for Windows
-        if: matrix.platform == 'windows-latest'
-        uses: microsoft/setup-msvc-dev@v1
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
