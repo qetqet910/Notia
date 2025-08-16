@@ -67,6 +67,7 @@ jobs:
           path: artifacts
 
       - name: Create Release
+        working-directory: .
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
