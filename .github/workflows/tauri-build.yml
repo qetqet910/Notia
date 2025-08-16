@@ -54,7 +54,7 @@ jobs:
       - name: Build the app
         shell: bash
         run: |
-          if [ "${{ matrix.platform }}" == "ubuntu-2.04" ]; then
+          if [ "${{ matrix.platform }}" == "ubuntu-22.04" ]; then
             export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:${PKG_CONFIG_PATH}"
           fi
           npm run tauri build -- --verbose
