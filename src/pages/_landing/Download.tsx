@@ -11,6 +11,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { usePwaStore } from '@/stores/pwaStore';
+import { changelogData } from '@/constants/changeLog';
 
 // OS 아이콘 컴포넌트
 const OsIcon = ({ name }: { name: string }) => {
@@ -33,50 +34,54 @@ const platformData = [
   {
     id: 'Windows',
     label: 'Windows',
-    version: 'v1.3.0',
-    lastUpdate: '2025년 7월 8일',
     description:
       'Windows 10/11에 최적화된 데스크톱 앱으로 가장 강력한 기능을 모두 사용해 보세요.',
     requirements: [
       'Windows 10 64-bit 이상',
       '4GB RAM 이상 권장',
-      '150MB 디스크 공간',
+      'Intel Core i5 (8세대) 또는 동급 CPU',
+      'Intel UHD 630 또는 동급 내장 그래픽',
     ],
-    download: { label: 'Download for Windows', link: '#' },
+    download: {
+      label: 'Download for Windows',
+      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-f7aee171c83956090b5c/Notia_1.3.0_x64-setup.exe',
+    },
   },
   {
     id: 'macOS',
     label: 'macOS',
-    version: 'v1.3.0',
-    lastUpdate: '2025년 7월 8일',
     description:
       'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
     requirements: [
       'macOS 12 Monterey 이상',
       'Apple Silicon / Intel 프로세서 지원',
-      '120MB 디스크 공간',
+      'Intel Core i5 (8세대) 또는 동급 CPU',
+      'Intel UHD 630 또는 동급 내장 그래픽',
     ],
-    download: { label: 'Download for macOS', link: '#' },
+    download: {
+      label: 'Download for macOS',
+      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-f7aee171c83956090b5c/Notia_aarch64.app.tar.gz',
+    },
   },
   {
     id: 'Linux',
     label: 'Linux',
-    version: 'v1.3.0',
-    lastUpdate: '2025년 7월 8일',
     description:
       '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. AppImage 또는 .deb 패키지로 제공됩니다.',
     requirements: [
       'Ubuntu 20.04, Fedora 36, Arch 등',
       'glibc 2.31 이상',
-      '150MB 디스크 공간',
+      'Intel Core i5 (8세대) 또는 동급 CPU',
+      'Intel UHD 630 또는 동급 내장 그래픽',
     ],
-    download: { label: 'Download for Linux (.AppImage)', link: '#' },
+    download: {
+      label: 'Download for Linux (.AppImage)',
+      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-f7aee171c83956090b5c/Notia_1.3.0_amd64.AppImage',
+    },
   },
   {
     id: 'PWA',
     label: 'PWA',
-    version: 'v1.3.0',
-    lastUpdate: '2025년 7월 8일',
     description:
       '설치 없이 웹에서 바로 사용하거나, 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.',
     requirements: [
@@ -84,7 +89,10 @@ const platformData = [
       '홈 화면에 추가하여 사용',
       '오프라인 사용 지원',
     ],
-    download: { label: '앱 설치', link: '#' },
+    download: {
+      label: '앱 설치',
+      link: '#',
+    },
   },
 ];
 
@@ -225,10 +233,10 @@ export const DownloadPage: React.FC = () => {
 
                         <div className="flex flex-wrap justify-center gap-3 mb-6">
                           <Badge variant="outline">
-                            최신 버전: {platform.version}
+                            최신 버전: {changelogData[0].version}
                           </Badge>
                           <Badge variant="outline">
-                            업데이트: {platform.lastUpdate}
+                            최근 업데이트: {changelogData[0].date}
                           </Badge>
                           <a
                             href="/changelog"

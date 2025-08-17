@@ -59,13 +59,6 @@ const SocialLoginButton = React.memo<{
 SocialLoginButton.displayName = 'SocialLoginButton';
 
 const AnimationSection = React.memo(() => {
-  const [play, setPlay] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setPlay(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <motion.div
       className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
@@ -78,7 +71,7 @@ const AnimationSection = React.memo(() => {
           <DotLottieReact
             src={loginAnimation}
             loop
-            autoplay={play}
+            autoplay={true}
             className="drop-shadow-xl w-full h-full"
           />
         </div>

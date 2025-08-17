@@ -87,12 +87,14 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
             className="hidden md:flex items-center justify-center"
           >
-            <DotLottieReact
-              src={landingAnimation}
-              loop
-              autoplay
-              className="w-[600px] h-[600px]"
-            />
+            <div className="w-[600px] h-[600px]">
+              <DotLottieReact
+                src={landingAnimation}
+                loop
+                autoplay
+                className="w-full h-full"
+              />
+            </div>
           </motion.div>
         </div>
         <motion.a
@@ -104,7 +106,12 @@ export const Home: React.FC = () => {
           transition={{ delay: 1, duration: 0.8 }}
           whileHover={{ scale: 1.1 }}
         >
-          <DotLottieReact src={bottomArrow} loop autoplay />
+          <DotLottieReact
+            src={bottomArrow}
+            loop
+            autoplay
+            className="w-full h-full"
+          />
         </motion.a>
       </section>
 
@@ -151,7 +158,7 @@ export const Home: React.FC = () => {
               당신의 생산성을 위한 모든 것
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된
+              콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된<br/>
               기능을 제공하며 어떤 환경에서도 최고의 성능을 보장합니다.
             </p>
           </motion.div>
@@ -188,12 +195,14 @@ export const Home: React.FC = () => {
             >
               <div className="p-10 rounded-2xl text-center">
                 <div className="flex justify-center mb-6">
-                  <DotLottieReact
-                    src={rocketAnimation}
-                    loop
-                    autoplay
-                    className="w-24 h-24 scale-150"
-                  />
+                  <div className="w-36 h-36">
+                    <DotLottieReact
+                      src={rocketAnimation}
+                      loop
+                      autoplay
+                      className="w-full h-full"
+                    />
+                  </div>
                 </div>
                 <h3 className="text-2xl font-bold mb-4">
                   성능에 타협은 없습니다

@@ -92,3 +92,21 @@ export interface TeamMember {
     email?: string;
   };
 }
+
+export type ChangeCategory =
+  | '✨ 기능'
+  | '🐛 버그 수정'
+  | '🚀 성능'
+  | '💅 디자인'
+  | '🔧 리팩토링'
+  | '📝 문서'
+  | '⚙️ 기타';
+
+export interface ChangelogEntry {
+  version: string;
+  date: string;
+  changes: {
+    category: ChangeCategory;
+    description: string;
+  }[];
+}

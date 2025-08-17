@@ -1,4 +1,4 @@
-import { ChangelogEntry } from '@/pages/_landing/ChangelogPage';
+import { ChangelogEntry } from '@/types';
 
 export const changelogData: ChangelogEntry[] = [
   {

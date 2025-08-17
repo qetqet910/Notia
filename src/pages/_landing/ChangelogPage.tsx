@@ -3,7 +3,8 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { motion } from 'framer-motion';
-import { changelogData, ChangeCategory } from '@/constants/changeLog';
+import { changelogData } from '@/constants/changeLog';
+import { ChangeCategory } from '@/types';
 import { fadeIn } from '@/constants/animations';
 import { Badge } from '@/components/ui/badge';
 
