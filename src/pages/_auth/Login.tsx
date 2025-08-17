@@ -58,59 +58,59 @@ const SocialLoginButton = React.memo<{
 ));
 SocialLoginButton.displayName = 'SocialLoginButton';
 
-const AnimationSection = React.memo(() => (
-  <motion.div
-    className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
-    initial={{ opacity: 0, x: 20 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ duration: 0.8, delay: 0.2 }}
-  >
-    <div className="w-full max-w-md">
-      <motion.div
-        className="w-full h-full mx-auto"
-        initial={{ scale: 0.9 }}
-        animate={{ scale: 1 }}
-        transition={{
-          duration: 0.8,
-          type: 'spring',
-          bounce: 0.3,
-        }}
-      >
-        <DotLottieReact
-          src={loginAnimation}
-          loop
-          autoplay
-          className="drop-shadow-xl w-full h-full transform scale-150"
-        />
-      </motion.div>
-      <motion.div
-        className="text-center mt-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
-      >
-        <motion.h2
-          className="text-xl md:text-2xl font-bold text-[#61C9A8]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
+const AnimationSection = React.memo(() => {
+  const [play, setPlay] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPlay(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <motion.div
+      className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.8, delay: 0.2 }}
+    >
+      <div className="w-full max-w-md">
+        <div className="w-full aspect-square mx-auto">
+          <DotLottieReact
+            src={loginAnimation}
+            loop
+            autoplay={play}
+            className="drop-shadow-xl w-full h-full"
+          />
+        </div>
+        <motion.div
+          className="text-center mt-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
         >
-          순간을 기록하세요,
-        </motion.h2>
-        <motion.p
-          className="text-gray-600 mt-2 max-w-sm mx-auto"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.7 }}
-        >
-          중요한 순간으로 내일을 만들어 드릴게요.
-          <br />
-          언제, 어디서나 기록하세요.
-        </motion.p>
-      </motion.div>
-    </div>
-  </motion.div>
-));
+          <motion.h2
+            className="text-xl md:text-2xl font-bold text-[#61C9A8]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
+            순간을 기록하세요,
+          </motion.h2>
+          <motion.p
+            className="text-gray-600 mt-2 max-w-sm mx-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+          >
+            중요한 순간으로 내일을 만들어 드릴게요.
+            <br />
+            언제, 어디서나 기록하세요.
+          </motion.p>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+});
 AnimationSection.displayName = 'AnimationSection';
 
 const LoginForm = React.memo<{
