@@ -73,20 +73,10 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
-      - name: Install dependencies (ubuntu only)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Move artifacts
-        run: |
-          mkdir -p src-tauri/target/release/bundle/
-          find artifacts -type f -name "*.*" -exec mv {} src-tauri/target/release/bundle/ \;
 
       - name: Create Release
         uses: tauri-apps/tauri-action@v0
@@ -94,6 +84,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: .
+          distPath: artifacts
           tagName: ${{ github.ref_name }}
           releaseName: 'App ${{ github.ref_name }}'
           releaseBody: 'See the assets to download this version.'
