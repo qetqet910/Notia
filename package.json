@@ -65,6 +65,7 @@
     "react-syntax-highlighter": "^15.6.1",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.2.0",
+    "uuid": "^11.1.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -75,6 +76,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.57.1",

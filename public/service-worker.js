@@ -1,26 +1,25 @@
 // public/service-worker.js
+// 가장 단순한 형태의 테스트용 서비스 워커
 
 self.addEventListener('push', (event) => {
-  if (!event.data) {
-    console.error('Push event but no data');
-    return;
-  }
+  console.log('Service Worker: Push event received.');
 
-  const data = event.data.json();
-  const title = data.title || 'Notia';
+  const title = '테스트 알림';
   const options = {
-    body: data.body,
-    icon: '/favicon/android-chrome-192x192.png', // 알림 아이콘
-    badge: '/favicon/favicon-16x16.png', // 작은 뱃지 아이콘 (Android에서 주로 사용)
-    data: {
-      url: data.url || '/', // 알림 클릭 시 이동할 URL
-    },
+    body: '이 알림이 보이면 기본 기능은 정상입니다.',
+    icon: '/favicon/android-chrome-192x192.png',
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  try {
+    event.waitUntil(self.registration.showNotification(title, options));
+    console.log('Service Worker: showNotification called successfully.');
+  } catch (e) {
+    console.error('Service Worker: Error calling showNotification:', e);
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url));
 });
+
+console.log('Service Worker: Loaded and ready.');

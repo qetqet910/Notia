@@ -1,6 +1,24 @@
 import '@/styles/global.css';
 
 /**
+ * 서비스 워커를 등록합니다.
+ */
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/service-worker.js')
+        .then((registration) => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        })
+        .catch((err) => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+    });
+  }
+}
+
+/**
  * 플랫폼별 초기화 모듈을 로드하고 실행합니다.
  * @param platformName 초기화할 플랫폼 이름
  * @returns 초기화 성공 여부
@@ -31,6 +49,9 @@ async function initializePlatform(platformName: string): Promise<boolean> {
  */
 async function initializeApp(): Promise<void> {
   try {
+    // 서비스 워커 등록 코드를 다시 추가합니다.
+    registerServiceWorker();
+
     // 1. 플랫폼 결정
     const platform = import.meta.env.VITE_PLATFORM || 'web';
 
