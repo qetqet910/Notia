@@ -510,6 +510,7 @@ export const useAuthStore = create<AuthStore>()(
       createEmailUserWithEdgeFunction: async (
         email: string,
         key: string,
+        clientIP: string,
       ) => {
         set({ isRegisterLoading: true, error: null });
         try {
@@ -519,6 +520,7 @@ export const useAuthStore = create<AuthStore>()(
               body: {
                 email,
                 key: key.replace(/-/g, '').toUpperCase(),
+                clientIP,
               },
             },
           );

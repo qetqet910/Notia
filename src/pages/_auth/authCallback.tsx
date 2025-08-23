@@ -9,10 +9,6 @@ export const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // 중복 콘솔 로그 제거
-        console.log('Auth callback 처리 중...');
-
-        // 세션 한 번에 가져오기
         const { data, error } = await supabase.auth.getSession();
 
         if (error || !data.session) {
@@ -23,7 +19,6 @@ export const AuthCallback = () => {
 
         const user = data.session.user;
 
-        // 상태 한 번에 업데이트
         useAuthStore.setState({
           user: user,
           session: data.session,
@@ -32,10 +27,9 @@ export const AuthCallback = () => {
           isRegisterLoading: false,
         });
 
-        console.log(localStorage.getItem('auth_redirect'));
         const redirectTo =
           localStorage.getItem('auth_redirect') || '/dashboard';
-        localStorage.removeItem('auth_redirect'); // 사용 후 제거
+        localStorage.removeItem('auth_redirect'); 
 
         navigate(redirectTo, { replace: true });
       } catch (err) {
@@ -51,7 +45,6 @@ export const AuthCallback = () => {
     handleAuthCallback();
   }, [navigate]);
 
-  // 단순한 로딩 표시로 변경
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">

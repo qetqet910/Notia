@@ -10,6 +10,8 @@ import {
   isSameDay,
   getDate,
   getDay,
+  addMonths,
+  subMonths,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Clock, FileText } from 'lucide-react';
@@ -90,13 +92,11 @@ export const Calendar: React.FC<CalendarProps> = React.memo(
     }, [currentDate]);
 
     const goToPreviousMonth = useCallback(
-      () =>
-        setCurrentDate((prev) => new Date(prev.setMonth(prev.getMonth() - 1))),
+      () => setCurrentDate((prev) => subMonths(prev, 1)),
       [],
     );
     const goToNextMonth = useCallback(
-      () =>
-        setCurrentDate((prev) => new Date(prev.setMonth(prev.getMonth() + 1))),
+      () => setCurrentDate((prev) => addMonths(prev, 1)),
       [],
     );
     const goToToday = useCallback(() => {

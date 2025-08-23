@@ -350,53 +350,55 @@ export const useNotes = () => {
         return false;
       }
 
-      // 1. 전체 낙관적 업데이트: UI 상태를 즉시 변경
+      // 1. Create a single, consistent timestamp for this entire update operation.
+      const newUpdatedAt = new Date();
+
+      // 2. Optimistic update for immediate UI feedback.
       const optimisticallyUpdatedNote: Note = {
         ...originalNote,
         title: updates.title ?? originalNote.title,
         content: updates.content ?? originalNote.content,
         tags: updates.tags ?? originalNote.tags,
+        updated_at: newUpdatedAt.toISOString(),
+        // Optimistically update reminders structure, but the real data will come from saveReminders
         reminders: (updates.reminders || []).map(
           (er: EditorReminder): Reminder => ({
-            id: er.id,
+            ...er,
+            id: er.id || '',
             note_id: originalNote.id,
             owner_id: originalNote.owner_id,
-            reminder_text: er.text,
             reminder_time: er.date.toISOString(),
-            completed: er.completed,
-            enabled: er.enabled ?? true,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            original_text: er.original_text,
+            updated_at: newUpdatedAt.toISOString(),
           }),
         ),
-        updated_at: new Date().toISOString(),
       };
       updateNoteState(optimisticallyUpdatedNote);
 
       try {
-        // 2. DB에 노트 기본 정보 업데이트
-        const { error: noteError } = await supabase
-          .from('notes')
-          .update({
-            title: updates.title,
-            content: updates.content,
-            tags: updates.tags,
-            updated_at: getKoreaTimeAsUTC(),
-          })
-          .eq('id', noteId);
-
-        if (noteError) throw noteError;
-
-        // 3. DB에 리마인더 동기화
+        // 3. Update reminders and the note itself in the database.
         const syncedReminders = await saveReminders(
           noteId,
           updates.reminders || [],
         );
 
-        // 4. 동기화된 리마인더로 최종 상태 업데이트
+        const { data: dbNote, error: noteError } = await supabase
+          .from('notes')
+          .update({
+            title: updates.title,
+            content: updates.content,
+            tags: updates.tags,
+            updated_at: newUpdatedAt.toISOString(), // Use the consistent timestamp
+          })
+          .eq('id', noteId)
+          .select()
+          .single();
+
+        if (noteError) throw noteError;
+
+        // 4. Final state sync with server-confirmed data.
         const finalNote: Note = {
-          ...optimisticallyUpdatedNote,
+          ...(dbNote as Note),
           reminders: syncedReminders,
         };
         updateNoteState(finalNote);
@@ -408,6 +410,7 @@ export const useNotes = () => {
           err instanceof Error ? err : new Error('노트 업데이트 중 오류 발생'),
         );
         
+        // Rollback to the original state on failure.
         if (originalNote) {
           updateNoteState(originalNote);
         }

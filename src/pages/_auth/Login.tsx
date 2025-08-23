@@ -453,15 +453,14 @@ export const Login: React.FC = () => {
             title: '키 생성 성공',
             description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
           });
-          await supabase.from('creation_attempts').insert({ client_ip: ip });
         } else {
           let errorMessage = result.error || '알 수 없는 오류가 발생했습니다.';
-          if (result.code === 'EMAIL_EXISTS') {
+          if (result.code === 'USER_ALREADY_EXISTS') {
             errorMessage =
               '이미 등록된 이메일입니다. 다른 이메일을 사용하세요.';
-          } else if (result.code === 'INVALID_PASSWORD') {
+          } else if (result.code === 'RATE_LIMITED') {
             errorMessage =
-              '생성된 키가 보안 요구사항을 충족하지 않습니다. 다시 시도해주세요.';
+              '너무 많은 키를 생성했습니다. 잠시 후 다시 시도해주세요.';
           }
           toast({
             title: '키 생성 실패',
@@ -506,12 +505,18 @@ export const Login: React.FC = () => {
         setShowKey(false);
         const key = generateRandomKey(16);
         const formattedKeyValue = formatKey(key);
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const { ip } = await ipResponse.json();
         const result = await createAnonymousUserWithEdgeFunction(
           formattedKeyValue,
+          ip,
         );
         if (!result.success) {
-          const errorMessage =
-            result?.error || '알 수 없는 오류가 발생했습니다.';
+          let errorMessage = result?.error || '알 수 없는 오류가 발생했습니다.';
+          if (result.code === 'RATE_LIMITED') {
+            errorMessage =
+              '너무 많은 키를 생성했습니다. 잠시 후 다시 시도해주세요.';
+          }
           toast({
             title: '키 생성 실패',
             description: errorMessage,
