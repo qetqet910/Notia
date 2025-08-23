@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { fromZonedTime } from 'date-fns-tz';
+import { v4 as uuidv4 } from 'uuid';
 
 // 한국 시간대 상수
 const KOREA_TIMEZONE = 'Asia/Seoul';
@@ -177,64 +178,152 @@ export const useNotes = () => {
     [],
   );
 
+  const generatePreNotificationReminders = (
+    baseReminder: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>,
+  ): Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] => {
+    const notificationsToSchedule: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] = [];
+    const originalTime = new Date(baseReminder.reminder_time);
+    const now = new Date();
+    const clientReminderId = uuidv4();
+
+    const intervals = [
+      { minutes: 30, type: 'before_30m' },
+      { minutes: 20, type: 'before_20m' },
+      { minutes: 15, type: 'before_15m' },
+      { minutes: 10, type: 'before_10m' },
+      { minutes: 5, type: 'before_5m' },
+      { minutes: 3, type: 'before_3m' },
+      { minutes: 1, type: 'before_1m' },
+    ];
+
+    for (const interval of intervals) {
+      const beforeTime = new Date(originalTime.getTime() - interval.minutes * 60 * 1000);
+      if (beforeTime > now) {
+        notificationsToSchedule.push({
+          ...baseReminder,
+          reminder_time: fromZonedTime(beforeTime, KOREA_TIMEZONE).toISOString(),
+          notification_type: interval.type,
+          client_reminder_id: clientReminderId,
+        });
+      }
+    }
+
+    notificationsToSchedule.push({
+      ...baseReminder,
+      notification_type: 'at_time',
+      client_reminder_id: clientReminderId,
+    });
+
+    return notificationsToSchedule;
+  };
+
   const saveReminders = useCallback(
     async (noteId: string, finalReminders: EditorReminder[]) => {
       if (!user) {
         console.error('[세이브리마인더-에러] 사용자 정보가 없습니다.');
-        return []; // 빈 배열 반환
+        return [];
       }
 
       try {
+        // 1. Handle deletions: Find reminders in DB that are not in the editor anymore
+        const finalOriginalTexts = new Set(finalReminders.map(r => r.original_text));
         const { data: existingReminders, error: fetchError } = await supabase
           .from('reminders')
           .select('id, original_text')
           .eq('note_id', noteId);
         if (fetchError) throw fetchError;
 
-        const finalTexts = new Set(finalReminders.map((r) => r.original_text));
         const idsToDelete = existingReminders
-          .filter((r) => !finalTexts.has(r.original_text))
-          .map((r) => r.id);
+          .filter(r => !finalOriginalTexts.has(r.original_text))
+          .map(r => r.id);
 
         if (idsToDelete.length > 0) {
-          const { error: deleteError } = await supabase
-            .from('reminders')
-            .delete()
-            .in('id', idsToDelete);
-          if (deleteError) throw deleteError;
+          await supabase.from('reminders').delete().in('id', idsToDelete);
         }
 
-        let upsertedData: Reminder[] = [];
-        if (finalReminders.length > 0) {
-          const reminderData = finalReminders
-            .filter(reminder => reminder.date instanceof Date && !isNaN(reminder.date.getTime()))
-            .map((reminder) => ({
+        // 2. Prepare and upsert the original reminders from the editor
+        const reminderDataToUpsert = finalReminders
+          .filter(r => r.date instanceof Date && !isNaN(r.date.getTime()))
+          .map(r => {
+            const roundedDate = new Date(r.date.getTime());
+            if (roundedDate.getSeconds() > 0) {
+              roundedDate.setMinutes(roundedDate.getMinutes() + 1);
+              roundedDate.setSeconds(0, 0);
+            }
+            return {
               note_id: noteId,
               owner_id: user.id,
-              reminder_text: reminder.text,
-              reminder_time: new Date(reminder.date).toISOString(),
-              completed: reminder.completed || false,
-              enabled: reminder.enabled ?? true,
-              original_text: reminder.original_text,
-            }));
+              reminder_text: r.text,
+              reminder_time: fromZonedTime(roundedDate, KOREA_TIMEZONE).toISOString(),
+              completed: r.completed || false,
+              enabled: r.enabled ?? true,
+              original_text: r.original_text,
+            };
+          });
+        
+        if (reminderDataToUpsert.length === 0) {
+          return []; // No valid reminders to process
+        }
 
-          if (reminderData.length > 0) {
-            const { data, error: upsertError } = await supabase
-              .from('reminders')
-              .upsert(reminderData, { onConflict: 'note_id, original_text' })
-              .select();
+        const { data: upsertedReminders, error: upsertError } = await supabase
+          .from('reminders')
+          .upsert(reminderDataToUpsert, { onConflict: 'note_id, original_text' })
+          .select();
 
-            if (upsertError) throw upsertError;
-            upsertedData = data as Reminder[];
+        if (upsertError) throw upsertError;
+
+        // 3. For each upserted reminder, regenerate its notification schedules
+        for (const reminder of upsertedReminders) {
+          // A. Delete all old schedules for this reminder to ensure consistency
+          await supabase.from('notification_schedules').delete().eq('reminder_id', reminder.id);
+
+          // B. Create new schedules only if the reminder is enabled
+          if (reminder.enabled) {
+            const schedulesToCreate = [];
+            const originalTime = new Date(reminder.reminder_time);
+            const now = new Date();
+
+            const intervals = [
+              { minutes: 30, type: 'before_30m' },
+              { minutes: 20, type: 'before_20m' },
+              { minutes: 15, type: 'before_15m' },
+              { minutes: 10, type: 'before_10m' },
+              { minutes: 5, type: 'before_5m' },
+              { minutes: 3, type: 'before_3m' },
+              { minutes: 1, type: 'before_1m' },
+            ];
+
+            for (const interval of intervals) {
+              const beforeTime = new Date(originalTime.getTime() - interval.minutes * 60 * 1000);
+              if (beforeTime > now) {
+                schedulesToCreate.push({
+                  reminder_id: reminder.id,
+                  owner_id: user.id,
+                  notification_type: interval.type,
+                  scheduled_time: fromZonedTime(beforeTime, KOREA_TIMEZONE).toISOString(),
+                });
+              }
+            }
+
+            schedulesToCreate.push({
+              reminder_id: reminder.id,
+              owner_id: user.id,
+              notification_type: 'at_time',
+              scheduled_time: reminder.reminder_time,
+            });
+
+            if (schedulesToCreate.length > 0) {
+              const { error: scheduleError } = await supabase
+                .from('notification_schedules')
+                .insert(schedulesToCreate);
+              if (scheduleError) throw scheduleError;
+            }
           }
         }
 
-        return upsertedData;
+        return upsertedReminders;
       } catch (err) {
-        console.error(
-          '[세이브리마인더-에러] 리마인더 동기화 중 오류 발생:',
-          err,
-        );
+        console.error('[세이브리마인더-에러] 리마인더 동기화 중 오류 발생:', err);
         return [];
       }
     },

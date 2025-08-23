@@ -20,11 +20,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { useAuthStore } from '@/stores/authStore';
 import { Reminder } from '@/types';
-import {
-  createReminderNotifications,
-  cancelReminderNotifications,
-  deleteReminderNotifications,
-} from '@/utils/supabaseNotifications';
 
 type EnrichedReminder = Reminder & {
   noteId: string;
@@ -129,46 +124,22 @@ export const ReminderView: React.FC<ReminderViewProps> = React.memo(
     }, [filteredReminders, activeFilter]);
 
     const handleToggleComplete = useCallback(
-      async (reminderId: string, completed: boolean) => {
+      (reminderId: string, completed: boolean) => {
         onToggleComplete(reminderId, completed);
-        if (completed) {
-          await cancelReminderNotifications(reminderId);
-        }
       },
       [onToggleComplete],
     );
 
     const handleToggleEnable = useCallback(
-      async (reminderId: string, enabled: boolean) => {
-        const reminder = reminders.find((r) => r.id === reminderId);
-        if (!reminder || !user?.id) return;
-
+      (reminderId: string, enabled: boolean) => {
         onToggleEnable(reminderId, enabled);
-
-        try {
-          if (enabled && globalNotifications) {
-            await createReminderNotifications(
-              user.id,
-              reminder.noteId,
-              reminder.id,
-              reminder.reminder_text,
-              reminder.noteTitle,
-              new Date(reminder.reminder_time),
-            );
-          } else {
-            await cancelReminderNotifications(reminder.id);
-          }
-        } catch (error) {
-          console.error('알림 설정 오류:', error);
-        }
       },
-      [reminders, user, onToggleEnable, globalNotifications],
+      [onToggleEnable],
     );
 
     const handleDelete = useCallback(
-      async (reminderId: string) => {
+      (reminderId: string) => {
         onDelete(reminderId);
-        await deleteReminderNotifications(reminderId);
       },
       [onDelete],
     );
