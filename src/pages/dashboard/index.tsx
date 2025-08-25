@@ -28,7 +28,7 @@ import {
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note, Reminder } from '@/types';
+import { Note, Reminder, EditorReminder } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,

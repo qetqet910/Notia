@@ -80,7 +80,7 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
     result.setHours(hour, minute);
     return dayWord === '오늘' ? adjustForPastTime(result) : result;
   }
-  
+
   match = timeStr.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
   if (match) {
     const [, ampm, hourStr, minStr] = match;
@@ -115,57 +115,56 @@ const parseTimeExpression = (timeText: string): Date | undefined => {
 };
 
 const parseNoteContent = (content: string) => {
-    const hashtagRegex = /#([^\s#@]+)/g;
-    const uniqueTags = new Set<string>();
-    let match;
+  const hashtagRegex = /#([^\s#@]+)/g;
+  const uniqueTags = new Set<string>();
+  let match;
 
-    while ((match = hashtagRegex.exec(content)) !== null) {
-      uniqueTags.add(match[1]);
-    }
-    const tags = Array.from(uniqueTags);
+  while ((match = hashtagRegex.exec(content)) !== null) {
+    uniqueTags.add(match[1]);
+  }
+  const tags = Array.from(uniqueTags);
 
-    const reminders: Omit<EditorReminder, 'id'>[] = [];
-    const reminderRegex = /@([^@#\n]+?)\./g;
-    while ((match = reminderRegex.exec(content)) !== null) {
-      const fullText = match[1].trim();
-      let timeText = '';
-      let reminderText = '';
+  const reminders: Omit<EditorReminder, 'id'>[] = [];
+  const reminderRegex = /@([^@#\n]+?)\./g;
+  while ((match = reminderRegex.exec(content)) !== null) {
+    const fullText = match[1].trim();
+    let timeText = '';
+    let reminderText = '';
 
-      const timePatterns = [
-        /^(\d{4}-\d{1,2}-\d{1,2}(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
-        /^((?:오늘|내일|모레)(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
-        /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-        /^(\d+\s*(?:시간|분))/, 
-        /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-        /^(\d{1,2}-\d{1,2})/, 
-      ];
+    const timePatterns = [
+      /^(\d{4}-\d{1,2}-\d{1,2}(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
+      /^((?:오늘|내일|모레)(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
+      /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
+      /^(\d+\s*(?:시간|분))/,
+      /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
+      /^(\d{1,2}-\d{1,2})/,
+    ];
 
-      for (const pattern of timePatterns) {
-        const timeMatch = fullText.match(pattern);
-        if (timeMatch) {
-          timeText = timeMatch[1].trim();
-          reminderText = fullText.substring(timeMatch[0].length).trim();
-          break;
-        }
-      }
-
-      if (timeText && reminderText) {
-        const parsedDate = parseTimeExpression(timeText);
-        if (parsedDate) {
-            reminders.push({
-              text: reminderText,
-              original_text: match[0],
-              date: parsedDate,
-              completed: false,
-              enabled: true,
-            });
-        }
+    for (const pattern of timePatterns) {
+      const timeMatch = fullText.match(pattern);
+      if (timeMatch) {
+        timeText = timeMatch[1].trim();
+        reminderText = fullText.substring(timeMatch[0].length).trim();
+        break;
       }
     }
 
-    return { tags, reminders };
-}
+    if (timeText && reminderText) {
+      const parsedDate = parseTimeExpression(timeText);
+      if (parsedDate) {
+        reminders.push({
+          text: reminderText,
+          original_text: match[0],
+          date: parsedDate,
+          completed: false,
+          enabled: true,
+        });
+      }
+    }
+  }
 
+  return { tags, reminders };
+};
 
 // --- Zustand Store ---
 
@@ -461,6 +460,11 @@ export const useAuthStore = create<AuthStore>()(
       ) => {
         set({ isRegisterLoading: true, error: null });
         try {
+          const limitCheck = await get().checkCreationLimit(clientIP);
+          if (!limitCheck.allowed) {
+            throw new Error(limitCheck.error);
+          }
+
           const { data, error } = await supabase.functions.invoke(
             'create_anonymous_user',
             {
@@ -514,6 +518,11 @@ export const useAuthStore = create<AuthStore>()(
       ) => {
         set({ isRegisterLoading: true, error: null });
         try {
+          const limitCheck = await get().checkCreationLimit(clientIP);
+          if (!limitCheck.allowed) {
+            throw new Error(limitCheck.error);
+          }
+
           const { data, error } = await supabase.functions.invoke(
             'create_email_user',
             {

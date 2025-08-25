@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Note } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,8 +40,8 @@ import { useNotes } from '@/hooks/useNotes';
 
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
-  const { signOut } = useAuthStore();
-  const { notes } = useDataStore();
+  const { signOut, user } = useAuthStore();
+  const { notes, createNote } = useDataStore();
   const { theme, setTheme } = useThemeStore();
   const { goalStats, updateUserGoals } = useNotes();
 
@@ -78,9 +79,9 @@ export const SettingsTab: React.FC = React.memo(() => {
   }, [notes, toast]);
 
   const handleImport = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
-      if (!file) return;
+      if (!file || !user) return;
 
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -88,12 +89,47 @@ export const SettingsTab: React.FC = React.memo(() => {
           const content = e.target?.result;
           if (typeof content !== 'string') throw new Error('파일 형식 오류');
           const importedData = JSON.parse(content);
-          // TODO: Import logic
-          console.log(importedData);
-          toast({
-            title: '성공',
-            description: '노트를 성공적으로 가져왔습니다.',
-          });
+
+          if (importedData && importedData.notes) {
+            const notesToImport: Note[] = Object.values(importedData.notes);
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const note of notesToImport) {
+              const newNoteData = {
+                owner_id: user.id, // 현재 사용자의 ID로 설정
+                title: note.title,
+                content: note.content || '',
+                tags: note.tags || [],
+                reminders: (note.reminders || []).map((r) => ({
+                  text: r.reminder_text,
+                  date: new Date(r.reminder_time),
+                  completed: r.completed,
+                  original_text: r.original_text,
+                  enabled: r.enabled,
+                })),
+              };
+
+              try {
+                const result = await createNote(newNoteData);
+                if (result) {
+                  successCount++;
+                } else {
+                  errorCount++;
+                }
+              } catch (err) {
+                console.error('노트 가져오기 오류:', err);
+                errorCount++;
+              }
+            }
+
+            toast({
+              title: '가져오기 완료',
+              description: `성공: ${successCount}개, 실패: ${errorCount}개`,
+            });
+          } else {
+            throw new Error('지원하지 않는 파일 형식입니다.');
+          }
         } catch {
           toast({
             title: '오류',
@@ -106,7 +142,7 @@ export const SettingsTab: React.FC = React.memo(() => {
       };
       reader.readAsText(file);
     },
-    [toast],
+    [user, createNote, toast],
   );
 
   const handleDeleteAccount = useCallback(async () => {
@@ -317,7 +353,9 @@ export const SettingsTab: React.FC = React.memo(() => {
           <DialogHeader>
             <DialogTitle>노트 내보내기</DialogTitle>
             <DialogDescription>
-              모든 노트를 JSON 파일로 다운로드합니다.
+              모든 노트를 JSON 파일로 다운로드합니다. 이 파일에는 노트의 전체
+              내용이 <br />
+              포함되므로, 민감한 정보가 있을 경우 안전하게 보관하세요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
