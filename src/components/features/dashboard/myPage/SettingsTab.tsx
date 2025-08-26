@@ -353,9 +353,9 @@ export const SettingsTab: React.FC = React.memo(() => {
           <DialogHeader>
             <DialogTitle>노트 내보내기</DialogTitle>
             <DialogDescription>
-              모든 노트를 JSON 파일로 다운로드합니다. 이 파일에는 노트의 전체
-              내용이 <br />
-              포함되므로, 민감한 정보가 있을 경우 안전하게 보관하세요.
+              모든 노트를 JSON 파일로 다운로드합니다. 이 파일에는 노트의
+              <br /> 전체 내용이 포함되므로, 민감한 정보가 있을 경우 안전하게
+              보관하세요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
