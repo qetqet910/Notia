@@ -57,43 +57,15 @@ Notia의 핵심은 간단한 기호를 사용한 빠른 정리입니다.
 - **Frontend**: React, TypeScript, TailwindCSS, shadcn/ui
 - **State Management**: Zustand
 - **Backend & DB**: Supabase (PostgreSQL, Auth, Realtime)
+- **Desktop App**: Tauri
 - **Animation**: Framer Motion
 - **Build Tool**: Vite
 - **Package Manager**: npm
 
-<br><br>
+### 잡담
 
-## 🚀 시작하기
+- 사지방에서 쓰려고 만들었는데 다 만들고 보니 말출인건 안 비밀
+- 내가 쓰고 있는 이 문장까지 누가 봐줄까 궁금함
+- 개선사항 매우 환영함 [Contributing](./CONTRIBUTING.md)
 
-프로젝트를 로컬 환경에서 실행하려면 아래의 단계를 따라주세요.
-
-1.  **저장소 복제**
-
-    ```bash
-    git clone [https://github.com/qetqet910/Notia.git](https://github.com/qetqet910/Notia.git)
-    cd Notia
-    ```
-
-2.  **의존성 패키지 설치**
-
-    ```bash
-    npm install
-    ```
-
-3.  **환경 변수 설정**
-
-[env example](.env.example)
-
-4.  **개발 서버 실행**
-    ```bash
-    npm run dev
-    ```
-    서버가 실행되면 `http://localhost:5173` 에서 앱을 확인할 수 있습니다.
-
-<br><br>
-
-## 만든 계기
-
-24년 군대에선 자격증 위주로, 부대에 적응하며, 새로운 취미를 찾으며, 알고리즘 문제를 풀며 시간을 보냈고 <br/> 25년은 제대로된 프로젝트를 만들고 싶었다 그동안 제대로 하나 완성한 프로젝트가 없기 때문에 <br/>나도 할 수 있다는 걸 나에게 알려주고 싶었다 그래서 사소한 디테일 하나 보고 또 보았으며 <br/>그래서 개발 소요 시간이 예상한 것 보다 3달이 더 걸렸지만 그래도 만족한다
-
-[CC BY-NC-SA 4.0 License](./LICENSE) / [Contributing](./CONTRIBUTING.md) / [후원한잔](https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f)
+[CC BY-NC-SA 4.0 License](./LICENSE) / [후원한잔](https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f)

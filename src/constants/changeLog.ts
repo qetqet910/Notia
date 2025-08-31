@@ -2,7 +2,7 @@ import { ChangelogEntry } from '@/types';
 
 export const changelogData: ChangelogEntry[] = [
   {
-    version: 'v1.3.0',
+    version: `v${process.env.APP_VERSION}`,
     date: '2025년 8월 14일',
     changes: [
       { category: '✨ 기능', description: 'PWA 기능 강화: 다운로드 페이지에 설치 버튼을 추가하고, 매니페스트를 개선하여 설치 경험을 향상시켰습니다.' },

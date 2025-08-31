@@ -75,6 +75,12 @@ const TimelineView = lazy(() =>
   ),
 );
 
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
+
 const NAV_ITEMS = [
   { id: 'notes', label: '노트', icon: List },
   { id: 'reminder', label: '리마인더', icon: Clock },
@@ -330,87 +336,105 @@ export const Dashboard: React.FC = () => {
       : notes || [];
 
     switch (activeTab) {
-      case 'notes':
-        return (
-          <div className="flex h-full overflow-hidden">
-            <AlertDialog
-              open={isDeleteDialogOpen}
-              onOpenChange={setIsDeleteDialogOpen}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    이 작업은 되돌릴 수 없습니다.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>취소</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmDelete}>
-                    삭제
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+      case 'notes': {
+        const editorContent = (
+          <Suspense fallback={<EditorLoader />}>
+            {isNoteContentLoading ? (
+              <EditorLoader />
+            ) : selectedNote ? (
+              <Editor
+                ref={editorRef}
+                key={selectedNote.id}
+                note={selectedNote}
+                onSave={handleSaveNote}
+                onDeleteRequest={() => setIsDeleteDialogOpen(true)}
+                isEditing={isEditing}
+                onEnterEditMode={handleEnterEditMode}
+                onCancelEdit={handleCancelEdit}
+                onContentChange={() => setHasUnsavedChanges(true)}
+                hasUnsavedChanges={hasUnsavedChanges}
+              />
+            ) : (
+              <EmptyNoteState handleCreateNote={handleCreateNote} />
+            )}
+          </Suspense>
+        );
 
-            <div
-              className={`h-full overflow-y-auto border-r custom-scrollbar transition-all duration-300 ease-in-out ${
-                isEditing ? 'w-0 opacity-0' : 'w-full md:w-1/3'
-              }`}
-            >
-              <Suspense fallback={<NoteListLoader />}>
-                {selectedTag && (
-                  <div className="p-3 bg-muted border-b">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">
-                        #{selectedTag} 필터링 중
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedTag(null)}
-                        className="h-6 w-6 p-0"
-                      >
-                        ✕
-                      </Button>
-                    </div>
+        const noteListContent = (
+          <div className="h-full overflow-y-auto border-r custom-scrollbar">
+            <Suspense fallback={<NoteListLoader />}>
+              {selectedTag && (
+                <div className="p-3 bg-muted border-b">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      #{selectedTag} 필터링 중
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTag(null)}
+                      className="h-6 w-6 p-0"
+                    >
+                      ✕
+                    </Button>
                   </div>
-                )}
-                <NoteList
-                  notes={filteredNotes}
-                  onSelectNote={handleSelectNote}
-                  selectedNote={selectedNote}
-                />
-              </Suspense>
-            </div>
-            <div
-              className={`h-full transition-all duration-300 ease-in-out ${
-                isEditing ? 'w-full' : 'hidden md:block w-2/3'
-              }`}
-            >
-              <Suspense fallback={<EditorLoader />}>
-                {isNoteContentLoading ? (
-                  <EditorLoader />
-                ) : selectedNote ? (
-                  <Editor
-                    ref={editorRef}
-                    key={selectedNote.id}
-                    note={selectedNote}
-                    onSave={handleSaveNote}
-                    onDeleteRequest={() => setIsDeleteDialogOpen(true)}
-                    isEditing={isEditing}
-                    onEnterEditMode={handleEnterEditMode}
-                    onCancelEdit={handleCancelEdit}
-                    onContentChange={() => setHasUnsavedChanges(true)}
-                    hasUnsavedChanges={hasUnsavedChanges}
-                  />
-                ) : (
-                  <EmptyNoteState handleCreateNote={handleCreateNote} />
-                )}
-              </Suspense>
-            </div>
+                </div>
+              )}
+              <NoteList
+                notes={filteredNotes}
+                onSelectNote={handleSelectNote}
+                selectedNote={selectedNote}
+              />
+            </Suspense>
           </div>
         );
+
+        const deleteDialog = (
+          <AlertDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  이 작업은 되돌릴 수 없습니다.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>취소</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmDelete}>
+                  삭제
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        );
+
+        if (isEditing) {
+          return (
+            <>
+              {deleteDialog}
+              <div className="h-full">{editorContent}</div>
+            </>
+          );
+        }
+
+        return (
+          <>
+            {deleteDialog}
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+              <ResizablePanel defaultSize={30} minSize={20}>
+                {noteListContent}
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={70} minSize={30}>
+                <div className="h-full">{editorContent}</div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </>
+        );
+      }
       case 'reminder':
         return (
           <Suspense fallback={<ReminderLoader />}>

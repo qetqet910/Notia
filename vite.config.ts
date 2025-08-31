@@ -2,9 +2,15 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'fs';
+
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
   cacheDir: '.vite-cache',
+  define: {
+    'process.env.APP_VERSION': JSON.stringify(packageJson.version),
+  },
   server: {
     hmr: {
       overlay: false,

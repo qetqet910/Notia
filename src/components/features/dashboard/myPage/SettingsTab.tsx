@@ -9,12 +9,14 @@ import {
   Goal,
   Save,
   Loader2,
+  Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { SettingSwitchItem } from '@/components/features/dashboard/myPage/SettingSwitchItem';
+import { SettingActionItem } from '@/components/features/dashboard/myPage/SettingActionItem';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useNotes } from '@/hooks/useNotes';
+import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
@@ -44,6 +47,7 @@ export const SettingsTab: React.FC = React.memo(() => {
   const { notes, createNote } = useDataStore();
   const { theme, setTheme } = useThemeStore();
   const { goalStats, updateUserGoals } = useNotes();
+  const { permission, requestPermission } = useNotificationPermission();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -177,6 +181,55 @@ export const SettingsTab: React.FC = React.memo(() => {
     }
   }, [weeklyNoteGoal, weeklyReminderGoal, updateUserGoals, toast]);
 
+  const getNotificationDescription = () => {
+    switch (permission) {
+      case 'granted':
+        return '알림이 활성화되었습니다.';
+      case 'denied':
+        return '알림이 차단되었습니다. 브라우저 설정에서 권한을 변경해주세요.';
+      default:
+        return '리마인더 및 중요 업데이트에 대한 알림을 받습니다.';
+    }
+  };
+
+  const handleTestNotification = async () => {
+    if (permission !== 'granted') {
+      toast({
+        title: '알림 권한 필요',
+        description: '알림을 테스트하려면 먼저 권한을 허용해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification('Notia', {
+          body: '테스트 알림입니다! 🎉',
+          icon: '/favicon/android-chrome-192x192.png',
+        });
+        toast({
+          title: '알림 전송됨',
+          description: '테스트 알림을 성공적으로 보냈습니다.',
+        });
+      } catch (error) {
+        console.error('Error showing notification:', error);
+        toast({
+          title: '알림 오류',
+          description: '알림을 표시하는 중 오류가 발생했습니다.',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      toast({
+        title: '서비스 워커 오류',
+        description: '서비스 워커가 준비되지 않았습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div
       className="space-y-8 custom-scrollbar"
@@ -190,13 +243,22 @@ export const SettingsTab: React.FC = React.memo(() => {
           <SettingSwitchItem
             id="notifications"
             label="푸시 알림"
-            description="리마인더 및 중요 업데이트에 대한 알림을 받습니다."
-            checked
-            onCheckedChange={() => {
-              /* Logic */
-            }}
+            description={getNotificationDescription()}
+            checked={permission === 'granted'}
+            disabled={permission !== 'default'}
+            onCheckedChange={requestPermission}
             icon={<Bell />}
           />
+          {permission === 'granted' && (
+            <SettingActionItem
+              id="test-notification"
+              label="알림 테스트"
+              description="푸시 알림이 제대로 동작하는지 테스트합니다."
+              buttonText="보내기"
+              onAction={handleTestNotification}
+              icon={<Send />}
+            />
+          )}
         </CardContent>
       </Card>
 

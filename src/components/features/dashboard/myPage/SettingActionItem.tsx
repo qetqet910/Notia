@@ -1,19 +1,19 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 
-interface SettingSwitchItemProps {
+interface SettingActionItemProps {
   id: string;
   label: string;
   description: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
+  buttonText: string;
+  onAction: () => void;
   icon: React.ReactElement;
   disabled?: boolean;
 }
 
-export const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
-  ({ id, label, description, checked, onCheckedChange, icon, disabled }) => (
+export const SettingActionItem: React.FC<SettingActionItemProps> = React.memo(
+  ({ id, label, description, buttonText, onAction, icon, disabled }) => (
     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
       <div className="flex items-center space-x-3">
         {icon && (
@@ -28,14 +28,17 @@ export const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
-      <Switch
+      <Button
         id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
+        variant="outline"
+        size="sm"
+        onClick={onAction}
         disabled={disabled}
-      />
+      >
+        {buttonText}
+      </Button>
     </div>
   ),
 );
 
-SettingSwitchItem.displayName = 'SettingSwitchItem';
+SettingActionItem.displayName = 'SettingActionItem';
