@@ -21,6 +21,8 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    
+    
     "@lottiefiles/dotlottie-react": "^0.13.5",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",

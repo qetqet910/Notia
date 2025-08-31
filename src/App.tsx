@@ -15,8 +15,8 @@ import {
 } from '@/components/loader/landing/AuthPageLoader';
 import { NotFoundPageLoader } from '@/components/loader/landing/NotFoundPageLoader';
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
-import HelpPage from '@/pages/dashboard/help';
-import MyPage from '@/pages/dashboard/myPage';
+const MyPage = lazy(() => import('@/pages/dashboard/myPage'));
+const HelpPage = lazy(() => import('@/pages/dashboard/help'));
 
 const Home = lazy(() => import('@/pages/_landing/Home'));
 const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
@@ -134,7 +134,9 @@ function App() {
             path="/dashboard/myPage"
             element={
               <ProtectedRoute>
-                <MyPage />
+                <Suspense fallback={<DashboardPageLoader />}>
+                  <MyPage />
+                </Suspense>
               </ProtectedRoute>
             }
           />
@@ -142,7 +144,9 @@ function App() {
             path="/dashboard/help"
             element={
               <ProtectedRoute>
-                <HelpPage />
+                <Suspense fallback={<DashboardPageLoader />}>
+                  <HelpPage />
+                </Suspense>
               </ProtectedRoute>
             }
           />
