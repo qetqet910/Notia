@@ -32,7 +32,11 @@ self.onmessage = (event: MessageEvent<Note[]>) => {
       if (r.completed) {
         completedReminders++;
         if (r.updated_at) {
-          const date = new Date(r.updated_at).toISOString().split('T')[0];
+          const d = new Date(r.updated_at);
+          const year = d.getUTCFullYear();
+          const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(d.getUTCDate()).padStart(2, '0');
+          const date = `${year}-${month}-${day}`;
           data.set(date, (data.get(date) || 0) + 1);
         }
       }

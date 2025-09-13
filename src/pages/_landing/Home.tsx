@@ -56,7 +56,7 @@ export const Home: React.FC = () => {
           >
             <motion.h1
               variants={fadeIn(0)}
-              className="text-5xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight"
+              className="text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight break-words"
             >
               <span className="block mb-2">생각의 조각을</span>
               <span className="block text-shadows">#태그와 @리마인더로</span>
@@ -67,8 +67,9 @@ export const Home: React.FC = () => {
               className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0"
             >
               마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며,
-              <br />
-              일상속 중요한 약속까지 관리하세요. <br />
+              <br className="hidden md:block" />
+              일상속 중요한 약속까지 관리하세요.{' '}
+              <br className="hidden md:block" />
               당신의 생산성을 위한 가장 가볍고 빠른 도구입니다.
             </motion.p>
             <motion.div variants={fadeIn(0.4)} className="mt-8">
@@ -87,7 +88,7 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
             className="hidden md:flex items-center justify-center"
           >
-            <div className="w-[600px] h-[600px]">
+            <div className="w-full h-auto md:w-[450px] md:h-[450px] lg:w-[600px] lg:h-[600px]">
               <DotLottieReact
                 src={landingAnimation}
                 loop
@@ -158,7 +159,8 @@ export const Home: React.FC = () => {
               당신의 생산성을 위한 모든 것
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된<br/>
+              콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된
+              <br />
               기능을 제공하며 어떤 환경에서도 최고의 성능을 보장합니다.
             </p>
           </motion.div>

@@ -61,7 +61,7 @@ SocialLoginButton.displayName = 'SocialLoginButton';
 const AnimationSection = React.memo(() => {
   return (
     <motion.div
-      className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start p-8 order-first lg:order-last bg-gradient-to-b lg:bg-gradient-to-r from-white to-[#e6f7f2]"
+      className="w-full flex items-center justify-center p-8 order-first md:order-last bg-gradient-to-b md:bg-gradient-to-r from-white to-[#e6f7f2]"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.8, delay: 0.2 }}
@@ -555,9 +555,9 @@ export const Login: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br overflow-hidden from-white to-[#e6f7f2]">
+    <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br overflow-hidden from-white to-[#e6f7f2]">
       <Toaster />
-      <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
+      <div className="w-full md:w-1/2 p-4 md:p-8 flex items-start md:mt-32 md:mb-16 justify-center md:justify-end md:pr-24">
         <motion.div
           initial="hidden"
           animate={controls}
@@ -635,7 +635,9 @@ export const Login: React.FC = () => {
         </motion.div>
       </div>
 
-      <AnimationSection />
+      <div className="hidden md:flex w-full md:w-1/2">
+        <AnimationSection />
+      </div>
     </div>
   );
 };

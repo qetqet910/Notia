@@ -242,13 +242,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     }, [note, onCancelEdit]);
 
     useEffect(() => {
-      if (isEditing && textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-      }
-    }, [content, isEditing]);
-
-    useEffect(() => {
       if (!isEditing) return;
 
       const handleKeyDown = (event: KeyboardEvent) => {
@@ -363,7 +356,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
           {isEditing ? (
             <ResizablePanelGroup direction="horizontal" className="h-full">
               <ResizablePanel defaultSize={50}>
-                <div className="h-full overflow-y-auto custom-scrollbar">
+                <div className="h-full flex flex-col">
                   {/* Title Input */}
                   <div className="p-4 border-b border-border pl-6">
                     <Input
@@ -413,7 +406,9 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                         <div className={`mt-3 pl-5`}>
                           <div className="flex items-center mb-2">
                             <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <span className="text-sm font-medium">리마인더</span>
+                            <span className="text-sm font-medium">
+                              리마인더
+                            </span>
                           </div>
                           <Carousel
                             opts={{
@@ -457,7 +452,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   )}
 
                   {/* Editor */}
-                  <div className="p-4 flex flex-col">
+                  <div className="p-4 flex flex-col flex-1 overflow-hidden">
                     <div className="flex items-center mb-2 flex-shrink-0">
                       <Edit3 className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span className="text-sm font-medium">편집</span>
@@ -470,16 +465,15 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                         onContentChange();
                       }}
                       placeholder="
-          내용을 입력하세요...
+  내용을 입력하세요...
         
-          #프로젝트 #중요
-        
-          @내일 2시 팀 미팅 참석하기.
-          @1시간 코드 리뷰 완료하기.
-          @10시 양치질하기.
-          @2025-05-25 프로젝트 마감."
-                      className="w-full resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-sm font-mono custom-scrollbar px-2"
-                      style={{ overflowY: 'hidden' }}
+  #프로젝트 #중요
+
+  @내일 2시 팀 미팅 참석하기.
+  @1시간 코드 리뷰 완료하기.
+  @10시 양치질하기.
+  @2025-05-25 프로젝트 마감."
+                      className="w-full flex-1 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-sm font-mono custom-scrollbar p-2"
                     />
                   </div>
                 </div>

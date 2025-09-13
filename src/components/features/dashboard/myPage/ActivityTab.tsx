@@ -49,6 +49,11 @@ export const ActivityTab: React.FC = React.memo(() => {
       setIsCalculating(false);
     };
 
+    worker.onerror = (error) => {
+      console.error('Worker error:', error);
+      setIsCalculating(false);
+    };
+
     worker.postMessage(notes);
 
     return () => {
@@ -98,7 +103,7 @@ export const ActivityTab: React.FC = React.memo(() => {
 
     const startDate = new Date(firstActivity.date);
     const endDate = new Date(startDate);
-    endDate.setFullYear(startDate.getFullYear() + 1);
+    endDate.setMonth(startDate.getMonth() + 6);
 
     const generatedWeeks: { date: string; count: number; level: number }[][] =
       [];
@@ -132,16 +137,21 @@ export const ActivityTab: React.FC = React.memo(() => {
     const labels: { weekIndex: number; name: string }[] = [];
     let lastMonth = -1;
     weeks.forEach((week, weekIndex) => {
-      const firstDayOfWeek = new Date(week[0].date);
-      const month = firstDayOfWeek.getMonth();
+      const firstDayOfMonth = new Date(week[0].date);
+      firstDayOfMonth.setDate(1);
+      const month = firstDayOfMonth.getMonth();
+
       if (month !== lastMonth) {
-        labels.push({
-          weekIndex,
-          name: new Intl.DateTimeFormat('ko-KR', { month: 'short' }).format(
-            firstDayOfWeek,
-          ),
-        });
-        lastMonth = month;
+        const firstDayOfWeek = new Date(week[0].date);
+        if (week.some((day) => new Date(day.date).getMonth() === month)) {
+          labels.push({
+            weekIndex,
+            name: new Intl.DateTimeFormat('ko-KR', {
+              month: 'short',
+            }).format(firstDayOfWeek),
+          });
+          lastMonth = month;
+        }
       }
     });
     return labels;
@@ -175,7 +185,7 @@ export const ActivityTab: React.FC = React.memo(() => {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>
-              지난 1년간 {stats.completedReminders}개의 리마인더 완료
+              지난 6개월간 {stats.completedReminders}개의 리마인더 완료
             </span>
             <div className="flex items-center gap-1 text-xs">
               적음{' '}
@@ -192,38 +202,36 @@ export const ActivityTab: React.FC = React.memo(() => {
           </div>
           <div className="overflow-x-auto pb-2 custom-scrollbar">
             <div className="inline-flex flex-col">
-              <div className="flex gap-1" style={{ paddingLeft: '2rem' }}>
+              <div className="flex gap-1.5" style={{ paddingLeft: '2rem' }}>
                 {weeks.map((_, weekIndex) => (
                   <div
                     key={weekIndex}
-                    className="w-3.5 text-xs text-muted-foreground text-center"
+                    className="w-5 text-xs text-muted-foreground text-center"
                   >
                     {monthLabels.find((m) => m.weekIndex === weekIndex)?.name}
                   </div>
                 ))}
               </div>
               <div className="flex">
-                <div className="flex flex-col gap-1 pr-2 text-xs text-muted-foreground pt-1">
+                <div className="flex flex-col gap-1.5 pr-2 text-xs text-muted-foreground pt-1">
                   {['일', '', '수', '', '금', ''].map((label, index) => (
-                    <span key={index} className="h-3.5 flex items-center">
+                    <span key={index} className="h-5 flex items-center">
                       {label}
                     </span>
                   ))}
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                   {weeks.map((week, weekIndex) => (
-                    <div key={weekIndex} className="flex flex-col gap-1">
+                    <div key={weekIndex} className="flex flex-col gap-1.5">
                       {week.map((day, dayIndex) => {
                         if (day.count === -1) {
-                          return (
-                            <div key={dayIndex} className="w-3.5 h-3.5" />
-                          );
+                          return <div key={dayIndex} className="w-5 h-5" />;
                         }
                         return (
                           <Tooltip key={dayIndex}>
                             <TooltipTrigger asChild>
                               <div
-                                className={`w-3.5 h-3.5 rounded-sm border border-black/10 ${getLevelColor(
+                                className={`w-5 h-5 rounded-sm border border-black/10 ${getLevelColor(
                                   day.level,
                                 )} cursor-pointer`}
                               />

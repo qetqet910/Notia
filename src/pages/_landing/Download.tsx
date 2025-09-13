@@ -12,6 +12,7 @@ import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { usePwaStore } from '@/stores/pwaStore';
 import { changelogData } from '@/constants/changeLog';
+import FeatureUnderConstruction from '@/components/features/FeatureUnderConstruction';
 
 // OS 아이콘 컴포넌트
 const OsIcon = ({ name }: { name: string }) => {
@@ -258,23 +259,37 @@ export const DownloadPage: React.FC = () => {
                           ))}
                         </div>
 
-                        <Button
-                          size="lg"
-                          className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 w-full max-w-xs"
-                          onClick={
-                            platform.id === 'PWA' ? handlePwaInstall : undefined
-                          }
-                          asChild={platform.id !== 'PWA'}
-                          disabled={platform.id === 'PWA' && !deferredPrompt}
-                        >
-                          {platform.id === 'PWA' ? (
-                            <span>{platform.download.label}</span>
-                          ) : (
-                            <a href={platform.download.link}>
-                              {platform.download.label}
-                            </a>
-                          )}
-                        </Button>
+                        {['Windows', 'macOS', 'Linux'].includes(
+                          platform.id,
+                        ) ? (
+                          <div className="w-full max-w-xs">
+                            <FeatureUnderConstruction
+                              featureName={`${platform.label} 앱`}
+                            />
+                          </div>
+                        ) : (
+                          <Button
+                            size="lg"
+                            className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 w-full max-w-xs"
+                            onClick={
+                              platform.id === 'PWA'
+                                ? handlePwaInstall
+                                : undefined
+                            }
+                            asChild={platform.id !== 'PWA'}
+                            disabled={
+                              platform.id === 'PWA' && !deferredPrompt
+                            }
+                          >
+                            {platform.id === 'PWA' ? (
+                              <span>{platform.download.label}</span>
+                            ) : (
+                              <a href={platform.download.link}>
+                                {platform.download.label}
+                              </a>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

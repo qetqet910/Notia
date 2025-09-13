@@ -1,7 +1,4 @@
-# Notia [![Netlify Status](https://api.netlify.com/api/v1/badges/46a1398f-b909-402f-946a-4e54be53e9f2/deploy-status)](https://app.netlify.com/projects/wedontlikeamnesia/deploys)
-
-<br>
-
+<br/>
 <p align="center">
   <img src="./src/assets/images/Logo.png" alt="Notia Logo" width="120">
 </p>
@@ -14,6 +11,28 @@
 <p align="center">
     <a href="https://notia.site"><strong>🔗 서비스 바로가기</strong></a>
 </p>
+<br/>
+
+<div align="center"> 
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/46a1398f-b909-402f-946a-4e54be53e9f2/deploy-status)](https://app.netlify.com/projects/wedontlikeamnesia/deploys)
+![](https://img.shields.io/github/last-commit/qetqet910/Notia?style=flat&logo=git&logoColor=white&color=0080ff)
+![](https://img.shields.io/github/languages/top/qetqet910/Notia?style=flat&color=0080ff)
+![](https://img.shields.io/github/languages/count/qetqet910/Notia?style=flat&color=0080ff)
+
+![](https://img.shields.io/badge/Rust-000000.svg?style=flat&logo=Rust&logoColor=white)
+![](https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white)
+![](https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white)
+![](https://img.shields.io/badge/Supabase-3FCF8E.svg?style=flat&logo=Supabase&logoColor=white)
+![](https://img.shields.io/badge/Tauri-24C8D8.svg?style=flat&logo=Tauri&logoColor=white)
+![](https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black)
+![](https://img.shields.io/badge/TypeScript-3178C6.svg?style=flat&logo=TypeScript&logoColor=white)
+
+![](https://img.shields.io/badge/GitHub%20Actions-2088FF.svg?style=flat&logo=GitHub-Actions&logoColor=white)
+![](https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white)
+![](https://img.shields.io/badge/Mermaid-FF3670.svg?style=flat&logo=Mermaid&logoColor=white)
+
+</div>
 
 ## ✨ 핵심 기능
 
