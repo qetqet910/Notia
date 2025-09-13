@@ -101,14 +101,14 @@ export const ActivityTab: React.FC = React.memo(() => {
       allDays.set(d.date, { count: d.count, level: d.level });
     });
 
-    const startDate = new Date(firstActivity.date);
+    const startDate = new Date(firstActivity.date + 'T00:00:00Z');
     const endDate = new Date(startDate);
-    endDate.setMonth(startDate.getMonth() + 6);
+    endDate.setUTCMonth(startDate.getUTCMonth() + 6);
 
     const generatedWeeks: { date: string; count: number; level: number }[][] =
       [];
     let currentDay = new Date(startDate);
-    currentDay.setDate(currentDay.getDate() - currentDay.getDay()); // Start week on Sunday
+    currentDay.setUTCDate(currentDay.getUTCDate() - currentDay.getUTCDay()); // Start week on Sunday
 
     const totalDays = Math.ceil(
       (endDate.getTime() - currentDay.getTime()) / (1000 * 3600 * 24),
@@ -118,14 +118,18 @@ export const ActivityTab: React.FC = React.memo(() => {
     for (let i = 0; i < totalWeeks; i++) {
       const week: { date: string; count: number; level: number }[] = [];
       for (let j = 0; j < 7; j++) {
-        const dateStr = currentDay.toISOString().split('T')[0];
+        const year = currentDay.getUTCFullYear();
+        const month = String(currentDay.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(currentDay.getUTCDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
         if (currentDay >= startDate && currentDay <= endDate) {
           const data = allDays.get(dateStr) || { count: 0, level: 0 };
           week.push({ date: dateStr, ...data });
         } else {
           week.push({ date: dateStr, count: -1, level: -1 }); // Placeholder
         }
-        currentDay.setDate(currentDay.getDate() + 1);
+        currentDay.setUTCDate(currentDay.getUTCDate() + 1);
       }
       generatedWeeks.push(week);
     }
@@ -137,17 +141,18 @@ export const ActivityTab: React.FC = React.memo(() => {
     const labels: { weekIndex: number; name: string }[] = [];
     let lastMonth = -1;
     weeks.forEach((week, weekIndex) => {
-      const firstDayOfMonth = new Date(week[0].date);
-      firstDayOfMonth.setDate(1);
-      const month = firstDayOfMonth.getMonth();
-
+      const firstDayOfWeek = new Date(week[0].date + 'T00:00:00Z');
+      const month = firstDayOfWeek.getUTCMonth();
       if (month !== lastMonth) {
-        const firstDayOfWeek = new Date(week[0].date);
-        if (week.some((day) => new Date(day.date).getMonth() === month)) {
+        const containsFirstDay = week.some(
+          (day) => new Date(day.date + 'T00:00:00Z').getUTCDate() === 1,
+        );
+        if (containsFirstDay || weekIndex === 0) {
           labels.push({
             weekIndex,
             name: new Intl.DateTimeFormat('ko-KR', {
               month: 'short',
+              timeZone: 'UTC',
             }).format(firstDayOfWeek),
           });
           lastMonth = month;

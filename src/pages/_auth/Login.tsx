@@ -5,7 +5,6 @@ import { Key, Loader2 } from 'lucide-react';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, useAnimation } from 'framer-motion';
-import { supabase } from '@/services/supabaseClient';
 
 import { Toaster } from '@/components/ui/toaster';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
