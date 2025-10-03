@@ -10,8 +10,18 @@ import React, {
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/toaster';
+
+import { useToast } from '@/hooks/useToast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 import { GoalProgress } from '@/components/features/dashboard/goalProgress';
 import { UserProfile } from '@/components/features/dashboard/userProfile';
@@ -24,7 +34,14 @@ import {
   Clock,
   List,
   Menu,
+  User,
+  Activity,
+  Settings,
+  Monitor,
+  LogOut,
+  Loader2,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
@@ -117,7 +134,6 @@ export const Dashboard: React.FC = () => {
   } = useNotes();
   const { permission, requestPermission } = useNotificationPermission();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
-  const [isMobile] = useState(window.innerWidth < 768);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState('notes');
@@ -353,6 +369,7 @@ export const Dashboard: React.FC = () => {
                 onCancelEdit={handleCancelEdit}
                 onContentChange={() => setHasUnsavedChanges(true)}
                 hasUnsavedChanges={hasUnsavedChanges}
+                onBack={() => setSelectedNoteId(null)}
               />
             ) : (
               <EmptyNoteState handleCreateNote={handleCreateNote} />
@@ -423,15 +440,54 @@ export const Dashboard: React.FC = () => {
         return (
           <>
             {deleteDialog}
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={30} minSize={20}>
+            {/* Desktop layout */}
+            <div className="hidden md:flex h-full">
+              <ResizablePanelGroup direction="horizontal" className="h-full">
+                <ResizablePanel defaultSize={30} minSize={20}>
+                  {noteListContent}
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={70} minSize={30}>
+                  <div className="h-full">{editorContent}</div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </div>
+            {/* Mobile layout */}
+            <div className="md:hidden h-full overflow-hidden relative">
+              <motion.div
+                className="h-full w-full"
+                animate={{
+                  scale: selectedNoteId ? 0.95 : 1,
+                  x: selectedNoteId ? '-25%' : '0%',
+                }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              >
                 {noteListContent}
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={70} minSize={30}>
-                <div className="h-full">{editorContent}</div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+              </motion.div>
+
+              <AnimatePresence>
+                {selectedNoteId && (
+                  <motion.div
+                    key="editor"
+                    className="h-full absolute w-full top-0 left-0"
+                    initial={{ x: '100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '100%' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x > 100) {
+                        setSelectedNoteId(null);
+                      }
+                    }}
+                  >
+                    {editorContent}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </>
         );
       }
@@ -508,23 +564,22 @@ export const Dashboard: React.FC = () => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {isMobile ? (
+            <div className="md:hidden">
               <MobileNavigation
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 handleCreateNote={handleCreateNote}
               />
-            ) : (
+            </div>
+            <div className="hidden md:block">
               <DesktopActions handleCreateNote={handleCreateNote} />
-            )}
+            </div>
           </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
           <div
-            className={`transition-all duration-300 ease-in-out h-full ${
-              !isMobile && !isEditing && isSidebarVisible
-                ? 'w-56'
-                : 'w-0 opacity-0'
+            className={`transition-all duration-300 ease-in-out h-full hidden md:block ${
+              !isEditing && isSidebarVisible ? 'w-56' : 'w-0 opacity-0'
             }`}
           >
             <Sidebar
@@ -638,46 +693,171 @@ const MobileNavigation = ({
   activeTab: string;
   setActiveTab: (tab: string) => void;
   handleCreateNote: () => void;
-}) => (
-  <Sheet>
-    <SheetTrigger asChild>
-      <Button variant="ghost" size="icon">
-        <Menu className="h-5 w-5" />
-      </Button>
-    </SheetTrigger>
-    <SheetContent side="right" className="w-64 bg-background">
-      <div className="flex flex-col gap-4 py-4 h-full">
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={handleCreateNote}
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />새 노트
+}) => {
+  const navigate = useNavigate();
+  const { userProfile, user, signOut, isLogoutLoading } = useAuthStore();
+  const { toast } = useToast();
+  const { setTheme } = useThemeStore();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const displayName =
+    userProfile?.display_name || user?.user_metadata?.name || '사용자';
+  const displayEmail =
+    userProfile?.email && !userProfile.email.startsWith('anon_')
+      ? userProfile.email
+      : user?.email && !user.email.startsWith('anon_')
+      ? user.email
+      : '';
+  const avatarUrl =
+    userProfile?.avatar_url || user?.user_metadata?.avatar_url || '';
+  const initials = displayName?.substring(0, 1).toUpperCase() || '사';
+
+  const handleSignOut = async () => {
+    try {
+      const result = await signOut();
+      if (result.success) {
+        toast({
+          title: '로그아웃 성공',
+          description: '성공적으로 로그아웃되었습니다.',
+        });
+        setTheme('system');
+        navigate('/login');
+      } else {
+        throw result.error || new Error('로그아웃 실패');
+      }
+    } catch (error) {
+      toast({
+        title: '로그아웃 실패',
+        description:
+          error instanceof Error
+            ? error.message
+            : '로그아웃 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setIsOpen(false);
+  };
+
+  return (
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <Menu className="h-5 w-5" />
         </Button>
-        <Separator />
-        <nav className="flex flex-col gap-2">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
+      </SheetTrigger>
+      <SheetContent side="right" className="w-72 bg-background p-0">
+        <SheetHeader className="sr-only">
+          <SheetTitle>모바일 메뉴</SheetTitle>
+          <SheetDescription>
+            노트, 리마인더, 캘린더, 타임라인 등 주요 기능으로 이동할 수 있는
+            메뉴입니다.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col h-full">
+          <div className="p-4 border-b">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={avatarUrl} alt={displayName} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <span className="font-semibold">{displayName}</span>
+                <span className="text-sm text-muted-foreground">
+                  {displayEmail}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 flex-1">
+            <Button
+              variant="outline"
+              className="w-full justify-start mb-4"
+              onClick={() => {
+                handleCreateNote();
+                setIsOpen(false);
+              }}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" />새 노트
+            </Button>
+            <nav className="flex flex-col gap-1">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.id}
+                    variant={activeTab === item.id ? 'secondary' : 'ghost'}
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsOpen(false);
+                    }}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </nav>
+            <Separator className="my-4" />
+            <nav className="flex flex-col gap-1">
               <Button
-                key={item.id}
-                variant={activeTab === item.id ? 'default' : 'ghost'}
+                variant="ghost"
                 className="w-full justify-start"
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleNavigation('/dashboard/myPage?tab=profile')}
               >
-                <Icon className="mr-2 h-4 w-4" />
-                {item.label}
+                <User className="mr-2 h-4 w-4" />
+                마이페이지
               </Button>
-            );
-          })}
-        </nav>
-        <div className="mt-auto">
-          <UserProfile />
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => handleNavigation('/dashboard/myPage?tab=activity')}
+              >
+                <Activity className="mr-2 h-4 w-4" />
+                활동
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => handleNavigation('/dashboard/myPage?tab=settings')}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                설정
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => handleNavigation('/dashboard/help')}
+              >
+                <Monitor className="mr-2 h-4 w-4" />
+                도움말
+              </Button>
+            </nav>
+          </div>
+          <div className="p-4 border-t">
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={handleSignOut}
+              disabled={isLogoutLoading}
+            >
+              {isLogoutLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="mr-2 h-4 w-4" />
+              )}
+              로그아웃
+            </Button>
+          </div>
         </div>
-      </div>
-    </SheetContent>
-  </Sheet>
-);
+      </SheetContent>
+    </Sheet>
+  );
+};
 
 const DesktopActions = ({
   handleCreateNote,

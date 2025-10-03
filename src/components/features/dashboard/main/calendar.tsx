@@ -17,6 +17,13 @@ import { ko } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Clock, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Reminder } from '@/types';
 
 type EnrichedReminder = Reminder & {
@@ -34,7 +41,7 @@ interface CalendarProps {
 export const Calendar: React.FC<CalendarProps> = React.memo(
   ({ reminders = [], onOpenNote }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
     const today = new Date();
 
@@ -117,8 +124,8 @@ export const Calendar: React.FC<CalendarProps> = React.memo(
     );
 
     return (
-      <div className="flex h-full">
-        <div className="flex-1 p-4 overflow-auto custom-scrollbar">
+      <div className="h-full">
+        <div className="p-4 overflow-auto custom-scrollbar h-full">
           <div className="flex items-center justify-between mt-4 mb-4 max-w-[1200px] mx-auto">
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-bold">
@@ -148,12 +155,23 @@ export const Calendar: React.FC<CalendarProps> = React.memo(
             onDateClick={handleDateClick}
           />
         </div>
-        <EventSidebar
-          selectedDate={selectedDate}
-          events={selectedDateEvents}
-          holidays={holidays}
-          onOpenNote={onOpenNote}
-        />
+        <Sheet
+          open={selectedDate !== null}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setSelectedDate(null);
+            }
+          }}
+        >
+          <SheetContent className="w-[350px] sm:w-[400px] overflow-y-auto custom-scrollbar">
+            <EventSidebarContent
+              selectedDate={selectedDate}
+              events={selectedDateEvents}
+              holidays={holidays}
+              onOpenNote={onOpenNote}
+            />
+          </SheetContent>
+        </Sheet>
       </div>
     );
   },
@@ -276,70 +294,74 @@ const CalendarGrid = React.memo<{
 );
 CalendarGrid.displayName = 'CalendarGrid';
 
-const EventSidebar = React.memo<{
+const EventSidebarContent = React.memo<{
   selectedDate: Date | null;
   events: CalendarEvent[];
   holidays: Map<string, string>;
   onOpenNote: (noteId: string) => void;
 }>(({ selectedDate, events, holidays, onOpenNote }) => {
   if (!selectedDate) {
-    return (
-      <aside className="w-0 opacity-0 transition-all duration-300 ease-in-out" />
-    );
+    return null;
   }
 
   return (
-    <aside className="w-80 opacity-100 p-4 border-l border-border bg-muted/30 transition-all duration-300 ease-in-out overflow-y-auto custom-scrollbar">
-      <div className="flex items-center gap-2 mb-4">
-        <h3 className="text-lg font-semibold">
+    <>
+      <SheetHeader>
+        <SheetTitle className="flex items-center gap-2">
           {format(selectedDate, 'M월 d일')}
-        </h3>
-        {holidays.get(format(selectedDate, 'yyyy-MM-dd')) && (
-          <Badge variant="destructive">
-            {holidays.get(format(selectedDate, 'yyyy-MM-dd'))}
-          </Badge>
+          {holidays.get(format(selectedDate, 'yyyy-MM-dd')) && (
+            <Badge variant="destructive">
+              {holidays.get(format(selectedDate, 'yyyy-MM-dd'))}
+            </Badge>
+          )}
+        </SheetTitle>
+        <SheetDescription>
+          선택된 날짜의 리마인더 목록입니다. 클릭하여 해당 노트로 이동할 수
+          있습니다.
+        </SheetDescription>
+      </SheetHeader>
+      <div className="py-4">
+        {events.length > 0 ? (
+          <div className="space-y-3">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className={`p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
+                  event.completed
+                    ? 'bg-muted/50 text-muted-foreground'
+                    : 'bg-background'
+                }`}
+                onClick={() => onOpenNote(event.noteId)}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <Badge variant={event.completed ? 'secondary' : 'default'}>
+                    {event.completed ? '완료' : '대기'}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {format(new Date(event.reminder_time), 'p', { locale: ko })}
+                  </span>
+                </div>
+                <p
+                  className={`text-sm mb-2 ${
+                    event.completed ? 'line-through' : ''
+                  }`}
+                >
+                  {event.reminder_text}
+                </p>
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <FileText className="w-3 h-3 mr-1" />
+                  <span className="truncate">{event.noteTitle}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">
+            이 날짜에는 이벤트가 없습니다.
+          </p>
         )}
       </div>
-      {events.length > 0 ? (
-        <div className="space-y-3">
-          {events.map((event) => (
-            <div
-              key={event.id}
-              className={`p-3 rounded-lg border cursor-pointer hover:bg-accent/50 transition-colors ${
-                event.completed
-                  ? 'bg-muted/50 text-muted-foreground'
-                  : 'bg-background'
-              }`}
-              onClick={() => onOpenNote(event.noteId)}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <Badge variant={event.completed ? 'secondary' : 'default'}>
-                  {event.completed ? '완료' : '대기'}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  {format(new Date(event.reminder_time), 'p', { locale: ko })}
-                </span>
-              </div>
-              <p
-                className={`text-sm mb-2 ${
-                  event.completed ? 'line-through' : ''
-                }`}
-              >
-                {event.reminder_text}
-              </p>
-              <div className="flex items-center text-xs text-muted-foreground">
-                <FileText className="w-3 h-3 mr-1" />
-                <span className="truncate">{event.noteTitle}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-center py-8">
-          이 날짜에는 이벤트가 없습니다.
-        </p>
-      )}
-    </aside>
+    </>
   );
 });
-EventSidebar.displayName = 'EventSidebar';
+EventSidebarContent.displayName = 'EventSidebarContent';

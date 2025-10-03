@@ -134,9 +134,7 @@ export default function MyPage() {
               ))}
             </ul>
           </div>
-          <div className="md:col-span-4 space-y-6 no-scrollbar">
-            {renderContent()}
-          </div>
+          <div className="md:col-span-4 space-y-6">{renderContent()}</div>
         </div>
       </div>
     </div>

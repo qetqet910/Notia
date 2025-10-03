@@ -231,10 +231,7 @@ export const SettingsTab: React.FC = React.memo(() => {
   };
 
   return (
-    <div
-      className="space-y-8 custom-scrollbar"
-      style={{ maxHeight: 'calc(100vh - 200px)', paddingRight: '1rem' }}
-    >
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>일반</CardTitle>

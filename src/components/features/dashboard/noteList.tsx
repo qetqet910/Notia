@@ -64,10 +64,12 @@ export const NoteList: React.FC<NoteListProps> = ({
                 }`}
                 onClick={() => onSelectNote(note)}
               >
-                <h3 className="font-medium line-clamp-1">{note.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {getContentPreview(note.content_preview)}
-                </p>
+                <div className="grid grid-cols-[minmax(0,1fr)]">
+                  <h3 className="font-medium truncate">{note.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {getContentPreview(note.content_preview)}
+                  </p>
+                </div>
 
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex flex-wrap gap-1">

@@ -249,25 +249,31 @@ export const TimelineView: React.FC<TimelineViewProps> = React.memo(
           </Tabs>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-2 mb-1">
+        <div className="grid grid-cols-3 md:grid-cols-3 gap-4 mb-6">
+          <div className="p-4 max-[470px]:p-3 rounded-lg border bg-card">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
               <FileText className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">총 노트</span>
+              <span className="text-sm max-[470px]:text-xs font-medium">
+                총 노트
+              </span>
             </div>
             <div className="text-2xl font-bold">{notes.length}</div>
           </div>
-          <div className="p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="p-4 max-[470px]:p-3 rounded-lg border bg-card">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
               <Clock className="w-4 h-4 text-orange-500" />
-              <span className="text-sm font-medium">총 리마인더</span>
+              <span className="text-sm max-[470px]:text-xs font-medium">
+                총 리마인더
+              </span>
             </div>
             <div className="text-2xl font-bold">{totalReminders}</div>
           </div>
-          <div className="p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="p-4 max-[470px]:p-3 rounded-lg border bg-card">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
               <Calendar className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium">완료된 리마인더</span>
+              <span className="text-sm max-[470px]:text-xs font-medium">
+                완료된 리마인더
+              </span>
             </div>
             <div className="text-2xl font-bold">{completedReminders}</div>
           </div>

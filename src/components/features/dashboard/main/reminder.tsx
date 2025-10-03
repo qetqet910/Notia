@@ -482,14 +482,15 @@ const ReminderCard = React.memo<{
                 )}
               </div>
             </Button>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 overflow-hidden grid grid-cols-[minmax(0,1fr)]">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <h3
-                  className={`font-medium text-base leading-snug ${
+                  className={`font-medium text-base leading-snug truncate ${
                     reminder.completed
                       ? 'line-through text-muted-foreground'
                       : 'text-foreground'
                   }`}
+                  title={reminder.reminder_text}
                 >
                   {reminder.reminder_text}
                 </h3>
@@ -540,7 +541,7 @@ const ReminderCard = React.memo<{
                   )}
                 </div>
                 <div
-                  className="flex items-center text-sm text-muted-foreground max-w-36 truncate"
+                  className="flex items-center text-sm text-muted-foreground truncate"
                   title={reminder.noteTitle}
                 >
                   <span>📝</span>
