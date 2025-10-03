@@ -13,7 +13,7 @@
 </p>
 <br/>
 
-<div align="center"> 
+<div align="center">
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/46a1398f-b909-402f-946a-4e54be53e9f2/deploy-status)](https://app.netlify.com/projects/wedontlikeamnesia/deploys)
 ![](https://img.shields.io/github/last-commit/qetqet910/Notia?style=flat&logo=git&logoColor=white&color=0080ff)
@@ -21,7 +21,6 @@
 ![](https://img.shields.io/github/languages/count/qetqet910/Notia?style=flat&color=0080ff)
 
 ![](https://img.shields.io/badge/Rust-000000.svg?style=flat&logo=Rust&logoColor=white)
-![](https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white)
 ![](https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white)
 ![](https://img.shields.io/badge/Supabase-3FCF8E.svg?style=flat&logo=Supabase&logoColor=white)
 ![](https://img.shields.io/badge/Tauri-24C8D8.svg?style=flat&logo=Tauri&logoColor=white)
@@ -42,16 +41,6 @@
 - **빠른 속도와 접근성**: 군 복무 경험에서 착안하여, 어떤 저사양 환경에서도 빠르고 가볍게 작동하도록 최적화되었습니다. 별도 설치 없이 웹에서 바로 사용 가능합니다.
 - **실시간 동기화**: 모든 기기에서 작성한 내용이 실시간으로 안전하게 동기화됩니다.
 - **사용자 맞춤 플랫폼**: 사용자의 환경에 따라, 웹, 웹앱, 데스크탑 앱 등 알맞게 사용하세요.
-
-<br>
-
-## 📸 주요 화면
-
-아래는 현재 프로젝트의 메인 주요 화면들입니다.
-
-| 랜딩 페이지                                         | 대시보드 페이지                                    | 캘린더 페이지                                    |
-| --------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------ |
-| ![랜딩 화면](src/assets//images/readme/readme1.png) | ![대시보드](src/assets//images/readme/readme2.png) | ![캘린더](src/assets//images/readme/readme3.png) |
 
 <br>
 
@@ -81,10 +70,10 @@ Notia의 핵심은 간단한 기호를 사용한 빠른 정리입니다.
 - **Build Tool**: Vite
 - **Package Manager**: npm
 
-### 잡담
+#### 잡담
 
-- 사지방에서 쓰려고 만들었는데 다 만들고 보니 말출인건 안 비밀
-- 내가 쓰고 있는 이 문장까지 누가 봐줄까 궁금함
-- 개선사항 매우 환영함 [Contributing](./CONTRIBUTING.md)
+- 사지방에서 쓰려고 만들었는데 다 만들고 보니 전역이 곧임
+- 개선사항 매우 환영 [Contributing](./CONTRIBUTING.md)
 
-[CC BY-NC-SA 4.0 License](./LICENSE) / [후원한잔](https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f)
+[GPL-3.0-or-later License](./LICENSE) / [후원한잔](https://acoffee.shop/d/00be6d8a-5e3e-494e-a559-0c2f4bb1c25f)
+  
