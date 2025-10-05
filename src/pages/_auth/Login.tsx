@@ -562,7 +562,7 @@ export const Login: React.FC = () => {
           animate={controls}
           variants={animations.card}
         >
-          <Card className="relative w-full max-w-md shadow-lg border-[#d8f2ea] overflow-visible">
+          <Card className="relative w-full max-w-md shadow-lg border-[#d8f2ea] overflow-visible md:mt-0 mt-20">
             <CardContent className="pt-8 pb-6">
               <motion.div
                 className="flex justify-center items-center mb-6"

@@ -162,7 +162,7 @@ export const DownloadPage: React.FC = () => {
       <Toaster />
       <Header />
 
-      <main className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
+      <main className="max-w-4xl mx-auto px-4 pt-24 pb-16 sm:pt-32 sm:pb-24">
         {/* Installation Guide Section as the new header */}
         <section className="mb-16">
           <div className="text-center mb-12">
@@ -198,12 +198,12 @@ export const DownloadPage: React.FC = () => {
           onValueChange={setSelectedId}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsList className="flex flex-wrap justify-around w-full">
             {platformData.map((platform) => (
               <TabsTrigger
                 key={platform.id}
                 value={platform.id}
-                className="data-[state=active]:bg-[#61C9A8] data-[state=active]:text-white"
+                className="data-[state=active]:bg-[#61C9A8] data-[state=active]:text-white w-max"
               >
                 {platform.label}
               </TabsTrigger>
@@ -259,9 +259,7 @@ export const DownloadPage: React.FC = () => {
                           ))}
                         </div>
 
-                        {['Windows', 'macOS', 'Linux'].includes(
-                          platform.id,
-                        ) ? (
+                        {['Windows', 'macOS', 'Linux'].includes(platform.id) ? (
                           <div className="w-full max-w-xs">
                             <FeatureUnderConstruction
                               featureName={`${platform.label} 앱`}
@@ -277,9 +275,7 @@ export const DownloadPage: React.FC = () => {
                                 : undefined
                             }
                             asChild={platform.id !== 'PWA'}
-                            disabled={
-                              platform.id === 'PWA' && !deferredPrompt
-                            }
+                            disabled={platform.id === 'PWA' && !deferredPrompt}
                           >
                             {platform.id === 'PWA' ? (
                               <span>{platform.download.label}</span>

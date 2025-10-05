@@ -158,20 +158,19 @@ export const Home: React.FC = () => {
             <h2 className="text-4xl font-extrabold mb-4 tracking-tight">
               당신의 생산성을 위한 모든 것
             </h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-1xl mx-auto">
               콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된
-              <br />
               기능을 제공하며 어떤 환경에서도 최고의 성능을 보장합니다.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-8 items-center">
+          <div className="flex flex-col md:flex-row items-stretch gap-8">
             <motion.div
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.3 }}
               variants={staggerContainer}
-              className="space-y-8"
+              className="space-y-8 md:w-1/2"
             >
               {userProfiles.map((profile, index) => (
                 <motion.div key={index} variants={fadeIn(index * 0.1)}>
@@ -189,13 +188,17 @@ export const Home: React.FC = () => {
                 </motion.div>
               ))}
             </motion.div>
+
+            <div className="w-full h-px bg-gray-900/10 md:w-px md:h-auto"></div>
+
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, amount: 0.5 }}
               transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="md:w-1/2"
             >
-              <div className="p-10 rounded-2xl text-center">
+              <div className="p-10 rounded-2xl text-center h-full flex flex-col justify-center">
                 <div className="flex justify-center mb-6">
                   <div className="w-36 h-36">
                     <DotLottieReact
@@ -236,9 +239,8 @@ export const Home: React.FC = () => {
             <h2 className="text-4xl font-extrabold mb-4 tracking-tight text-gray-900">
               미리보기
             </h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-1x1 mx-auto">
               아래 편집기에서 직접 #태그와 @리마인더 기능을 사용해보세요.
-              <br />
               입력하는 대로 실시간으로 분석하고 똑똑하게 정리합니다.
             </p>
           </motion.div>
