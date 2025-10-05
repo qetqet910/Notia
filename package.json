@@ -21,8 +21,6 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    
-    
     "@lottiefiles/dotlottie-react": "^0.13.5",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -85,6 +83,8 @@
     "eslint-plugin-react": "^7.37.4",
     "gh-pages": "^6.3.0",
     "globals": "^16.0.0",
+    "lighthouse-mcp": "^0.1.9",
+    "rollup-plugin-visualizer": "^6.0.4",
     "supabase": "^2.20.12",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",

@@ -94,6 +94,7 @@ export const Home: React.FC = () => {
                 loop
                 autoplay
                 className="w-full h-full"
+                style={{ width: '100%', height: '100%' }}
               />
             </div>
           </motion.div>
