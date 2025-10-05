@@ -218,7 +218,7 @@ const CalendarGrid = React.memo<{
       cells.push(
         <div
           key={dateString}
-          className={`h-32 p-1.5 border border-border cursor-pointer hover:bg-accent transition-colors flex flex-col ${
+          className={`h-24 md:h-32 p-1.5 border border-border cursor-pointer hover:bg-accent transition-colors flex flex-col ${
             !isCurrentMonth ? 'text-muted-foreground bg-muted/30' : ''
           } ${isSelectedDate ? 'bg-accent' : ''}`}
           onClick={() => onDateClick(cellDate)}

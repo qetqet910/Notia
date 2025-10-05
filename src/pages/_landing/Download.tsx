@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaWindows, FaApple } from 'react-icons/fa';
 import { FcLinux } from 'react-icons/fc';
-import { IoGlobeOutline } from 'react-icons/io5';
+import { IoGlobeOutline, IoShareOutline } from 'react-icons/io5';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -145,6 +145,11 @@ interface BeforeInstallPromptEvent extends Event {
 export const DownloadPage: React.FC = () => {
   const [selectedId, setSelectedId] = React.useState(platformData[0].id);
   const { deferredPrompt, setDeferredPrompt } = usePwaStore();
+  const [isIOS, setIsIOS] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
+  }, []);
 
   const handlePwaInstall = async () => {
     if (deferredPrompt) {
@@ -259,7 +264,41 @@ export const DownloadPage: React.FC = () => {
                           ))}
                         </div>
 
-                        {['Windows', 'macOS', 'Linux'].includes(platform.id) ? (
+                        {platform.id === 'PWA' ? (
+                          isIOS ? (
+                            <div className="w-full max-w-xs text-center p-4 bg-muted rounded-lg">
+                              <h4 className="font-semibold mb-2">
+                                iOS에서 설치하는 방법
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                Safari 브라우저의 하단 공유 버튼
+                                <br />
+                                ( <IoShareOutline className="inline h-4 w-4 mx-1" />)
+                                을 탭한 후,
+                                <br />
+                                '홈 화면에 추가'를 선택하세요.
+                              </p>
+                            </div>
+                          ) : (
+                            <>
+                              <Button
+                                size="lg"
+                                className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 w-full max-w-xs"
+                                onClick={handlePwaInstall}
+                                disabled={!deferredPrompt}
+                              >
+                                {platform.download.label}
+                              </Button>
+                              {!deferredPrompt && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  앱이 이미 설치되었거나, 브라우저 메뉴를 통해 직접 설치할 수 있습니다.
+                                </p>
+                              )}
+                            </>
+                          )
+                        ) : ['Windows', 'macOS', 'Linux'].includes(
+                            platform.id,
+                          ) ? (
                           <div className="w-full max-w-xs">
                             <FeatureUnderConstruction
                               featureName={`${platform.label} 앱`}
@@ -269,21 +308,11 @@ export const DownloadPage: React.FC = () => {
                           <Button
                             size="lg"
                             className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 w-full max-w-xs"
-                            onClick={
-                              platform.id === 'PWA'
-                                ? handlePwaInstall
-                                : undefined
-                            }
-                            asChild={platform.id !== 'PWA'}
-                            disabled={platform.id === 'PWA' && !deferredPrompt}
+                            asChild
                           >
-                            {platform.id === 'PWA' ? (
-                              <span>{platform.download.label}</span>
-                            ) : (
-                              <a href={platform.download.link}>
-                                {platform.download.label}
-                              </a>
-                            )}
+                            <a href={platform.download.link}>
+                              {platform.download.label}
+                            </a>
                           </Button>
                         )}
                       </div>

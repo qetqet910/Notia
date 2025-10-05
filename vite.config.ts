@@ -55,17 +55,17 @@ export default defineConfig({
         ],
         icons: [
           {
-            src: '/icons/pwa-192x192.png',
+            src: '/favicon/pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/icons/pwa-512x512.png',
+            src: '/favicon/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: '/icons/pwa-512x512.png',
+            src: '/favicon/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
