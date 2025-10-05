@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Bell,
-  Trash2,
-  Download,
-  Upload,
-  Palette,
-  LogOut,
-  Goal,
-  Save,
-  Loader2,
-  Send,
-} from 'lucide-react';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Download from 'lucide-react/dist/esm/icons/download';
+import Upload from 'lucide-react/dist/esm/icons/upload';
+import Palette from 'lucide-react/dist/esm/icons/palette';
+import LogOut from 'lucide-react/dist/esm/icons/log-out';
+import Goal from 'lucide-react/dist/esm/icons/goal';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Send from 'lucide-react/dist/esm/icons/send';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/authStore';

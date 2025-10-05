@@ -1,13 +1,11 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  FileText,
-  Bell,
-  Calendar,
-  Tag,
-  TrendingUp,
-  CheckCircle,
-} from 'lucide-react';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Tag from 'lucide-react/dist/esm/icons/tag';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
 import { useNotes } from '@/hooks/useNotes';
 import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';

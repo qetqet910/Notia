@@ -22,18 +22,16 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { MarkdownPreviewLoader } from '@/components/loader/dashboard/MarkdownPreviewLoader';
-import {
-  Trash2,
-  Save,
-  Calendar,
-  Tag,
-  Clock,
-  HelpCircle,
-  Edit3,
-  Eye,
-  X,
-  ArrowLeft,
-} from 'lucide-react';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Tag from 'lucide-react/dist/esm/icons/tag';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
+import Edit3 from 'lucide-react/dist/esm/icons/edit-3';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import X from 'lucide-react/dist/esm/icons/x';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import {
   Popover,
   PopoverContent,

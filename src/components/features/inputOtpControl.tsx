@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/input-otp';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/useToast';
-import { Loader2 } from 'lucide-react';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
 export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = useState('');

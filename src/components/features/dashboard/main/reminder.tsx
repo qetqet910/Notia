@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isSameDay, addDays, startOfDay, subDays } from 'date-fns';
-import {
-  Bell,
-  Calendar,
-  CalendarClock,
-  CheckCircle2,
-  Clock,
-  Trash2,
-  AlertCircle,
-} from 'lucide-react';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import CalendarClock from 'lucide-react/dist/esm/icons/calendar-clock';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

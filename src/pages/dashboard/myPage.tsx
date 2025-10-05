@@ -6,7 +6,9 @@ import { ProfileTab } from '@/components/features/dashboard/myPage/ProfileTab';
 import { ActivityTab } from '@/components/features/dashboard/myPage/ActivityTab';
 import { SettingsTab } from '@/components/features/dashboard/myPage/SettingsTab';
 import { useThemeStore } from '@/stores/themeStore';
-import { User, BarChart3, Settings } from 'lucide-react';
+import User from 'lucide-react/dist/esm/icons/user';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
+import Settings from 'lucide-react/dist/esm/icons/settings';
 
 const TABS = [
   { id: 'profile', label: '프로필', icon: <User /> },

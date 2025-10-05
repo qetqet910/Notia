@@ -1,12 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-  FileText,
-  Clock,
-  Calendar,
-  Tag,
-  ChevronDown,
-  ChevronRight,
-} from 'lucide-react';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Tag from 'lucide-react/dist/esm/icons/tag';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Note, Reminder } from '@/types';

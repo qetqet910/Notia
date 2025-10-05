@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNotes } from '@/hooks/useNotes';
 import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';
-import { Target, CheckCircle } from 'lucide-react';
+import Target from 'lucide-react/dist/esm/icons/target';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 
 export const GoalProgress = () => {
   const { goalStats } = useNotes();

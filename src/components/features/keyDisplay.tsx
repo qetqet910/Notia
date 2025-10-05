@@ -1,7 +1,9 @@
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Key, Copy, Check } from 'lucide-react';
+import Key from 'lucide-react/dist/esm/icons/key';
+import Copy from 'lucide-react/dist/esm/icons/copy';
+import Check from 'lucide-react/dist/esm/icons/check';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 

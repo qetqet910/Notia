@@ -1,7 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users, Settings } from 'lucide-react';
+import PlusCircle from 'lucide-react/dist/esm/icons/plus-circle';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Settings from 'lucide-react/dist/esm/icons/settings';
 import { Team } from '@/types';
 
 interface TeamSpaceListProps {

@@ -46,7 +46,7 @@ export default defineConfig({
         display: 'standalone',
         screenshots: [
           {
-            src: '/og-image.png',
+            src: '/og-image.webp',
             sizes: '1280x640',
             type: 'image/png',
             form_factor: 'wide',

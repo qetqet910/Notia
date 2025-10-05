@@ -1,5 +1,8 @@
 import * as React from 'react';
-import { Laptop, Moon, MoonStar, Sun } from 'lucide-react';
+import Laptop from 'lucide-react/dist/esm/icons/laptop';
+import Moon from 'lucide-react/dist/esm/icons/moon';
+import MoonStar from 'lucide-react/dist/esm/icons/moon-star';
+import Sun from 'lucide-react/dist/esm/icons/sun';
 
 import { cn } from '@/utils/shadcnUtils';
 import {

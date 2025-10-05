@@ -1,12 +1,10 @@
 import React from 'react';
-import {
-  Feather,
-  Hash,
-  AtSign,
-  PenSquare,
-  Users,
-  BrainCircuit,
-} from 'lucide-react';
+import Hash from 'lucide-react/dist/esm/icons/hash';
+import AtSign from 'lucide-react/dist/esm/icons/at-sign';
+import PenSquare from 'lucide-react/dist/esm/icons/pen-square';
+import Users from 'lucide-react/dist/esm/icons/users';
+import BrainCircuit from 'lucide-react/dist/esm/icons/brain-circuit';
+import Feather from 'lucide-react/dist/esm/icons/feather';
 import { cubicBezier } from 'framer-motion';
 
 export const features = [

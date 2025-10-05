@@ -28,19 +28,17 @@ import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
-import {
-  PlusCircle,
-  Calendar as CalendarIcon,
-  Clock,
-  List,
-  Menu,
-  User,
-  Activity,
-  Settings,
-  Monitor,
-  LogOut,
-  Loader2,
-} from 'lucide-react';
+import PlusCircle from 'lucide-react/dist/esm/icons/plus-circle';
+import CalendarIcon from 'lucide-react/dist/esm/icons/calendar';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import List from 'lucide-react/dist/esm/icons/list';
+import Menu from 'lucide-react/dist/esm/icons/menu';
+import User from 'lucide-react/dist/esm/icons/user';
+import Activity from 'lucide-react/dist/esm/icons/activity';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Monitor from 'lucide-react/dist/esm/icons/monitor';
+import LogOut from 'lucide-react/dist/esm/icons/log-out';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';

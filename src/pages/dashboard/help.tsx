@@ -11,27 +11,25 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Search,
-  Keyboard,
-  FileText,
-  Info,
-  Tag,
-  Bell,
-  Users,
-  Calendar,
-  History,
-  Lightbulb,
-  Zap,
-  Star,
-  Clock,
-  Hash,
-  HelpCircle,
-  Heart,
-  DatabaseBackup,
-  BellRing,
-  SkipForward,
-} from 'lucide-react';
+import Search from 'lucide-react/dist/esm/icons/search';
+import Keyboard from 'lucide-react/dist/esm/icons/keyboard';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Info from 'lucide-react/dist/esm/icons/info';
+import Tag from 'lucide-react/dist/esm/icons/tag';
+import Bell from 'lucide-react/dist/esm/icons/bell';
+import Users from 'lucide-react/dist/esm/icons/users';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import History from 'lucide-react/dist/esm/icons/history';
+import Lightbulb from 'lucide-react/dist/esm/icons/lightbulb';
+import Zap from 'lucide-react/dist/esm/icons/zap';
+import Star from 'lucide-react/dist/esm/icons/star';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import Hash from 'lucide-react/dist/esm/icons/hash';
+import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
+import Heart from 'lucide-react/dist/esm/icons/heart';
+import DatabaseBackup from 'lucide-react/dist/esm/icons/database-backup';
+import BellRing from 'lucide-react/dist/esm/icons/bell-ring';
+import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
 import { useThemeStore } from '@/stores/themeStore';
 
 // Content from user's original file

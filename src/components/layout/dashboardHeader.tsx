@@ -6,7 +6,7 @@ import { useThemeStore } from '@/stores/themeStore';
 
 import { UserProfile } from '@/components/features/dashboard/userProfile';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
 

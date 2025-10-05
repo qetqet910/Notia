@@ -1,11 +1,9 @@
-import {
-  User,
-  Settings,
-  LogOut,
-  Loader2,
-  Monitor,
-  Activity,
-} from 'lucide-react';
+import User from 'lucide-react/dist/esm/icons/user';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import LogOut from 'lucide-react/dist/esm/icons/log-out';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Monitor from 'lucide-react/dist/esm/icons/monitor';
+import Activity from 'lucide-react/dist/esm/icons/activity';
 import { useAuthStore } from '@/stores/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';

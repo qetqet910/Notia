@@ -14,7 +14,10 @@ import {
   subMonths,
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Clock, FileText } from 'lucide-react';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {

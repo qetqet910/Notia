@@ -16,21 +16,19 @@ import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/services/supabaseClient';
 import { useNotes } from '@/hooks/useNotes';
-import {
-  User,
-  Settings,
-  BarChart3,
-  Save,
-  Camera,
-  Award,
-  TrendingUp,
-  CheckCircle,
-  Flame,
-  Trophy,
-  Loader2,
-  FileText,
-  Bell,
-} from 'lucide-react';
+import User from 'lucide-react/dist/esm/icons/user';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
+import Save from 'lucide-react/dist/esm/icons/save';
+import Camera from 'lucide-react/dist/esm/icons/camera';
+import Award from 'lucide-react/dist/esm/icons/award';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import Flame from 'lucide-react/dist/esm/icons/flame';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Bell from 'lucide-react/dist/esm/icons/bell';
 import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
 import { Achievement, UserProfile, Note, Reminder } from '@/types/index';
 

@@ -15,7 +15,7 @@ import {
 import { MarkdownPreview } from '@/components/features/dashboard/MarkdownPreview';
 import { termsOfService, privacyPolicy } from '@/constants/terms';
 import { useToast } from '@/hooks/useToast';
-import { Expand } from 'lucide-react';
+import Expand from 'lucide-react/dist/esm/icons/expand';
 import { motion } from 'framer-motion';
 
 // 약관 내용을 표시하고 확대하는 재사용 가능한 컴포넌트

@@ -1,5 +1,5 @@
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle } from 'lucide-react';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
 
 interface FeatureUnderConstructionProps {
   featureName: string;
