@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export const EditorLoader = () => {
   return (
-    <div className="p-6 space-y-8 animate-pulse">
+    <div className="p-6 space-y-8 animate-pulse bg-background md:bg-transparent h-full">
       {/* 상단 버튼 스켈레톤 */}
       <div className="flex justify-end gap-2">
         <Skeleton className="h-9 w-20 rounded-md" />

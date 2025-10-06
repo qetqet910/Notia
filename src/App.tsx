@@ -1,10 +1,9 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
+  createBrowserRouter,
+  RouterProvider,
   useLocation,
+  Outlet,
 } from 'react-router-dom';
 import { LandingPageLoader } from '@/components/loader/landing/LandingPageLoader';
 import { ChangelogPageLoader } from '@/components/loader/landing/ChangelogPageLoader';
@@ -49,14 +48,113 @@ const ScrollToTop = () => {
   return null;
 };
 
+const AppLayout = () => {
+  return (
+    <ThemeProvider>
+      <ScrollToTop />
+      <Outlet />
+    </ThemeProvider>
+  );
+};
+
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      {
+        path: '/',
+        element: (
+          <Suspense fallback={<LandingPageLoader />}>
+            <Home />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/login',
+        element: (
+          <Suspense fallback={<LoginPageLoader />}>
+            <Login />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/terms-agreement',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<TermsPageLoader />}>
+              <TermsAgreement />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/download',
+        element: (
+          <Suspense fallback={<DownloadPageLoader />}>
+            <DownloadPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/auth/callback',
+        element: <AuthCallback />,
+      },
+      {
+        path: '/changelog',
+        element: (
+          <Suspense fallback={<ChangelogPageLoader />}>
+            <ChangelogPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/dashboard',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<DashboardPageLoader />}>
+              <Dashboard />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/dashboard/myPage',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<DashboardPageLoader />}>
+              <MyPage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/dashboard/help',
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<DashboardPageLoader />}>
+              <HelpPage />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '*',
+        element: (
+          <Suspense fallback={<NotFoundPageLoader />}>
+            <NotFound />
+          </Suspense>
+        ),
+      },
+    ],
+  },
+]);
+
 function App() {
   const { setDeferredPrompt } = usePwaStore();
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
     };
 
@@ -70,101 +168,7 @@ function App() {
     };
   }, [setDeferredPrompt]);
 
-  return (
-    <Router>
-      <ScrollToTop />
-      <ThemeProvider>
-        <Routes>
-          {/* 공개 라우트 */}
-          <Route
-            path="/"
-            element={
-              <Suspense fallback={<LandingPageLoader />}>
-                <Home />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <Suspense fallback={<LoginPageLoader />}>
-                <Login />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/terms-agreement"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<TermsPageLoader />}>
-                  <TermsAgreement />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/download"
-            element={
-              <Suspense fallback={<DownloadPageLoader />}>
-                <DownloadPage />
-              </Suspense>
-            }
-          />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route
-            path="/changelog"
-            element={
-              <Suspense fallback={<ChangelogPageLoader />}>
-                <ChangelogPage />
-              </Suspense>
-            }
-          />
-
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<DashboardPageLoader />}>
-                  <Dashboard />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/myPage"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<DashboardPageLoader />}>
-                  <MyPage />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/help"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<DashboardPageLoader />}>
-                  <HelpPage />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* 404 및 리디렉션 */}
-          <Route
-            path="/404"
-            element={
-              <Suspense fallback={<NotFoundPageLoader />}>
-                <NotFound />
-              </Suspense>
-            }
-          />
-          <Route path="*" element={<Navigate to="/404" replace />} />
-        </Routes>
-      </ThemeProvider>
-    </Router>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

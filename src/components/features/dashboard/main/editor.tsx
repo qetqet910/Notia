@@ -279,7 +279,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         <div className="flex justify-between items-center p-4 border-b border-border">
           <div className="flex items-center">
             <h2 className="flex items-center h-full text-lg font-semibold">
-              {onBack && (
+              {onBack && !isEditing && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -565,7 +565,7 @@ const EditingPanel = ({
 @1시간 코드 리뷰 완료하기.
 @10시 양치질하기.
 @2025-05-25 프로젝트 마감."
-        className="w-full flex-1 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-sm font-mono custom-scrollbar p-2"
+        className="w-full flex-1 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent text-base sm:text-sm font-mono custom-scrollbar p-2"
       />
     </div>
   </div>

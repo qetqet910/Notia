@@ -7,7 +7,7 @@ import React, {
   Suspense,
   lazy,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useBlocker } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -143,10 +143,23 @@ export const Dashboard: React.FC = () => {
   const [isNoteContentLoading, setIsNoteContentLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const editorRef = useRef<{ save: () => void } | null>(null);
   const newlyCreatedNoteId = useRef<string | null>(null);
+
+  const blocker = useBlocker(isEditing);
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      if (hasUnsavedChanges) {
+        setIsCancelDialogOpen(true);
+      } else {
+        blocker.proceed();
+      }
+    }
+  }, [blocker, hasUnsavedChanges]);
 
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const activeTabs = useMemo(
@@ -340,6 +353,27 @@ export const Dashboard: React.FC = () => {
     [isDarkMode, isDeepDarkMode],
   );
 
+  const popularTags = useMemo(() => {
+    if (!notes || !Array.isArray(notes)) return [];
+    const tagCount: Record<string, number> = {};
+    notes
+      .filter((note) => note && typeof note === 'object')
+      .forEach((note) => {
+        const tags = note.tags;
+        if (tags && Array.isArray(tags)) {
+          tags
+            .filter((tag) => typeof tag === 'string')
+            .forEach((tag) => {
+              tagCount[tag] = (tagCount[tag] || 0) + 1;
+            });
+        }
+      });
+    return Object.entries(tagCount)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [notes]);
+
   if (isNotesLoading) return <DashboardPageLoader />;
 
   const renderMainContent = () => {
@@ -426,10 +460,44 @@ export const Dashboard: React.FC = () => {
           </AlertDialog>
         );
 
+        const cancelDialog = (
+          <AlertDialog
+            open={isCancelDialogOpen}
+            onOpenChange={setIsCancelDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>변경사항이 저장되지 않았습니다</AlertDialogTitle>
+                <AlertDialogDescription>
+                  편집을 취소하시겠습니까? 저장하지 않은 내용은 사라집니다.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => {
+                    blocker.reset?.();
+                  }}
+                >
+                  취소
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    handleCancelEdit();
+                    blocker.proceed?.();
+                  }}
+                >
+                  나가기
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        );
+
         if (isEditing) {
           return (
             <>
               {deleteDialog}
+              {cancelDialog}
               <div className="h-full">{editorContent}</div>
             </>
           );
@@ -438,6 +506,7 @@ export const Dashboard: React.FC = () => {
         return (
           <>
             {deleteDialog}
+            {cancelDialog}
             {/* Desktop layout */}
             <div className="hidden md:flex h-full">
               <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -567,6 +636,11 @@ export const Dashboard: React.FC = () => {
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 handleCreateNote={handleCreateNote}
+                popularTags={popularTags}
+                onTagSelect={(tag) => {
+                  setActiveTab('notes');
+                  setSelectedTag(tag);
+                }}
               />
             </div>
             <div className="hidden md:block">
@@ -585,6 +659,7 @@ export const Dashboard: React.FC = () => {
               setActiveTab={setActiveTab}
               onTagSelect={setSelectedTag}
               isEditing={isEditing}
+              popularTags={popularTags}
             />
           </div>
           <main className="flex-1 overflow-auto no-scrollbar">
@@ -600,34 +675,14 @@ const Sidebar = ({
   setActiveTab,
   onTagSelect,
   isEditing,
+  popularTags,
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onTagSelect: (tag: string) => void;
   isEditing: boolean;
+  popularTags: { tag: string; count: number }[];
 }) => {
-  const { notes } = useNotes();
-  const popularTags = useMemo(() => {
-    if (!notes || !Array.isArray(notes)) return [];
-    const tagCount: Record<string, number> = {};
-    notes
-      .filter((note) => note && typeof note === 'object')
-      .forEach((note) => {
-        const tags = note.tags;
-        if (tags && Array.isArray(tags)) {
-          tags
-            .filter((tag) => typeof tag === 'string')
-            .forEach((tag) => {
-              tagCount[tag] = (tagCount[tag] || 0) + 1;
-            });
-        }
-      });
-    return Object.entries(tagCount)
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [notes]);
-
   return (
     <aside
       className={`border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col h-full ${
@@ -687,10 +742,14 @@ const MobileNavigation = ({
   activeTab,
   setActiveTab,
   handleCreateNote,
+  popularTags,
+  onTagSelect,
 }: {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   handleCreateNote: () => void;
+  popularTags: { tag: string; count: number }[];
+  onTagSelect: (tag: string) => void;
 }) => {
   const navigate = useNavigate();
   const { userProfile, user, signOut, isLogoutLoading } = useAuthStore();
@@ -742,6 +801,15 @@ const MobileNavigation = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <Button
+        variant="ghost"
+        onClick={() => {
+          handleCreateNote();
+          setIsOpen(false);
+        }}
+      >
+        <PlusCircle />
+      </Button>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
           <Menu className="h-5 w-5" />
@@ -756,87 +824,124 @@ const MobileNavigation = ({
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col h-full">
-          <div className="p-4 border-b">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={avatarUrl} alt={displayName} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="font-semibold">{displayName}</span>
-                <span className="text-sm text-muted-foreground">
-                  {displayEmail}
-                </span>
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 border-b">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={avatarUrl} alt={displayName} />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <span className="font-semibold">{displayName}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {displayEmail}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="p-4 flex-1">
-            <Button
-              variant="outline"
-              className="w-full justify-start mb-4"
-              onClick={() => {
-                handleCreateNote();
-                setIsOpen(false);
-              }}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />새 노트
-            </Button>
-            <nav className="flex flex-col gap-1">
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Button
-                    key={item.id}
-                    variant={activeTab === item.id ? 'secondary' : 'ghost'}
-                    className="w-full justify-start"
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      setIsOpen(false);
-                    }}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    {item.label}
-                  </Button>
-                );
-              })}
-            </nav>
-            <Separator className="my-4" />
-            <nav className="flex flex-col gap-1">
+            <div className="p-4">
               <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/dashboard/myPage?tab=profile')}
+                variant="outline"
+                className="w-full justify-start mb-4"
+                onClick={() => {
+                  handleCreateNote();
+                  setIsOpen(false);
+                }}
               >
-                <User className="mr-2 h-4 w-4" />
-                마이페이지
+                <PlusCircle className="mr-2 h-4 w-4" />새 노트
               </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/dashboard/myPage?tab=activity')}
-              >
-                <Activity className="mr-2 h-4 w-4" />
-                활동
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/dashboard/myPage?tab=settings')}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                설정
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleNavigation('/dashboard/help')}
-              >
-                <Monitor className="mr-2 h-4 w-4" />
-                도움말
-              </Button>
-            </nav>
+              <nav className="flex flex-col gap-1">
+                {NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Button
+                      key={item.id}
+                      variant={activeTab === item.id ? 'secondary' : 'ghost'}
+                      className="w-full justify-start"
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <Icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  );
+                })}
+              </nav>
+              <Separator className="my-4" />
+              <nav className="flex flex-col gap-1">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() =>
+                    handleNavigation('/dashboard/myPage?tab=profile')
+                  }
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  마이페이지
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() =>
+                    handleNavigation('/dashboard/myPage?tab=activity')
+                  }
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  활동
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() =>
+                    handleNavigation('/dashboard/myPage?tab=settings')
+                  }
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  설정
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => handleNavigation('/dashboard/help')}
+                >
+                  <Monitor className="mr-2 h-4 w-4" />
+                  도움말
+                </Button>
+              </nav>
+            </div>
           </div>
           <div className="p-4 border-t">
+            {popularTags.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                  인기 태그
+                </h3>
+                <div className="flex flex-col gap-1">
+                  {popularTags.map(({ tag, count }) => (
+                    <Button
+                      key={tag}
+                      variant="ghost"
+                      size="sm"
+                      className="justify-between text-xs"
+                      onClick={() => {
+                        onTagSelect(tag);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <span>#{tag}</span>
+                      <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
+                        {count}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mb-4">
+              <GoalProgress />
+            </div>
             <Button
               variant="ghost"
               className="w-full justify-start"
