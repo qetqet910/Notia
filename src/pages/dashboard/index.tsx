@@ -467,7 +467,9 @@ export const Dashboard: React.FC = () => {
           >
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>변경사항이 저장되지 않았습니다</AlertDialogTitle>
+                <AlertDialogTitle>
+                  변경사항이 저장되지 않았습니다
+                </AlertDialogTitle>
                 <AlertDialogDescription>
                   편집을 취소하시겠습니까? 저장하지 않은 내용은 사라집니다.
                 </AlertDialogDescription>
