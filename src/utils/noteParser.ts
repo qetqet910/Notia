@@ -60,34 +60,37 @@ const parseTimeExpression = (
     );
   }
 
-  // 3. 오늘, 내일, 모레 [HH:mm] 형식
+  // 3. 오늘, 내일, 모레, 글피 등 [HH:mm] 형식
   match = timeStr.match(
-    /(오늘|내일|모레)(?:\s*(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?)?/
+    /(오늘|금일|내일|명일|모레|글피)(?:\s*(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?)?/
   );
   if (match) {
     const [, dayWord, ampm, hourStr, minStr] = match;
     const result = new Date(now); // Use new Date(now)
     result.setSeconds(0, 0);
 
-    if (dayWord === '내일') result.setDate(result.getDate() + 1);
+    if (dayWord === '내일' || dayWord === '명일') result.setDate(result.getDate() + 1);
     if (dayWord === '모레') result.setDate(result.getDate() + 2);
+    if (dayWord === '글피') result.setDate(result.getDate() + 3);
 
     let hour = hourStr ? parseInt(hourStr, 10) : 9;
     const minute = minStr ? parseInt(minStr, 10) : 0;
 
     if (ampm) {
       if (ampm === '오전' && hour === 12) hour = 0;
-      if (ampm === '오후' && hour !== 12) hour += 12;
+      if (ampm === '오후' && hour < 12) hour += 12;
     } else if (hourStr) {
-      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
-        if (hour !== 12) {
-          hour += 12;
-        }
+      if (hour < 12) {
+        hour += 12;
       }
     }
 
     result.setHours(hour, minute);
-    return dayWord === '오늘' ? adjustForPastTime(result) : result;
+    // '오늘' 또는 '금일'이면서 과거 시간일 경우에만 다음 날로 조정
+    if (['오늘', '금일'].includes(dayWord)) {
+      return adjustForPastTime(result);
+    }
+    return result;
   }
 
   // 4. 시간만 명시
@@ -99,13 +102,12 @@ const parseTimeExpression = (
     let hour = parseInt(hourStr, 10);
     const minute = minStr ? parseInt(minStr, 10) : 0;
 
-    if (!ampm) {
-      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
-        if (hour !== 12) hour += 12;
-      }
-    } else {
-      if (ampm === '오전' && hour === 12) hour = 0;
-      if (ampm === '오후' && hour !== 12) hour += 12;
+    if (ampm === '오전' && hour === 12) {
+      hour = 0;
+    } else if (ampm === '오후' && hour < 12) {
+      hour += 12;
+    } else if (!ampm && hour < 12) {
+      hour += 12;
     }
 
     const result = new Date(now); // Use new Date(now)
@@ -149,8 +151,12 @@ export const parseNoteContent = (
   }));
 
   // 2. 리마인더 파싱
-  const reminderRegex = /@([^@#\n]+?)\./g;
+  // 마침표(.), 줄바꿈(\n), 또는 문자열의 끝($)에서 리마인더를 인식하도록 정규식 수정
+  const reminderRegex = /@([^@#\n]+?)(?:\.|\n|$)/g;
   while ((match = reminderRegex.exec(content)) !== null) {
+    // 빈 캡처 그룹(예: 문자열 끝의 빈 줄)은 건너뜁니다.
+    if (!match[1]) continue;
+
     const fullText = match[1].trim();
     const originalText = match[0];
     let timeText = '';

@@ -2,169 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
 import type { User, Session } from '@supabase/supabase-js';
-import type { UserProfile, EditorReminder } from '@/types';
+import type { UserProfile } from '@/types';
 import { formatKey } from '@/utils/keyValidation';
 import { checkCreationLimit } from '@/utils/kegisterValidation';
 import { guideNoteContent } from '@/constants/basicNote';
-import { useDataStore } from './dataStore';
-
-// --- Note Parser Logic (from useNoteParser.ts) ---
-
-const parseTimeExpression = (timeText: string): Date | undefined => {
-  const now = new Date();
-  const timeStr = timeText.trim().toLowerCase();
-
-  const adjustForPastTime = (result: Date): Date => {
-    if (result <= now) {
-      result.setDate(result.getDate() + 1);
-    }
-    return result;
-  };
-
-  let match = timeStr.match(/^(\d+)\s*(시간|분)$/);
-  if (match) {
-    const amount = parseInt(match[1], 10);
-    const unit = match[2];
-    const result = new Date();
-    if (unit === '시간') {
-      result.setHours(result.getHours() + amount);
-    } else {
-      result.setMinutes(result.getMinutes() + amount);
-    }
-    return result;
-  }
-
-  match = timeStr.match(
-    /(\d{4})-(\d{1,2})-(\d{1,2})(?:\s*(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?)?/,
-  );
-  if (match) {
-    const [, year, month, day, ampm, hourStr, minStr] = match;
-    let hour = hourStr ? parseInt(hourStr, 10) : 9;
-    const minute = minStr ? parseInt(minStr, 10) : 0;
-    if (ampm === '오전' && hour === 12) hour = 0;
-    if (ampm === '오후' && hour !== 12) hour += 12;
-    return new Date(
-      parseInt(year, 10),
-      parseInt(month, 10) - 1,
-      parseInt(day, 10),
-      hour,
-      minute,
-    );
-  }
-
-  match = timeStr.match(
-    /(오늘|내일|모레)(?:\s*(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?)?/,
-  );
-  if (match) {
-    const [, dayWord, ampm, hourStr, minStr] = match;
-    const result = new Date();
-    result.setSeconds(0, 0);
-
-    if (dayWord === '내일') result.setDate(result.getDate() + 1);
-    if (dayWord === '모레') result.setDate(result.getDate() + 2);
-
-    let hour = hourStr ? parseInt(hourStr, 10) : 9;
-    const minute = minStr ? parseInt(minStr, 10) : 0;
-
-    if (ampm) {
-      if (ampm === '오전' && hour === 12) hour = 0;
-      if (ampm === '오후' && hour !== 12) hour += 12;
-    } else if (hourStr) {
-      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
-        if (hour !== 12) {
-          hour += 12;
-        }
-      }
-    }
-
-    result.setHours(hour, minute);
-    return dayWord === '오늘' ? adjustForPastTime(result) : result;
-  }
-
-  match = timeStr.match(/(오전|오후)?\s*(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
-  if (match) {
-    const [, ampm, hourStr, minStr] = match;
-    if (!hourStr) return undefined;
-
-    let hour = parseInt(hourStr, 10);
-    const minute = minStr ? parseInt(minStr, 10) : 0;
-
-    if (!ampm) {
-      if (!(hourStr.startsWith('0') && hourStr.length === 2)) {
-        if (hour !== 12) hour += 12;
-      }
-    } else {
-      if (ampm === '오전' && hour === 12) hour = 0;
-      if (ampm === '오후' && hour !== 12) hour += 12;
-    }
-
-    const result = new Date();
-    result.setHours(hour, minute, 0, 0);
-    return adjustForPastTime(result);
-  }
-
-  match = timeStr.match(/^(\d{1,2})-(\d{1,2})$/);
-  if (match) {
-    const now = new Date();
-    const month = parseInt(match[1], 10) - 1;
-    const day = parseInt(match[2], 10);
-    return new Date(now.getFullYear(), month, day, 9, 0, 0, 0);
-  }
-
-  return undefined;
-};
-
-const parseNoteContent = (content: string) => {
-  const hashtagRegex = /#([^\s#@]+)/g;
-  const uniqueTags = new Set<string>();
-  let match;
-
-  while ((match = hashtagRegex.exec(content)) !== null) {
-    uniqueTags.add(match[1]);
-  }
-  const tags = Array.from(uniqueTags);
-
-  const reminders: Omit<EditorReminder, 'id'>[] = [];
-  const reminderRegex = /@([^@#\n]+?)\./g;
-  while ((match = reminderRegex.exec(content)) !== null) {
-    const fullText = match[1].trim();
-    let timeText = '';
-    let reminderText = '';
-
-    const timePatterns = [
-      /^(\d{4}-\d{1,2}-\d{1,2}(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
-      /^((?:오늘|내일|모레)(?:\s*(?:오전|오후)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)?)/,
-      /^((?:오전|오후)\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-      /^(\d+\s*(?:시간|분))/,
-      /^(\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?)/,
-      /^(\d{1,2}-\d{1,2})/,
-    ];
-
-    for (const pattern of timePatterns) {
-      const timeMatch = fullText.match(pattern);
-      if (timeMatch) {
-        timeText = timeMatch[1].trim();
-        reminderText = fullText.substring(timeMatch[0].length).trim();
-        break;
-      }
-    }
-
-    if (timeText && reminderText) {
-      const parsedDate = parseTimeExpression(timeText);
-      if (parsedDate) {
-        reminders.push({
-          text: reminderText,
-          original_text: match[0],
-          date: parsedDate,
-          completed: false,
-          enabled: true,
-        });
-      }
-    }
-  }
-
-  return { tags, reminders };
-};
+import { useDataStore } from '@/stores/dataStore';
+import { parseNoteContent } from '@/utils/noteParser'; // 올바른 파서 import
 
 // --- Zustand Store ---
 
@@ -372,7 +215,10 @@ export const useAuthStore = create<AuthStore>()(
             });
 
           if (keyCheckError || !keyCheckData?.success) {
-            throw new Error(keyCheckData?.error || '유효하지 않은 키입니다.');
+            return {
+              success: false,
+              message: keyCheckData?.error || '유효하지 않은 키입니다.',
+            };
           }
 
           if (keyCheckData.email) {
@@ -381,8 +227,12 @@ export const useAuthStore = create<AuthStore>()(
               password: cleanKey,
             });
 
-            if (error)
-              throw new Error('유효하지 않은 키입니다. 다시 확인해 주세요.');
+            if (error) {
+              return {
+                success: false,
+                message: '유효하지 않은 키입니다. 다시 확인해 주세요.',
+              };
+            }
 
             if (data.user) {
               set({
@@ -397,18 +247,21 @@ export const useAuthStore = create<AuthStore>()(
             }
           }
 
-          throw new Error(
-            '로그인에 실패했습니다. 키와 연결된 이메일을 찾을 수 없습니다.',
-          );
-        } catch (error) {
-          console.error('로그인 중 오류 발생:', error);
-          set({ error: error as Error });
           return {
             success: false,
             message:
-              error instanceof Error
-                ? error.message
-                : '로그인 중 오류가 발생했습니다.',
+              '로그인에 실패했습니다. 키와 연결된 이메일을 찾을 수 없습니다.',
+          };
+        } catch (error) {
+          console.error('로그인 중 오류 발생:', error);
+          const message =
+            error instanceof Error
+              ? error.message
+              : '로그인 중 오류가 발생했습니다.';
+          set({ error: error as Error });
+          return {
+            success: false,
+            message,
             error: error as Error,
           };
         } finally {
@@ -462,7 +315,11 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const limitCheck = await get().checkCreationLimit(clientIP);
           if (!limitCheck.allowed) {
-            throw new Error(limitCheck.error);
+            return {
+              success: false,
+              error: limitCheck.error,
+              code: 'RATE_LIMITED',
+            };
           }
 
           const { data, error } = await supabase.functions.invoke(
@@ -473,12 +330,11 @@ export const useAuthStore = create<AuthStore>()(
           );
 
           if (error || !data?.success) {
-            const errorMessage =
-              data?.error || '익명 사용자 생성에 실패했습니다.';
-            const errorCode = data?.code || 'UNEXPECTED_ERROR';
-            const customError = new Error(errorMessage);
-            (customError as any).code = errorCode;
-            throw customError;
+            return {
+              success: false,
+              error: data?.error || '익명 사용자 생성에 실패했습니다.',
+              code: data?.code || 'UNEXPECTED_ERROR',
+            };
           }
 
           if (data.user) {
@@ -498,13 +354,17 @@ export const useAuthStore = create<AuthStore>()(
           };
         } catch (error) {
           console.error('익명 사용자 생성 중 오류:', error);
+          const code =
+            error && typeof error === 'object' && 'code' in error
+              ? String(error.code)
+              : 'UNEXPECTED_ERROR';
           return {
             success: false,
             error:
               error instanceof Error
                 ? error.message
                 : '알 수 없는 오류가 발생했습니다.',
-            code: (error as any)?.code || 'UNEXPECTED_ERROR',
+            code,
           };
         } finally {
           set({ isRegisterLoading: false });
@@ -520,7 +380,11 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const limitCheck = await get().checkCreationLimit(clientIP);
           if (!limitCheck.allowed) {
-            throw new Error(limitCheck.error);
+            return {
+              success: false,
+              error: limitCheck.error,
+              code: 'RATE_LIMITED',
+            };
           }
 
           const { data, error } = await supabase.functions.invoke(
@@ -535,12 +399,11 @@ export const useAuthStore = create<AuthStore>()(
           );
 
           if (error || !data?.success) {
-            const errorMessage =
-              data?.error || '이메일 사용자 생성에 실패했습니다.';
-            const errorCode = data?.code || 'UNEXPECTED_ERROR';
-            const customError = new Error(errorMessage);
-            (customError as any).code = errorCode;
-            throw customError;
+            return {
+              success: false,
+              error: data?.error || '이메일 사용자 생성에 실패했습니다.',
+              code: data?.code || 'UNEXPECTED_ERROR',
+            };
           }
 
           if (data.user) {
@@ -560,13 +423,17 @@ export const useAuthStore = create<AuthStore>()(
           };
         } catch (error) {
           console.error('이메일 사용자 생성 중 오류:', error);
+          const code =
+            error && typeof error === 'object' && 'code' in error
+              ? String(error.code)
+              : 'UNEXPECTED_ERROR';
           return {
             success: false,
             error:
               error instanceof Error
                 ? error.message
                 : '알 수 없는 오류가 발생했습니다.',
-            code: (error as any)?.code || 'UNEXPECTED_ERROR',
+            code,
           };
         } finally {
           set({ isRegisterLoading: false });
@@ -577,25 +444,42 @@ export const useAuthStore = create<AuthStore>()(
         set({ isTermsLoading: true });
         try {
           const { user, userProfile } = get();
-          if (!user || !userProfile) throw new Error('User not authenticated');
+          if (!user || !userProfile) {
+            return {
+              success: false,
+              error: new Error('User not authenticated'),
+            };
+          }
 
           const { error: termsError } = await supabase
             .from('users')
             .update({ terms_agreed: true })
             .eq('id', user.id);
 
-          if (termsError) throw termsError;
+          if (termsError) {
+            return { success: false, error: termsError };
+          }
 
           set({ userProfile: { ...userProfile, terms_agreed: true } });
 
+          // 중앙화된 파서 사용
           const { tags, reminders } = parseNoteContent(guideNoteContent);
+          const remindersToCreate = reminders
+            .filter((r) => r.parsedDate)
+            .map((r) => ({
+              text: r.reminderText!,
+              original_text: r.originalText,
+              date: r.parsedDate!,
+              completed: false,
+              enabled: true,
+            }));
 
           useDataStore.getState().createNote({
             owner_id: user.id,
             title: '🎉 NOTIA 에 오신 것을 환영합니다! 🎉',
             content: guideNoteContent,
-            tags: tags,
-            reminders: reminders,
+            tags: tags.map((t) => t.text),
+            reminders: remindersToCreate,
           });
 
           return { success: true };

@@ -113,13 +113,11 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const navigate = useNavigate();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    useEffect(() => {
-      setTitle(note.title);
-      setContent(note.content);
+    const resetStateFromNote = useCallback((noteToReset: Note) => {
+      setTitle(noteToReset.title);
+      setContent(noteToReset.content);
 
-      const existingEditorReminders: EditorReminder[] = (
-        note.reminders || []
-      ).map((r: Reminder) => ({
+      const existingEditorReminders: EditorReminder[] = (noteToReset.reminders || []).map((r: Reminder) => ({
         id: r.id,
         text: r.reminder_text,
         date: new Date(r.reminder_time),
@@ -128,16 +126,16 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         original_text: r.original_text,
       }));
 
-      const { tags: initialTags, reminders: initialReminders } =
-        parseNoteContent(note.content, new Date(), existingEditorReminders);
+      const { tags: initialTags, reminders: initialReminders } = parseNoteContent(
+        noteToReset.content,
+        new Date(),
+        existingEditorReminders,
+      );
 
       setTags(initialTags.map((t) => t.text));
       setReminders(
         initialReminders
-          .filter(
-            (p) =>
-              p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
-          )
+          .filter((p) => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
           .map((parsed) => {
             const existing = existingEditorReminders.find(
               (er) => er.original_text === parsed.originalText,
@@ -152,37 +150,35 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
             };
           }),
       );
-    }, [note]);
+    }, []);
 
     useEffect(() => {
-      if (content === note.content && title === note.title) return;
+      resetStateFromNote(note);
+    }, [note, resetStateFromNote]);
 
-      const { tags: currentTags, reminders: currentRemindersRaw } =
-        parseNoteContent(content, new Date());
+    useEffect(() => {
+      // content가 변경될 때만 파싱을 다시 실행합니다.
+      const { tags: currentTags, reminders: currentRemindersRaw } = parseNoteContent(content, new Date());
 
       setTags(currentTags.map((t) => t.text));
 
       setReminders((prevReminders) => {
         return currentRemindersRaw
-          .filter(
-            (p) =>
-              p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
-          )
+          .filter((p) => p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()))
           .map((parsed) => {
-            const existing = prevReminders.find(
-              (r) => r.original_text === parsed.originalText,
-            );
+            const existing = prevReminders.find((r) => r.original_text === parsed.originalText);
+            // 날짜는 파싱된 최신 값을 사용하되, 기존 리마인더의 다른 속성은 유지합니다.
             return {
               id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
               text: parsed.reminderText!,
-              date: existing?.date || parsed.parsedDate!,
+              date: parsed.parsedDate!, // 항상 최신 파싱 날짜 사용
               completed: existing?.completed || false,
               enabled: existing?.enabled ?? true,
               original_text: parsed.originalText,
             };
           });
       });
-    }, [content, title, note.content, note.title]);
+    }, [content]);
 
     const handleSave = useCallback(() => {
       onSave(note.id, {
@@ -201,47 +197,9 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
     const handleCancel = useCallback(() => {
-      setTitle(note.title);
-      setContent(note.content);
-
-      const existingEditorReminders: EditorReminder[] = (
-        note.reminders || []
-      ).map((r: Reminder) => ({
-        id: r.id,
-        text: r.reminder_text,
-        date: new Date(r.reminder_time),
-        completed: r.completed,
-        enabled: r.enabled,
-        original_text: r.original_text,
-      }));
-
-      const { tags: initialTags, reminders: initialReminders } =
-        parseNoteContent(note.content, new Date(), existingEditorReminders);
-
-      setTags(initialTags.map((t) => t.text));
-      setReminders(
-        initialReminders
-          .filter(
-            (p) =>
-              p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
-          )
-          .map((parsed) => {
-            const existing = existingEditorReminders.find(
-              (er) => er.original_text === parsed.originalText,
-            );
-            return {
-              id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
-              text: parsed.reminderText!,
-              date: existing?.date || parsed.parsedDate!,
-              completed: existing?.completed || false,
-              enabled: existing?.enabled ?? true,
-              original_text: parsed.originalText,
-            };
-          }),
-      );
-
+      resetStateFromNote(note);
       onCancelEdit();
-    }, [note, onCancelEdit]);
+    }, [note, onCancelEdit, resetStateFromNote]);
 
     useEffect(() => {
       if (!isEditing) return;
@@ -446,7 +404,18 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 Editor.displayName = 'Editor';
 
 // Helper components to avoid repetition
-const EditingPanel = ({
+interface EditingPanelProps {
+  title: string;
+  setTitle: (title: string) => void;
+  onContentChange: () => void;
+  displayTags: { text: string }[];
+  displayReminders: { reminderText: string; parsedDate?: Date }[];
+  content: string;
+  setContent: (content: string) => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+}
+
+const EditingPanel: React.FC<EditingPanelProps> = ({
   title,
   setTitle,
   onContentChange,
@@ -455,7 +424,7 @@ const EditingPanel = ({
   content,
   setContent,
   textareaRef,
-}: any) => (
+}) => (
   <div className="h-full flex flex-col">
     {/* Title Input */}
     <div className="p-4 border-b border-border pl-6">
@@ -489,7 +458,7 @@ const EditingPanel = ({
               className="w-full"
             >
               <CarouselContent className="-ml-0">
-                {displayTags.map((tag: any, index: number) => (
+                {displayTags.map((tag, index) => (
                   <CarouselItem key={index} className="basis-auto pl-1 pr-1">
                     <Badge variant="secondary">#{tag.text}</Badge>
                   </CarouselItem>
@@ -513,7 +482,7 @@ const EditingPanel = ({
               className="w-full"
             >
               <CarouselContent className="-ml-0">
-                {displayReminders.map((reminder: any, index: number) => (
+                {displayReminders.map((reminder, index) => (
                   <CarouselItem key={index} className="basis-auto pl-1 pr-1">
                     <div className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-background rounded-lg border border-border min-w-fit">
                       <Clock className="h-4 w-4 text-blue-500" />
@@ -571,13 +540,21 @@ const EditingPanel = ({
   </div>
 );
 
-const PreviewPanel = ({
+interface PreviewPanelProps {
+  content: string;
+  isReadOnly?: boolean;
+  title?: string;
+  displayTags?: { text: string }[];
+  displayReminders?: { reminderText: string; parsedDate?: Date }[];
+}
+
+const PreviewPanel: React.FC<PreviewPanelProps> = ({
   content,
   isReadOnly = false,
   title,
   displayTags,
   displayReminders,
-}: any) => (
+}) => (
   <div className="h-full overflow-y-auto custom-scrollbar">
     {isReadOnly && (
       <>
@@ -607,7 +584,7 @@ const PreviewPanel = ({
                   className="w-full"
                 >
                   <CarouselContent className="-ml-0">
-                    {displayTags.map((tag: any, index: number) => (
+                    {displayTags.map((tag, index) => (
                       <CarouselItem key={index} className="basis-auto pl-1 pr-1">
                         <Badge variant="secondary">#{tag.text}</Badge>
                       </CarouselItem>
@@ -631,7 +608,7 @@ const PreviewPanel = ({
                   className="w-full"
                 >
                   <CarouselContent className="-ml-0">
-                    {displayReminders.map((reminder: any, index: number) => (
+                    {displayReminders.map((reminder, index) => (
                       <CarouselItem key={index} className="basis-auto pl-1 pr-1">
                         <div className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-background rounded-lg border border-border min-w-fit">
                           <Clock className="h-4 w-4 text-blue-500" />
