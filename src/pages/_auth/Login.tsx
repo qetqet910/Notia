@@ -19,6 +19,7 @@ import { KeyDisplay } from '@/components/features/keyDisplay';
 import { useToast } from '@/hooks/useToast';
 import { generateRandomKey, formatKey } from '@/utils/keyValidation';
 import { animations } from '@/constants/animations';
+import { ToastAction } from '@/components/ui/toast';
 
 import logoImage from '@/assets/images/Logo.png';
 import loginAnimation from '/lottie/loginAnimation.lottie';
@@ -289,7 +290,6 @@ const SignupForm = React.memo<{
             formattedKey={formattedKey}
             onCopy={() => copyToClipboard(formattedKey)}
             copied={copiedKey}
-            autoCopy
           />
         )}
       </div>
@@ -450,8 +450,16 @@ export const Login: React.FC = () => {
           });
           setShowKey(true);
           toast({
-            title: '키 생성 성공',
-            description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+            title: '키 생성 성공!',
+            description: '새로운 키가 생성되었습니다.',
+            action: (
+              <ToastAction
+                altText="복사"
+                onClick={() => copyToClipboard(formattedKeyValue)}
+              >
+                복사
+              </ToastAction>
+            ),
           });
         } else {
           let errorMessage = result.error || '알 수 없는 오류가 발생했습니다.';
@@ -530,8 +538,16 @@ export const Login: React.FC = () => {
         });
         setShowKey(true);
         toast({
-          title: '키 생성 성공',
-          description: '생성된 키를 복사하여 로그인 탭에서 사용하세요.',
+          title: '키 생성 성공!',
+          description: '새로운 키가 생성되었습니다.',
+          action: (
+            <ToastAction
+              altText="복사"
+              onClick={() => copyToClipboard(formattedKeyValue)}
+            >
+              복사
+            </ToastAction>
+          ),
         });
       } catch (err) {
         console.error('익명 사용자 저장 오류:', err);

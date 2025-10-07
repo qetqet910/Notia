@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
-import { useNoteParser } from '@/hooks/useNoteParser';
+import React, { useState, useMemo } from 'react';
+import { parseNoteContent } from '@/utils/noteParser';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { initialContent } from '@/constants/home';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Button } from '@/components/ui/button';
+
 import Tag from 'lucide-react/dist/esm/icons/tag';
 import Calendar from 'lucide-react/dist/esm/icons/calendar';
 import Clock from 'lucide-react/dist/esm/icons/clock';
 import Eye from 'lucide-react/dist/esm/icons/eye';
 import Code from 'lucide-react/dist/esm/icons/code';
-import { motion } from 'framer-motion';
-import { initialContent } from '@/constants/home';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Button } from '@/components/ui/button';
 
 const formatDate = (date: Date): string => {
   if (!date || !(date instanceof Date)) return '날짜 정보 없음';
@@ -32,7 +34,7 @@ const formatDate = (date: Date): string => {
 
 export const LandingEditor: React.FC = () => {
   const [content, setContent] = useState(initialContent);
-  const { tags, reminders } = useNoteParser(content);
+  const { tags, reminders } = useMemo(() => parseNoteContent(content), [content]);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
 
   return (
@@ -115,60 +117,68 @@ export const LandingEditor: React.FC = () => {
         </motion.div>
 
         <div className="mt-6 space-y-6">
-          {tags.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-            >
-              <div className="flex items-center mb-3">
-                <Tag className="h-5 w-5 mr-2 text-green-500" />
-                <h3 className="text-lg font-semibold text-gray-800 ">태그</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-base">
-                    #{tag.text}
-                  </Badge>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {reminders.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-            >
-              <div className="flex items-center mb-3">
-                <Calendar className="h-5 w-5 mr-2 text-blue-500" />
-                <h3 className="text-lg font-semibold text-gray-800 ">
-                  리마인더
-                </h3>
-              </div>
-              <div className="space-y-3">
-                {reminders
-                  .filter((reminder) => reminder.parsedDate)
-                  .map((reminder, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 bg-gray-50  rounded-lg border border-gray-200 "
-                    >
-                      <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                      <div className="flex-grow">
-                        <p className="font-medium text-gray-900 ">
-                          {reminder.reminderText}
-                        </p>
-                        <p className="text-sm text-green-600  font-semibold">
-                          {formatDate(reminder.parsedDate!)}
-                        </p>
-                      </div>
-                    </div>
+          <AnimatePresence>
+            {tags.length > 0 && (
+              <motion.div
+                key="tags-section"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+              >
+                <div className="flex items-center mb-3">
+                  <Tag className="h-5 w-5 mr-2 text-green-500" />
+                  <h3 className="text-lg font-semibold text-gray-800 ">태그</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-base">
+                      #{tag.text}
+                    </Badge>
                   ))}
-              </div>
-            </motion.div>
-          )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {reminders.length > 0 && (
+              <motion.div
+                key="reminders-section"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+              >
+                <div className="flex items-center mb-3">
+                  <Calendar className="h-5 w-5 mr-2 text-blue-500" />
+                  <h3 className="text-lg font-semibold text-gray-800 ">
+                    리마인더
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  {reminders
+                    .filter((reminder) => reminder.parsedDate)
+                    .map((reminder, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 bg-gray-50  rounded-lg border border-gray-200 "
+                      >
+                        <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                        <div className="flex-grow">
+                          <p className="font-medium text-gray-900 ">
+                            {reminder.reminderText}
+                          </p>
+                          <p className="text-sm text-green-600  font-semibold">
+                            {formatDate(reminder.parsedDate!)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </CardContent>
     </Card>
