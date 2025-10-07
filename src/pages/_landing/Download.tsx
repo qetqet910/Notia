@@ -24,7 +24,7 @@ const OsIcon = ({ name }: { name: string }) => {
       return <FaApple {...iconProps} />;
     case 'Linux':
       return <FcLinux {...iconProps} />;
-    case 'PWA':
+    case 'Mobile / Desktop':
       return <IoGlobeOutline {...iconProps} />;
     default:
       return null;
@@ -81,8 +81,8 @@ const platformData = [
     },
   },
   {
-    id: 'PWA',
-    label: 'PWA',
+    id: 'Mobile / Desktop',
+    label: 'Mobile / Desktop',
     description:
       '설치 없이 웹에서 바로 사용하거나, 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.',
     requirements: [
@@ -264,7 +264,7 @@ export const DownloadPage: React.FC = () => {
                           ))}
                         </div>
 
-                        {platform.id === 'PWA' ? (
+                        {platform.id === 'Mobile / Desktop' ? (
                           isIOS ? (
                             <div className="w-full max-w-xs text-center p-4 bg-muted rounded-lg">
                               <h4 className="font-semibold mb-2">
@@ -276,7 +276,7 @@ export const DownloadPage: React.FC = () => {
                                 ( <IoShareOutline className="inline h-4 w-4 mx-1" />)
                                 을 탭한 후,
                                 <br />
-                                '홈 화면에 추가'를 선택하세요.
+                                `홈 화면에 추가`를 선택하세요.
                               </p>
                             </div>
                           ) : (

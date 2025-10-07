@@ -36,14 +36,14 @@ export const InputOTPControlled: React.FC = () => {
             variant: 'destructive',
           });
           setValue('');
-          if (!success) throw message;
+        } else {
+          toast({
+            title: '로그인 오류',
+            description: '예상치 못한 오류가 발생했습니다.',
+            variant: 'destructive',
+          });
+          setValue('');
         }
-      } catch (message) {
-        toast({
-          title: '로그인 오류',
-          description: message,
-          variant: 'destructive',
-        });
       } finally {
         setIsProcessing(false);
       }
@@ -68,6 +68,7 @@ export const InputOTPControlled: React.FC = () => {
         autoFocus
         autoComplete="off"
         spellCheck={false}
+        inputMode="text"
       >
         <div className="flex flex-col w-full justify-center gap-1 sm:gap-2">
           <div className="flex justify-center gap-0.5 sm:gap-1">

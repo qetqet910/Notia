@@ -1,5 +1,4 @@
 import type React from 'react';
-import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Key from 'lucide-react/dist/esm/icons/key';
 import Copy from 'lucide-react/dist/esm/icons/copy';
@@ -11,26 +10,13 @@ interface KeyDisplayProps {
   formattedKey: string;
   onCopy: () => void;
   copied: boolean;
-  autoCopy?: boolean; // 자동 복사 옵션 추가
 }
 
 export const KeyDisplay: React.FC<KeyDisplayProps> = ({
   formattedKey,
   onCopy,
   copied,
-  autoCopy = false, // 기본값은 false
 }) => {
-  // 자동 복사 기능 - 무한 루프 방지를 위한 ref 사용
-  const hasCopied = useRef(false);
-
-  useEffect(() => {
-    // 이미 복사했으면 다시 복사하지 않음
-    if (autoCopy && formattedKey && !hasCopied.current) {
-      onCopy();
-      hasCopied.current = true;
-    }
-  }, [autoCopy, formattedKey, onCopy]);
-
   return (
     <motion.div
       key="key-display"
