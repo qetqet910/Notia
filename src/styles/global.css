@@ -290,3 +290,8 @@ html {
     }
   }
 }
+
+/* Custom CodeMirror styles */
+.cm-editor.cm-focused {
+  outline: none !important;
+}

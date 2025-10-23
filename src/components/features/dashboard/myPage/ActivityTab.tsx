@@ -16,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { ActivityData, Note, Reminder } from '@/types/index';
+import type { ActivityData } from '@/types/index';
 
 interface CalculationResult {
   stats: {
