@@ -1,4 +1,5 @@
-import React, {
+import {
+  useRef,
   useState,
   useEffect,
   useMemo,
@@ -11,14 +12,19 @@ import React, {
 import { useToast } from '@/hooks/useToast';
 import { parseNoteContent } from '@/utils/noteParser';
 
-import CodeMirror from '@uiw/react-codemirror';
+import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
 import { keymap } from '@codemirror/view';
 
-import { history, historyKeymap } from '@codemirror/commands';
-import { defaultKeymap } from '@codemirror/commands';
+import {
+  history,
+  historyKeymap,
+  defaultKeymap,
+  redo,
+  deleteLine,
+} from '@codemirror/commands';
 import { indentOnInput } from '@codemirror/language';
 import { bracketMatching } from '@codemirror/matchbrackets';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/closebrackets';
@@ -49,6 +55,7 @@ import {
 } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Note, EditorReminder, Reminder } from '@/types';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
   Carousel,
   CarouselContent,
@@ -57,6 +64,7 @@ import {
 import { supabase } from '@/services/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
 import { v4 as uuidv4 } from 'uuid';
+import { EditorToolbar } from '@/components/features/dashboard/editorToolbar';
 import { codeMirrorTheme } from '@/components/features/dashboard/editorTheme';
 
 const MarkdownPreview = lazy(() =>
@@ -97,6 +105,32 @@ const formatDate = (date: Date): string => {
   return `${date.getMonth() + 1}/${date.getDate()} ${timeString}`;
 };
 
+const toggleMarkdownFormatting = (
+  view: EditorView,
+  formatting: string,
+): boolean => {
+  const { from, to } = view.state.selection.main;
+  const selection = view.state.sliceDoc(from, to);
+  const formattedText = `${formatting}${selection}${formatting}`;
+  view.dispatch({
+    changes: { from, to, insert: formattedText },
+  });
+  return true;
+};
+
+const customKeymap = [
+  { key: 'Ctrl-d', run: deleteLine },
+  { key: 'Ctrl-Shift-z', run: redo },
+  {
+    key: 'Ctrl-b',
+    run: (view: EditorView) => toggleMarkdownFormatting(view, '**'),
+  },
+  {
+    key: 'Ctrl-i',
+    run: (view: EditorView) => toggleMarkdownFormatting(view, '_'),
+  },
+];
+
 export const Editor = forwardRef<EditorRef, EditorProps>(
   (
     {
@@ -116,9 +150,11 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const [tags, setTags] = useState<string[]>([]);
     const [reminders, setReminders] = useState<EditorReminder[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+    const editorRef = useRef<ReactCodeMirrorRef>(null);
     const { toast } = useToast();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const isDesktop = useMediaQuery('(min-width: 1024px)');
 
     const { title, body } = useMemo(() => {
       const lines = content.split('\n');
@@ -480,12 +516,14 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         <div className="flex-1 overflow-hidden">
           {isEditing ? (
             <>
-              {/* Desktop: Resizable Panel Layout */}
-              <div className="hidden lg:block h-full">
+              {isDesktop ? (
+                // Desktop: Resizable Panel Layout
                 <ResizablePanelGroup direction="horizontal" className="h-full">
                   <ResizablePanel defaultSize={50}>
                     <div className="p-4 h-full flex flex-col">
+                      <EditorToolbar editorRef={editorRef} />
                       <CodeMirror
+                        ref={editorRef}
                         value={content}
                         height="100%"
                         basicSetup={false}
@@ -495,12 +533,15 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                             codeLanguages: filteredLanguages,
                           }),
                           history(),
-                          keymap.of(defaultKeymap),
-                          keymap.of(historyKeymap),
                           indentOnInput(),
                           bracketMatching(),
                           closeBrackets(),
-                          keymap.of(closeBracketsKeymap),
+                          keymap.of([
+                            ...customKeymap,
+                            ...defaultKeymap,
+                            ...historyKeymap,
+                            ...closeBracketsKeymap,
+                          ]),
                           imageUploadExtension,
                           EditorView.lineWrapping,
                         ]}
@@ -519,10 +560,8 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     <PreviewPanel content={body} title={title} />
                   </ResizablePanel>
                 </ResizablePanelGroup>
-              </div>
-
-              {/* Mobile & Tablet: Tabs Layout */}
-              <div className="lg:hidden h-full">
+              ) : (
+                // Mobile & Tablet: Tabs Layout
                 <Tabs defaultValue="edit" className="h-full flex flex-col">
                   <div className="p-2 border-b">
                     <TabsList className="grid w-full grid-cols-2">
@@ -541,7 +580,9 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     className="flex-1 overflow-hidden data-[state=inactive]:hidden"
                   >
                     <div className="p-4 h-full flex flex-col">
+                      <EditorToolbar editorRef={editorRef} />
                       <CodeMirror
+                        ref={editorRef}
                         value={content}
                         height="100%"
                         basicSetup={false}
@@ -551,12 +592,15 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                             codeLanguages: filteredLanguages,
                           }),
                           history(),
-                          keymap.of(defaultKeymap),
-                          keymap.of(historyKeymap),
                           indentOnInput(),
                           bracketMatching(),
                           closeBrackets(),
-                          keymap.of(closeBracketsKeymap),
+                          keymap.of([
+                            ...customKeymap,
+                            ...defaultKeymap,
+                            ...historyKeymap,
+                            ...closeBracketsKeymap,
+                          ]),
                           imageUploadExtension,
                           EditorView.lineWrapping,
                         ]}
@@ -577,7 +621,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     <PreviewPanel content={body} title={title} />
                   </TabsContent>
                 </Tabs>
-              </div>
+              )}
             </>
           ) : (
             <PreviewPanel
@@ -618,7 +662,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           {title || '제목 없음'}
         </h1>
         {(displayTags?.length > 0 || displayReminders?.length > 0) && (
-          <div className="sticky top-0 z-10 border-b border-t bg-background p-4 mb-4 rounded-b-lg space-y-4">
+          <div className="sticky top-0 z-10 border-b border-t bg-background p-4 rounded-b-lg space-y-4">
             {displayTags && displayTags.length > 0 && (
               <div className="flex items-center">
                 <Tag className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
