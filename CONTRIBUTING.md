@@ -1,4 +1,2 @@
-> # [qetqet910](https://github.com/qetqet910) [1인] with 사이버지식정보방
-> # Contact -> haemmin48@gmail.com
-
-![SVG Example](https://readme-decorate.vercel.app/api/get?type=wave&text=%EB%91%A0%EB%B0%94+%EB%91%A0%EB%B0%94+%EB%91%90%EB%B9%84%EB%91%90%EB%B0%94&width=810&height=250&fontSize=52&fontWeight=1000&useGradient=false&fontColor=%23333333&backgroundColor=%23ffffff00&gradientColor1=&gradientColor2=)
+> ### [qetqet910](https://github.com/qetqet910) with 사이버지식정보방
+> ### Contact -> haemmin48@gmail.com
