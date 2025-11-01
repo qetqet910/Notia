@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 export const handler = async (event) => {
   console.log('=== Prerender Function Called ===');
   console.log('Path:', event.path);

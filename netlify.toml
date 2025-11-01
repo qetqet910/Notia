@@ -1,28 +1,10 @@
 [build]
-  # 빌드 명령어 (package.json의 build 스크립트와 동일)
   command = "npm run build"
-  
-  # 빌드 결과물이 생성되는 폴더 (Vite의 기본값은 'dist')
   publish = "dist"
-  
-  # Netlify 함수 소스 코드가 있는 폴더
   functions = "netlify/functions"
 
-# 리디렉션 및 재작성 규칙
-# 중요: 순서가 중요합니다! 위에서 아래로 평가됩니다.
-
+# 모든 요청을 prerender 함수로 라우팅
 [[redirects]]
-  # Prerender.io를 위한 크롤러 감지
-  # 봇의 User-Agent와 일치하는 경우, 요청을 prerender 함수로 보냄
   from = "/*"
   to = "/.netlify/functions/prerender"
-  status = 200
-  force = false
-  conditions = {User-Agent = ["googlebot", "bingbot", "yandex", "baiduspider", "facebookexternalhit", "twitterbot", "rogerbot", "linkedinbot", "embedly", "quora link preview", "showyoubot", "outbrain", "pinterest/0.", "slackbot", "vkShare", "W3C_Validator", "whatsapp", "Prerender"]}
-
-[[redirects]]
-  # SPA (Single Page Application) 라우팅을 위한 설정
-  # 크롤러가 아닌 일반 사용자는 index.html로 라우팅
-  from = "/*"
-  to = "/index.html"
   status = 200
