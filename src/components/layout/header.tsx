@@ -38,6 +38,10 @@ export const Header: React.FC = () => {
           </Button>
         </div>
       </div>
+            <div className="absolute w-full left-0 top-full z-20 bg-yellow-300 text-yellow-900 text-center p-3 text-sm font-semibold">
+        Notia는 현재 베타 버전으로 운영 중입니다. 12월 중 정식 버전을
+        만나보세요!
+      </div>
     </motion.nav>
   );
 };

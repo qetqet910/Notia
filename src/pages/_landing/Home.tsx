@@ -56,21 +56,21 @@ export const Home: React.FC = () => {
           >
             <motion.h1
               variants={fadeIn(0)}
-              className="text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight break-words"
+              className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight"
             >
-              <span className="block mb-2">생각의 조각을</span>
-              <span className="block text-shadows">#태그와 @리마인더로</span>
-              <span className="block mt-3">완성하세요</span>
+              기억의 조각으#
+              <br className="hidden md:block" />
+              <span className="text-shadows">태그와 리마인더로</span>
+              <br className="hidden md:block" />
+              @ㅕㄴ결하세요
             </motion.h1>
             <motion.p
               variants={fadeIn(0.2)}
-              className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0"
+              className="mt-6 text-base md:text-lg text-muted-foreground max-w-xl mx-auto md:mx-0"
             >
-              마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며,
-              <br className="hidden md:block" />
-              일상속 중요한 약속까지 관리하세요.{' '}
-              <br className="hidden md:block" />
-              당신의 생산성을 위한 가장 가볍고 빠른 도구입니다.
+              Notia는 마크다운, #태그, @리마인더를 통해 당신의 아이디어를
+              체계적으로 정리하고, 중요한 약속을 놓치지 않도록 돕는 가장 빠른
+              도구입니다.
             </motion.p>
             <motion.div variants={fadeIn(0.4)} className="mt-8">
               <Button
