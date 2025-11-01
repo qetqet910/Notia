@@ -3,7 +3,14 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# 모든 요청을 prerender 함수로 라우팅
+# 정적 파일은 함수를 거치지 않고 직접 제공
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = true
+
+# 나머지 요청은 prerender 함수로
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/prerender"
