@@ -1,17 +1,36 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
+  console.log('=== Prerender Function Called ===');
+  console.log('Path:', event.path);
+  console.log('User-Agent:', event.headers['user-agent']);
+  
   const prerenderToken = process.env.PRERENDER_TOKEN;
-  const userAgent = event.headers['user-agent'];
+  
+  // 토큰 확인
+  if (!prerenderToken) {
+    console.error('ERROR: PRERENDER_TOKEN is not set!');
+    return {
+      statusCode: 500,
+      body: 'Prerender token configuration error',
+    };
+  }
+  
+  const userAgent = event.headers['user-agent'] || '';
   const path = event.path;
+
+  // URL 재구성 (event.rawUrl이 없을 경우 대비)
+  const protocol = event.headers['x-forwarded-proto'] || 'https';
+  const host = event.headers.host;
+  const fullUrl = event.rawUrl || `${protocol}://${host}${path}`;
+  
+  console.log('Full URL:', fullUrl);
 
   // 인증 콜백 경로는 렌더링에서 제외
   if (path === '/auth/callback') {
-    // SPA가 처리하도록 index.html을 반환
+    console.log('Auth callback detected, returning index.html');
     try {
-      const siteUrl = new URL(event.rawUrl);
-      const rootUrl = `${siteUrl.protocol}//${siteUrl.host}`;
+      const rootUrl = `${protocol}://${host}`;
       const response = await fetch(`${rootUrl}/index.html`);
       const body = await response.text();
       return {
@@ -48,22 +67,33 @@ exports.handler = async (event) => {
     'slackbot',
     'vkShare',
     'W3C_Validator',
+    'whatsapp',
     'yandex',
+    'Prerender',
   ];
 
   // Check if the user-agent is a bot
-  const isBot = botUserAgents.some(bot => userAgent && userAgent.toLowerCase().includes(bot));
+  const isBot = botUserAgents.some(bot => userAgent.toLowerCase().includes(bot.toLowerCase()));
+
+  console.log('Is Bot?', isBot);
 
   // If it's a bot, proxy to Prerender.io
   if (isBot) {
+    console.log('Bot detected! Fetching from Prerender.io...');
     try {
-      const prerenderUrl = `https://service.prerender.io/${encodeURIComponent(event.rawUrl)}`;
+      const prerenderUrl = `https://service.prerender.io/${encodeURIComponent(fullUrl)}`;
+      console.log('Prerender URL:', prerenderUrl);
+      
       const response = await fetch(prerenderUrl, {
         headers: {
           'X-Prerender-Token': prerenderToken,
         },
       });
+      
+      console.log('Prerender.io response status:', response.status);
+      
       const body = await response.text();
+      
       return {
         statusCode: response.status,
         body: body,
@@ -81,9 +111,9 @@ exports.handler = async (event) => {
   }
 
   // If not a bot, serve the main index.html file to let the SPA handle routing
+  console.log('Regular user detected, serving index.html');
   try {
-    const siteUrl = new URL(event.rawUrl);
-    const rootUrl = `${siteUrl.protocol}//${siteUrl.host}`;
+    const rootUrl = `${protocol}://${host}`;
     const response = await fetch(`${rootUrl}/index.html`);
     const body = await response.text();
     return {
