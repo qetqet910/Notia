@@ -46,3 +46,5 @@ debug.dev.md
 md/
 GEMINI.md
 target
+# Local Netlify folder
+.netlify
