@@ -57,7 +57,7 @@ exports.handler = async (event) => {
   // If it's a bot, proxy to Prerender.io
   if (isBot) {
     try {
-      const prerenderUrl = `https://service.prerender.io/${encodeURIComponent(`https://notia.site${path}`)}`;
+      const prerenderUrl = `https://service.prerender.io/${encodeURIComponent(event.rawUrl)}`;
       const response = await fetch(prerenderUrl, {
         headers: {
           'X-Prerender-Token': prerenderToken,
