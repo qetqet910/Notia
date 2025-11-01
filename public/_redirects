@@ -1,2 +1,22 @@
-# Prerender.io: Serve pre-rendered pages to bots
-/*    /.netlify/functions/prerender   200
+# Prerender.io - 크롤러 감지
+/*  /.netlify/functions/prerender  200  User-Agent=googlebot
+/*  /.netlify/functions/prerender  200  User-Agent=bingbot
+/*  /.netlify/functions/prerender  200  User-Agent=yandex
+/*  /.netlify/functions/prerender  200  User-Agent=baiduspider
+/*  /.netlify/functions/prerender  200  User-Agent=facebookexternalhit
+/*  /.netlify/functions/prerender  200  User-Agent=twitterbot
+/*  /.netlify/functions/prerender  200  User-Agent=rogerbot
+/*  /.netlify/functions/prerender  200  User-Agent=linkedinbot
+/*  /.netlify/functions/prerender  200  User-Agent=embedly
+/*  /.netlify/functions/prerender  200  User-Agent=quora*
+/*  /.netlify/functions/prerender  200  User-Agent=showyoubot
+/*  /.netlify/functions/prerender  200  User-Agent=outbrain
+/*  /.netlify/functions/prerender  200  User-Agent=pinterest
+/*  /.netlify/functions/prerender  200  User-Agent=slackbot
+/*  /.netlify/functions/prerender  200  User-Agent=vkShare
+/*  /.netlify/functions/prerender  200  User-Agent=W3C_Validator
+/*  /.netlify/functions/prerender  200  User-Agent=whatsapp
+/*  /.netlify/functions/prerender  200  User-Agent=Prerender
+
+# SPA 폴백
+/*  /index.html  200
