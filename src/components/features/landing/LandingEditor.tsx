@@ -127,15 +127,14 @@ export const LandingEditor: React.FC = () => {
                 transition={{ delay: 0.2, duration: 0.5 }}
               >
                 <div className="flex items-center mb-3">
-                  <Tag className="h-5 w-5 mr-2 text-green-500" />
-                  <h3 className="text-lg font-semibold text-gray-800 ">태그</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-base">
-                      #{tag.text}
-                    </Badge>
-                  ))}
+                  <Tag className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-base cursor-pointer hover:bg-primary/20">
+                        {tag.text}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -151,30 +150,27 @@ export const LandingEditor: React.FC = () => {
                 transition={{ delay: 0.4, duration: 0.5 }}
               >
                 <div className="flex items-center mb-3">
-                  <Calendar className="h-5 w-5 mr-2 text-blue-500" />
-                  <h3 className="text-lg font-semibold text-gray-800 ">
-                    리마인더
-                  </h3>
-                </div>
-                <div className="space-y-3">
-                  {reminders
-                    .filter((reminder) => reminder.parsedDate)
-                    .map((reminder, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 bg-gray-50  rounded-lg border border-gray-200 "
-                      >
-                        <Clock className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                        <div className="flex-grow">
-                          <p className="font-medium text-gray-900 ">
-                            {reminder.reminderText}
-                          </p>
-                          <p className="text-sm text-green-600  font-semibold">
-                            {formatDate(reminder.parsedDate!)}
-                          </p>
+                  <Calendar className="h-5 w-5 mr-2 text-blue-500 flex-shrink-0" />
+                  <div className="flex flex-wrap gap-2">
+                    {reminders
+                      .filter((reminder) => reminder.parsedDate)
+                      .map((reminder, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg border text-sm"
+                        >
+                          <Clock className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">
+                              {reminder.reminderText}
+                            </p>
+                            <p className="text-xs text-blue-500 font-semibold">
+                              {formatDate(reminder.parsedDate!)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                  </div>
                 </div>
               </motion.div>
             )}

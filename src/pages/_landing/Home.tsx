@@ -58,19 +58,22 @@ export const Home: React.FC = () => {
               variants={fadeIn(0)}
               className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight"
             >
-              기억의 조각으#
+              <span>기억의 조각을</span>
               <br className="hidden md:block" />
               <span className="text-shadows">태그와 리마인더로</span>
               <br className="hidden md:block" />
-              @ㅕㄴ결하세요
+              <span className='ml-2'>
+               <img src="/images/연.svg" alt="연" className="inline-block" style={{ width: '.95em', transform: 'translateY(-0.04em)' }} />
+               결하세요 
+              </span>
+
             </motion.h1>
             <motion.p
               variants={fadeIn(0.2)}
               className="mt-6 text-base md:text-lg text-muted-foreground max-w-xl mx-auto md:mx-0"
             >
-              Notia는 마크다운, #태그, @리마인더를 통해 당신의 아이디어를
-              체계적으로 정리하고, 중요한 약속을 놓치지 않도록 돕는 가장 빠른
-              도구입니다.
+              #태그, @리마인더를 통해 하나의 노트에서<br/> 
+              체계적으로 정리하고, 스케줄을 돕는 가장 빠른 도구입니다.
             </motion.p>
             <motion.div variants={fadeIn(0.4)} className="mt-8">
               <Button
@@ -138,7 +141,7 @@ export const Home: React.FC = () => {
                       {feature.title}
                     </h3>
                   </div>
-                  <p className="text-gray-400">{feature.description}</p>
+                  <p className="text-gray-700">{feature.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -215,7 +218,7 @@ export const Home: React.FC = () => {
                 </h3>
                 <p className="text-lg text-muted-foreground">
                   어떤 환경에서도 즉각적인 반응 속도를 경험하세요. 불필요한
-                  기능은 덜어내고, 오직 핵심에만 집중하여 놀랍도록 가볍고 빠르게
+                  기능은 덜어내고, 오직 핵심에만 집중하여 가볍고 빠르게
                   만들었습니다.
                 </p>
               </div>
@@ -242,7 +245,7 @@ export const Home: React.FC = () => {
             </h2>
             <p className="text-lg text-muted-foreground max-w-1x1 mx-auto">
               아래 편집기에서 직접 #태그와 @리마인더 기능을 사용해보세요.
-              입력하는 대로 실시간으로 분석하고 똑똑하게 정리합니다.
+              입력하는 대로 실시간으로 반응합니다.
             </p>
           </motion.div>
           <motion.div
