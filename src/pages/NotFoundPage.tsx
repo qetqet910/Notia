@@ -1,8 +1,20 @@
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const metaTag = document.createElement('meta');
+    metaTag.setAttribute('name', 'prerender-status-code');
+    metaTag.setAttribute('content', '404');
+    document.head.appendChild(metaTag);
+
+    return () => {
+      document.head.removeChild(metaTag);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground">

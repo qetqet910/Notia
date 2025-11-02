@@ -3,6 +3,17 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# robots.txt와 sitemap.xml은 직접 제공
+[[redirects]]
+  from = "/robots.txt"
+  to = "/robots.txt"
+  status = 200
+
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/sitemap.xml"
+  status = 200
+
 # 정적 파일은 함수를 거치지 않고 직접 제공
 [[redirects]]
   from = "/assets/*"

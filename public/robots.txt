@@ -1,2 +1,8 @@
 User-agent: *
 Allow: /
+
+# Prerender.io
+User-agent: Prerender
+Allow: /
+
+Sitemap: https://notia.site/sitemap.xml
