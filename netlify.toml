@@ -1,28 +1,40 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
-  functions = "netlify/functions"
+command = "npm run build"
+publish = "dist"
+functions = "netlify/functions"
 
 # robots.txt와 sitemap.xml은 직접 제공
 [[redirects]]
-  from = "/robots.txt"
-  to = "/robots.txt"
-  status = 200
+from = "/robots.txt"
+to = "/robots.txt"
+status = 200
 
 [[redirects]]
-  from = "/sitemap.xml"
-  to = "/sitemap.xml"
-  status = 200
+from = "/sitemap.xml"
+to = "/sitemap.xml"
+status = 200
 
 # 정적 파일은 함수를 거치지 않고 직접 제공
 [[redirects]]
-  from = "/assets/*"
-  to = "/assets/:splat"
-  status = 200
-  force = true
+from = "/assets/*"
+to = "/assets/:splat"
+status = 200
+force = true
+
+# HTML은 캐시하지 않음
+[[headers]]
+for = "/*.html"
+[headers.values]
+Cache-Control = "public, max-age=0, must-revalidate"
+
+# JS/CSS는 영구 캐시 (파일명에 해시가 있으므로)
+[[headers]]
+for = "/assets/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
 
 # 나머지 요청은 prerender 함수로
 [[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/prerender"
-  status = 200
+from = "/*"
+to = "/.netlify/functions/prerender"
+status = 200
