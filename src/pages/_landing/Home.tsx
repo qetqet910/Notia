@@ -16,8 +16,10 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import landingAnimation from '/lottie/landingAnimation.lottie';
 import rocketAnimation from '/lottie/rocketAnimation.lottie';
 import bottomArrow from '/lottie/bottomArrow.lottie';
+import connectingAnimation from '/lottie/Connecting.lottie';
 import '@/styles/LandingTextAnimation.css';
 import { LandingEditor } from '@/components/features/landing/LandingEditor';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
   features,
   userProfiles,
@@ -28,6 +30,7 @@ import {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
     e.preventDefault();
@@ -47,6 +50,16 @@ export const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="relative h-screen flex items-center px-6 lg:px-12 overflow-hidden hero-section">
         <div className="absolute inset-0 bg-gradient-to-br from-green-100 via-white to-transparent blur-3xl"></div>
+        {isMobile && (
+          <div className="absolute inset-0 z-0 flex items-center justify-center opacity-50">
+            <DotLottieReact
+              src={connectingAnimation}
+              loop
+              autoplay
+              className="w-full object-cover opacity-75"
+            />
+          </div>
+        )}
         <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <motion.div
             initial="hidden"
@@ -56,12 +69,12 @@ export const Home: React.FC = () => {
           >
             <motion.h1
               variants={fadeIn(0)}
-              className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight"
+              className="text-4xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight"
             >
               <span>기억의 조각을</span>
-              <br className="hidden md:block" />
+              <br/>
               <span className="text-shadows">태그와 리마인더로</span>
-              <br className="hidden md:block" />
+              <br/>
               <span className='ml-2'>
                <img src="/images/연.svg" alt="연" className="inline-block" style={{ width: '.95em', transform: 'translateY(-0.04em)' }} />
                결하세요 
@@ -159,7 +172,7 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-extrabold mb-4 tracking-tight">
+            <h2 className="text-3xl md:text-5x1 font-extrabold mb-4 tracking-tight">
               당신의 생산성을 위한 모든 것
             </h2>
             <p className="text-lg text-muted-foreground max-w-1xl mx-auto">
