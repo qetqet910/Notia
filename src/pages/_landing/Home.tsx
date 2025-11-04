@@ -69,7 +69,7 @@ export const Home: React.FC = () => {
           >
             <motion.h1
               variants={fadeIn(0)}
-              className="text-4xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight"
+              className="text-4xl sm:text-4xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-6xl font-extrabold leading-tight tracking-tight"
             >
               <span>기억의 조각을</span>
               <br/>
@@ -141,20 +141,20 @@ export const Home: React.FC = () => {
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
             variants={staggerContainer}
-            className="grid md:grid-cols-3 gap-8"
+            className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8"
           >
             {features.map((feature, index) => (
-              <motion.div variants={fadeIn(index * 0.1)} key={index}>
-                <div className="p-8 rounded-2xl h-full border border-gray-700/50 hover:border-[#61C9A8]/50 hover:bg-white transition-all duration-300">
+              <motion.div variants={fadeIn(index * 0.1)} key={index} className={`${index === 1 ? 'md:mt-[250px] lg:mt-0 xl:mt-0' : ''}`}>
+                <div className="max-w-lg p-8 mx-auto lg:h-full xl:h-full rounded-2xl border border-gray-700/50 hover:border-[#61C9A8]/50 hover:bg-white transition-all duration-300">
                   <div className="flex flex-col items-center">
                     <div className="bg-[#61C9A8] w-16 h-16 rounded-full flex items-center justify-center mb-6 shadow-lg">
                       {feature.icon}
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-black">
+                    <h3 className="sm:text-md md:text-lg xl:text-xl 2xl:text-xl font-bold mb-3 text-black">
                       {feature.title}
                     </h3>
                   </div>
-                  <p className="text-gray-700">{feature.description}</p>
+                  <p className=" sm:text-sm md:text-md lg:text-base text-gray-700 text-center">{feature.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -172,10 +172,10 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-5x1 font-extrabold mb-4 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5x1 font-extrabold mb-4 tracking-tight">
               당신의 생산성을 위한 모든 것
             </h2>
-            <p className="text-lg text-muted-foreground max-w-1xl mx-auto">
+            <p className="text-md sm:text-lg text-muted-foreground max-w-1xl mx-auto">
               콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된
               기능을 제공하며 어떤 환경에서도 최고의 성능을 보장합니다.
             </p>
@@ -191,7 +191,7 @@ export const Home: React.FC = () => {
             >
               {userProfiles.map((profile, index) => (
                 <motion.div key={index} variants={fadeIn(index * 0.1)}>
-                  <div className="flex items-start gap-6">
+                  <div className="flex items-start gap-6 / text-sm sm:text-sm lg:text-sm md:text-sm xl:text-md">
                     <div className="flex-shrink-0">{profile.icon}</div>
                     <div>
                       <h3 className="text-xl font-bold mb-2">
@@ -229,7 +229,7 @@ export const Home: React.FC = () => {
                 <h3 className="text-2xl font-bold mb-4">
                   성능에 타협은 없습니다
                 </h3>
-                <p className="text-lg text-muted-foreground">
+                <p className="text-muted-foreground text-sm sm:text-sm lg:text-sm md:text-sm xl:text-md">
                   어떤 환경에서도 즉각적인 반응 속도를 경험하세요. 불필요한
                   기능은 덜어내고, 오직 핵심에만 집중하여 가볍고 빠르게
                   만들었습니다.
@@ -297,10 +297,10 @@ export const Home: React.FC = () => {
                     value={`item-${index}`}
                     className="shadow border-b-0 rounded-xl px-6"
                   >
-                    <AccordionTrigger className="text-lg font-medium text-left hover:no-underline">
+                    <AccordionTrigger className="text-md md:text-md lg:text-lg font-medium text-left hover:no-underline">
                       {item.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-base text-muted-foreground pt-2 pb-4">
+                    <AccordionContent className="text-sm md:text-md lg:text-lg text-muted-foreground pt-2 pb-4">
                       {item.answer}
                     </AccordionContent>
                   </AccordionItem>

@@ -168,7 +168,11 @@ function App() {
     };
   }, [setDeferredPrompt]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <div className="max-w-[1920px] mx-auto bg-[#FAF9F6] shadow-xl">
+      <RouterProvider router={router} />
+    </div>
+  );
 }
 
 export default App;
