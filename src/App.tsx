@@ -169,7 +169,7 @@ function App() {
   }, [setDeferredPrompt]);
 
   return (
-    <div className="max-w-[1920px] mx-auto bg-[#FAF9F6] shadow-xl">
+    <div className="max-w-[1920px] mx-auto bg-[#FAF9F6] border-l-2 border-r-2 border-[#cecece]">
       <RouterProvider router={router} />
     </div>
   );
