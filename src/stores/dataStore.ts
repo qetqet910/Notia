@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/services/supabaseClient';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { RealtimeChannel, PostgresChangesPayload } from '@supabase/supabase-js';
 import type { Note, Reminder, ActivityData } from '@/types';
 
 interface CalculationResult {
@@ -244,13 +244,13 @@ export const useDataStore = create<DataState>((set, get) => ({
       return;
     }
 
-    const handleNoteChange = (payload: any) => {
+    const handleNoteChange = (payload: PostgresChangesPayload) => {
       if (payload.eventType === 'INSERT') {
         get().addNoteState({ ...(payload.new as Note), reminders: [] });
       } else if (payload.eventType === 'UPDATE') {
         get().updateNoteState(payload.new as Note);
       } else if (payload.eventType === 'DELETE') {
-        get().removeNoteState(payload.old.id);
+        get().removeNoteState((payload.old as { id: string }).id);
       }
     };
 
@@ -336,8 +336,8 @@ export const useDataStore = create<DataState>((set, get) => ({
           table: 'reminders',
           filter: `owner_id=eq.${userId}`,
         },
-        (payload) => {
-          const oldReminder = payload.old as any;
+        (payload: PostgresChangesPayload) => {
+          const oldReminder = payload.old as { id: string; note_id: string };
           const noteId = oldReminder.note_id;
           set((state) => {
             const targetNote = state.notes[noteId];

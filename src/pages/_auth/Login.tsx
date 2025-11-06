@@ -488,7 +488,14 @@ export const Login: React.FC = () => {
         setEmail('');
       }
     },
-    [formattedKey, showKey, email, createEmailUserWithEdgeFunction, toast],
+    [
+      formattedKey,
+      showKey,
+      email,
+      createEmailUserWithEdgeFunction,
+      toast,
+      copyToClipboard,
+    ],
   );
 
   const handleSocialLogin = useCallback(
@@ -567,6 +574,7 @@ export const Login: React.FC = () => {
       showKey,
       createAnonymousUserWithEdgeFunction,
       toast,
+      copyToClipboard,
     ],
   );
 

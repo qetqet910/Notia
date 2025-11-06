@@ -178,7 +178,7 @@ export const useNotes = () => {
     [],
   );
 
-  const generatePreNotificationReminders = (
+  const _generatePreNotificationReminders = (
     baseReminder: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>,
   ): Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] => {
     const notificationsToSchedule: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] = [];

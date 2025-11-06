@@ -1,16 +1,13 @@
 import { supabase } from '@/services/supabaseClient';
-import { format } from 'date-fns';
 import { Reminder } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
  * 여러 개의 원본 리마인더에 대해 각각 사전 알림을 생성합니다.
  * @param originalReminders DB에 방금 저장된 원본 리마인더 객체 배열
- * @param noteTitle 노트 제목
  */
 export const schedulePreNotifications = async (
   originalReminders: Reminder[],
-  noteTitle: string,
 ) => {
   const notificationsToSchedule: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] = [];
   const now = new Date();
