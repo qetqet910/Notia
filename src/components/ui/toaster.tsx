@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/toast';
 import { cn } from '@/utils/shadcnUtils';
 
-export interface ToasterProps extends React.HTMLAttributes<HTMLDivElement> {}
+export type ToasterProps = React.HTMLAttributes<HTMLDivElement>;
 
 const Toaster = React.forwardRef<HTMLDivElement, ToasterProps>(
   ({ className, ...props }, ref) => {

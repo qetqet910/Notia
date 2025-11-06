@@ -11,8 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useThemeStore } from '@/stores/themeStore';
 
-export interface ThemeToggleProps
-  extends React.HTMLAttributes<HTMLDivElement> {}
+export type ThemeToggleProps = React.HTMLAttributes<HTMLDivElement>;
 
 const ThemeToggle = React.forwardRef<HTMLDivElement, ThemeToggleProps>(
   ({ className, ...props }, ref) => {

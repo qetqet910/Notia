@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
 interface PwaState {
-  deferredPrompt: Event | null;
-  setDeferredPrompt: (event: Event | null) => void;
+  deferredPrompt: BeforeInstallPromptEvent | null;
+  setDeferredPrompt: (event: BeforeInstallPromptEvent | null) => void;
 }
 
 // This interface is needed to access the prompt() method
