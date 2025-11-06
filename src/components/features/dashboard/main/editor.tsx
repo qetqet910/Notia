@@ -520,7 +520,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                 // Desktop: Resizable Panel Layout
                 <ResizablePanelGroup direction="horizontal" className="h-full">
                   <ResizablePanel defaultSize={50}>
-                    <div className="p-4 h-full flex flex-col">
+                    <div className="p-4 pt-0 h-full flex flex-col">
                       <EditorToolbar editorRef={editorRef} />
                       <CodeMirror
                         ref={editorRef}
@@ -579,7 +579,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     value="edit"
                     className="flex-1 overflow-hidden data-[state=inactive]:hidden"
                   >
-                    <div className="p-4 h-full flex flex-col">
+                    <div className="p-4 pt-0 h-full flex flex-col">
                       <EditorToolbar editorRef={editorRef} />
                       <CodeMirror
                         ref={editorRef}
