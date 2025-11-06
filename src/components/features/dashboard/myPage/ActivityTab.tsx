@@ -91,48 +91,70 @@ export const ActivityTab: React.FC = React.memo(() => {
     [activityData],
   );
 
-  const weeks = useMemo(() => {
-    if (!firstActivity) return [];
+const weeks = useMemo(() => {
+  if (!firstActivity) return [];
 
-    const allDays = new Map<string, { count: number; level: number }>();
-    activityData.forEach((d) => {
-      allDays.set(d.date, { count: d.count, level: d.level });
-    });
+  // 1. 활동 데이터를 Map으로 변환
+  const allDays = new Map<string, { count: number; level: number }>();
+  activityData.forEach((d) => {
+    allDays.set(d.date, { count: d.count, level: d.level });
+  });
 
-    const startDate = new Date(firstActivity.date + 'T00:00:00Z');
-    const endDate = new Date(startDate);
-    endDate.setUTCMonth(startDate.getUTCMonth() + 6);
+  // 2. 시작일과 종료일 설정
+  const startDate = new Date(firstActivity.date + 'T00:00:00Z');
+  const endDate = new Date(startDate);
+  endDate.setUTCMonth(startDate.getUTCMonth() + 6);
 
-    const generatedWeeks: { date: string; count: number; level: number }[][] =
-      [];
-    let currentDay = new Date(startDate);
-    currentDay.setUTCDate(currentDay.getUTCDate() - currentDay.getUTCDay()); // Start week on Sunday
+  // 3. 주의 시작일 (일요일) 계산
+  const weekStartDate = new Date(startDate);
+  weekStartDate.setUTCDate(startDate.getUTCDate() - startDate.getUTCDay());
 
-    const totalDays = Math.ceil(
-      (endDate.getTime() - currentDay.getTime()) / (1000 * 3600 * 24),
-    );
-    const totalWeeks = Math.ceil(totalDays / 7);
+  // 4. 총 주 수 계산
+  const totalDays = Math.ceil(
+    (endDate.getTime() - weekStartDate.getTime()) / (1000 * 3600 * 24),
+  );
+  const totalWeeks = Math.ceil(totalDays / 7);
 
-    for (let i = 0; i < totalWeeks; i++) {
-      const week: { date: string; count: number; level: number }[] = [];
-      for (let j = 0; j < 7; j++) {
-        const year = currentDay.getUTCFullYear();
-        const month = String(currentDay.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(currentDay.getUTCDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
+  // 5. Helper 함수: 오프셋으로 날짜 생성
+  const getDateByOffset = (offsetDays: number): Date => {
+    const date = new Date(weekStartDate);
+    date.setUTCDate(weekStartDate.getUTCDate() + offsetDays);
+    return date;
+  };
 
-        if (currentDay >= startDate && currentDay <= endDate) {
-          const data = allDays.get(dateStr) || { count: 0, level: 0 };
-          week.push({ date: dateStr, ...data });
-        } else {
-          week.push({ date: dateStr, count: -1, level: -1 }); // Placeholder
-        }
-        currentDay.setUTCDate(currentDay.getUTCDate() + 1);
+  // 6. Helper 함수: Date를 YYYY-MM-DD 문자열로 변환
+  const formatDate = (date: Date): string => {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // 7. 주별 데이터 생성
+  const generatedWeeks: { date: string; count: number; level: number }[][] = [];
+
+  for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
+    const week: { date: string; count: number; level: number }[] = [];
+
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+      const currentDay = getDateByOffset(weekIndex * 7 + dayIndex);
+      const dateStr = formatDate(currentDay);
+
+      // 범위 내 날짜인지 확인
+      if (currentDay >= startDate && currentDay <= endDate) {
+        const data = allDays.get(dateStr) || { count: 0, level: 0 };
+        week.push({ date: dateStr, ...data });
+      } else {
+        // 범위 밖의 placeholder
+        week.push({ date: dateStr, count: -1, level: -1 });
       }
-      generatedWeeks.push(week);
     }
-    return generatedWeeks;
-  }, [activityData, firstActivity]);
+
+    generatedWeeks.push(week);
+  }
+
+  return generatedWeeks;
+}, [activityData, firstActivity]);
 
   const monthLabels = useMemo(() => {
     if (!weeks.length) return [];
