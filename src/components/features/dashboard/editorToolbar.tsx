@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { EditorView } from '@codemirror/view';
+import { EditorSelection } from '@codemirror/state';
 import { Button } from '@/components/ui/button';
 import Bold from 'lucide-react/dist/esm/icons/bold';
 import Italic from 'lucide-react/dist/esm/icons/italic';
@@ -30,7 +31,6 @@ const executeCommand = (
   const view = editorRef.current?.view;
   if (view) {
     command(view);
-    view.focus();
   }
 };
 
@@ -60,26 +60,46 @@ const toggleHeading = (view: EditorView, level: number) => {
   const { state, dispatch } = view;
   const { from } = state.selection.main;
   const line = state.doc.lineAt(from);
-  const originalText = state.sliceDoc(line.from, line.to);
-  const syntax = '#'.repeat(level);
+  const syntax = '#'.repeat(level) + ' ';
 
   const headingRegex = /^(#+)\s/;
-  const match = originalText.match(headingRegex);
+  const match = line.text.match(headingRegex);
 
-  let newText;
-  if (match && match[1] === syntax) {
-    newText = originalText.replace(headingRegex, '');
-  } else if (match) {
-    newText = originalText.replace(headingRegex, `${syntax} `);
+  if (match) {
+    // Line already has a heading, remove or change it
+    const currentLevel = match[1].length;
+    if (currentLevel === level) {
+      // Same level, so remove it
+      dispatch(
+        state.update({
+          changes: {
+            from: line.from,
+            to: line.from + match[0].length,
+            insert: '',
+          },
+        }),
+      );
+    } else {
+      // Different level, so change it
+      dispatch(
+        state.update({
+          changes: {
+            from: line.from,
+            to: line.from + match[0].length,
+            insert: syntax,
+          },
+        }),
+      );
+    }
   } else {
-    newText = `${syntax} ${originalText}`;
+    // No heading, so add it
+    dispatch(
+      state.update({
+        changes: { from: line.from, insert: syntax },
+        selection: EditorSelection.cursor(line.from + syntax.length),
+      }),
+    );
   }
-
-  dispatch(
-    state.update({
-      changes: { from: line.from, to: line.to, insert: newText },
-    }),
-  );
 };
 
 // Inserts a multi-line code block

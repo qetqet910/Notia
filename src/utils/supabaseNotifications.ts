@@ -1,6 +1,5 @@
 import { supabase } from '@/services/supabaseClient';
 import { Reminder } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * 여러 개의 원본 리마인더에 대해 각각 사전 알림을 생성합니다.
@@ -9,12 +8,14 @@ import { v4 as uuidv4 } from 'uuid';
 export const schedulePreNotifications = async (
   originalReminders: Reminder[],
 ) => {
-  const notificationsToSchedule: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] = [];
+  const notificationsToSchedule: Omit<
+    Reminder,
+    'id' | 'created_at' | 'updated_at'
+  >[] = [];
   const now = new Date();
 
   for (const reminder of originalReminders) {
     const reminderTime = new Date(reminder.reminder_time);
-    const clientReminderId = reminder.client_reminder_id || uuidv4(); // 기존 ID가 없으면 새로 생성
 
     // 사전 알림 간격 설정
     const intervals = [
@@ -37,16 +38,9 @@ export const schedulePreNotifications = async (
           reminder_time: beforeTime.toISOString(),
           completed: false,
           enabled: true,
-          client_reminder_id: clientReminderId, // 동일한 그룹 ID 공유
         });
       }
     }
-    
-    // 원본 리마인더에도 client_reminder_id 업데이트
-    await supabase
-      .from('reminders')
-      .update({ client_reminder_id: clientReminderId })
-      .eq('id', reminder.id);
   }
 
   if (notificationsToSchedule.length === 0) {

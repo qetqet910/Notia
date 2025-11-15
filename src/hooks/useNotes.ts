@@ -10,10 +10,10 @@ import { v4 as uuidv4 } from 'uuid';
 const KOREA_TIMEZONE = 'Asia/Seoul';
 
 // 한국 시간대 기준으로 현재 시간을 UTC로 변환하는 헬퍼 함수
-const getKoreaTimeAsUTC = (): string => {
-  const now = new Date();
-  return fromZonedTime(now, KOREA_TIMEZONE).toISOString();
-};
+// const getKoreaTimeAsUTC = (): string => {
+//   const now = new Date();
+//   return fromZonedTime(now, KOREA_TIMEZONE).toISOString();
+// };
 
 const getStartOfWeek = () => {
   const now = new Date();
@@ -178,44 +178,7 @@ export const useNotes = () => {
     [],
   );
 
-  const _generatePreNotificationReminders = (
-    baseReminder: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>,
-  ): Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] => {
-    const notificationsToSchedule: Omit<Reminder, 'id' | 'created_at' | 'updated_at'>[] = [];
-    const originalTime = new Date(baseReminder.reminder_time);
-    const now = new Date();
-    const clientReminderId = uuidv4();
 
-    const intervals = [
-      { minutes: 30, type: 'before_30m' },
-      { minutes: 20, type: 'before_20m' },
-      { minutes: 15, type: 'before_15m' },
-      { minutes: 10, type: 'before_10m' },
-      { minutes: 5, type: 'before_5m' },
-      { minutes: 3, type: 'before_3m' },
-      { minutes: 1, type: 'before_1m' },
-    ];
-
-    for (const interval of intervals) {
-      const beforeTime = new Date(originalTime.getTime() - interval.minutes * 60 * 1000);
-      if (beforeTime > now) {
-        notificationsToSchedule.push({
-          ...baseReminder,
-          reminder_time: fromZonedTime(beforeTime, KOREA_TIMEZONE).toISOString(),
-          notification_type: interval.type,
-          client_reminder_id: clientReminderId,
-        });
-      }
-    }
-
-    notificationsToSchedule.push({
-      ...baseReminder,
-      notification_type: 'at_time',
-      client_reminder_id: clientReminderId,
-    });
-
-    return notificationsToSchedule;
-  };
 
   const saveReminders = useCallback(
     async (noteId: string, finalReminders: EditorReminder[]) => {
@@ -363,13 +326,16 @@ export const useNotes = () => {
         // Optimistically update reminders structure, but the real data will come from saveReminders
         reminders: (updates.reminders || []).map(
           (er: EditorReminder): Reminder => ({
-            ...er,
-            id: er.id || '',
+            id: er.id || uuidv4(),
             note_id: originalNote.id,
             owner_id: originalNote.owner_id,
+            reminder_text: er.text,
             reminder_time: er.date.toISOString(),
+            completed: er.completed || false,
+            enabled: er.enabled ?? true,
             created_at: new Date().toISOString(),
             updated_at: newUpdatedAt.toISOString(),
+            original_text: er.original_text,
           }),
         ),
       };
@@ -529,156 +495,6 @@ export const useNotes = () => {
     [user],
   );
 
-  // 팀 노트 관련 함수들 TODO: 기능구현하기
-  const fetchTeamNotes = useCallback(
-    async (teamId: string) => {
-      if (!teamId || !user) return [];
-
-      try {
-        const { data: groupNotesData, error: groupNotesError } = await supabase
-          .from('group_notes')
-          .select('note_id, access_level')
-          .eq('group_id', teamId);
-
-        if (groupNotesError) throw groupNotesError;
-
-        if (!groupNotesData.length) return [];
-
-        const noteIds = groupNotesData.map((item) => item.note_id);
-
-        const { data: notesData, error: notesError } = await supabase
-          .from('notes')
-          .select(
-            `
-          *,
-          reminders (
-            id,
-            reminder_text,
-            reminder_time,
-            completed,
-            enabled,
-            created_at,
-            updated_at
-          )
-        `,
-          )
-          .in('id', noteIds)
-          .order('updated_at', { ascending: false });
-
-        if (notesError) throw notesError;
-
-        const formattedNotes: Note[] = notesData.map(
-          (note) =>
-            ({
-              ...note,
-              createdAt: new Date(note.created_at),
-              updatedAt: new Date(note.updated_at),
-              accessLevel:
-                groupNotesData.find((gn) => gn.note_id === note.id)
-                  ?.access_level || 'read',
-              reminders: note.reminders || [],
-            } as Note & { accessLevel: string }),
-        );
-
-        return formattedNotes;
-      } catch (err) {
-        console.error('팀 노트 로드 중 오류 발생:', err);
-        return [];
-      }
-    },
-    [user],
-  );
-
-  const shareNoteWithTeam = useCallback(
-    async (
-      noteId: string,
-      teamId: string,
-      accessLevel: 'read' | 'write' | 'admin' = 'read',
-    ) => {
-      try {
-        const { data: existingShare } = await supabase
-          .from('group_notes')
-          .select('*')
-          .eq('note_id', noteId)
-          .eq('group_id', teamId)
-          .single();
-
-        if (existingShare) {
-          const { error } = await supabase
-            .from('group_notes')
-            .update({ access_level: accessLevel })
-            .eq('note_id', noteId)
-            .eq('group_id', teamId);
-
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('group_notes').insert([
-            {
-              note_id: noteId,
-              group_id: teamId,
-              access_level: accessLevel,
-              created_at: getKoreaTimeAsUTC(), // 한국 시간대 기준으로 생성 시간 설정
-            },
-          ]);
-
-          if (error) throw error;
-        }
-
-        return true;
-      } catch (err) {
-        console.error('노트 공유 중 오류 발생:', err);
-        return false;
-      }
-    },
-    [user],
-  );
-
-  const unshareNoteWithTeam = useCallback(
-    async (noteId: string, teamId: string) => {
-      try {
-        const { error } = await supabase
-          .from('group_notes')
-          .delete()
-          .eq('note_id', noteId)
-          .eq('group_id', teamId);
-
-        if (error) throw error;
-
-        return true;
-      } catch (err) {
-        console.error('노트 공유 취소 중 오류 발생:', err);
-        return false;
-      }
-    },
-    [],
-  );
-
-  const getTeamsWithAccess = useCallback(async (noteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('group_notes')
-        .select(
-          `
-          group_id,
-          access_level,
-          user_groups:group_id(id, name)
-        `,
-        )
-        .eq('note_id', noteId);
-
-      if (error) throw error;
-
-      return data.map((item) => ({
-        teamId: item.group_id,
-        teamName: item.user_groups,
-        accessLevel: item.access_level,
-      }));
-    } catch (err) {
-      console.error('노트 공유 정보 로드 중 오류 발생:', err);
-      return [];
-    }
-  }, []);
-
   // 기존 유틸리티 함수들
   const getNotesByTag = useCallback(
     (tag: string) => {
@@ -709,6 +525,159 @@ export const useNotes = () => {
     return Array.from(tagSet);
   }, [notes]);
 
+
+
+
+    // 팀 노트 관련 함수들 TODO: 기능구현하기
+  // const fetchTeamNotes = useCallback(
+  //   async (teamId: string) => {
+  //     if (!teamId || !user) return [];
+
+  //     try {
+  //       const { data: groupNotesData, error: groupNotesError } = await supabase
+  //         .from('group_notes')
+  //         .select('note_id, access_level')
+  //         .eq('group_id', teamId);
+
+  //       if (groupNotesError) throw groupNotesError;
+
+  //       if (!groupNotesData.length) return [];
+
+  //       const noteIds = groupNotesData.map((item) => item.note_id);
+
+  //       const { data: notesData, error: notesError } = await supabase
+  //         .from('notes')
+  //         .select(
+  //           `
+  //         *,
+  //         reminders (
+  //           id,
+  //           reminder_text,
+  //           reminder_time,
+  //           completed,
+  //           enabled,
+  //           created_at,
+  //           updated_at
+  //         )
+  //       `,
+  //         )
+  //         .in('id', noteIds)
+  //         .order('updated_at', { ascending: false });
+
+  //       if (notesError) throw notesError;
+
+  //       const formattedNotes: Note[] = notesData.map((note) => ({
+  //         ...(note as unknown as Note),
+  //         createdAt: new Date(note.created_at),
+  //         updatedAt: new Date(note.updated_at),
+  //         accessLevel:
+  //           groupNotesData.find((gn) => gn.note_id === note.id)?.access_level ||
+  //           'read',
+  //         reminders: note.reminders || [],
+  //       }));
+
+  //       return formattedNotes;
+  //     } catch (err) {
+  //       console.error('팀 노트 로드 중 오류 발생:', err);
+  //       return [];
+  //     }
+  //   },
+  //   [user],
+  // );
+
+  // const shareNoteWithTeam = useCallback(
+  //   async (
+  //     noteId: string,
+  //     teamId: string,
+  //     accessLevel: 'read' | 'write' | 'admin' = 'read',
+  //   ) => {
+  //     try {
+  //       const { data: existingShare } = await supabase
+  //         .from('group_notes')
+  //         .select('*')
+  //         .eq('note_id', noteId)
+  //         .eq('group_id', teamId)
+  //         .single();
+
+  //       if (existingShare) {
+  //         const { error } = await supabase
+  //           .from('group_notes')
+  //           .update({ access_level: accessLevel })
+  //           .eq('note_id', noteId)
+  //           .eq('group_id', teamId);
+
+  //         if (error) throw error;
+  //       } else {
+  //         const { error } = await supabase.from('group_notes').insert([
+  //           {
+  //             note_id: noteId,
+  //             group_id: teamId,
+  //             access_level: accessLevel,
+  //             created_at: getKoreaTimeAsUTC(), // 한국 시간대 기준으로 생성 시간 설정
+  //           },
+  //         ]);
+
+  //         if (error) throw error;
+  //       }
+
+  //       return true;
+  //     } catch (err) {
+  //       console.error('노트 공유 중 오류 발생:', err);
+  //       return false;
+  //     }
+  //   },
+  //   [user],
+  // );
+
+  // const unshareNoteWithTeam = useCallback(
+  //   async (noteId: string, teamId: string) => {
+  //     try {
+  //       const { error } = await supabase
+  //         .from('group_notes')
+  //         .delete()
+  //         .eq('note_id', noteId)
+  //         .eq('group_id', teamId);
+
+  //       if (error) throw error;
+
+  //       return true;
+  //     } catch (err) {
+  //       console.error('노트 공유 취소 중 오류 발생:', err);
+  //       return false;
+  //     }
+  //   },
+  //   [],
+  // );
+
+  // const getTeamsWithAccess = useCallback(async (noteId: string) => {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from('group_notes')
+  //       .select(
+  //         `
+  //         group_id,
+  //         access_level,
+  //         user_groups:group_id(id, name)
+  //       `,
+  //       )
+  //       .eq('note_id', noteId);
+
+  //     if (error) throw error;
+
+  //     return data.map((item) => ({
+  //       teamId: item.group_id,
+  //       teamName: (item.user_groups as { name: string } | null)?.name ?? null,
+  //       accessLevel: item.access_level,
+  //     }));
+  //   } catch (err) {
+  //     console.error('노트 공유 정보 로드 중 오류 발생:', err);
+  //     return [];
+  //   }
+  // }, []);
+
+
+
+
   return {
     notes,
     loading,
@@ -726,9 +695,9 @@ export const useNotes = () => {
     getNotesByTag,
     getNotesByDate,
     getAllTags,
-    fetchTeamNotes,
-    shareNoteWithTeam,
-    unshareNoteWithTeam,
-    getTeamsWithAccess,
+    // fetchTeamNotes,
+    // shareNoteWithTeam,
+    // unshareNoteWithTeam,
+    // getTeamsWithAccess,
   };
 };
