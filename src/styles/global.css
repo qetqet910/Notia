@@ -35,6 +35,14 @@
     font-style: normal;
   }
 
+    @font-face {
+    font-family: 'Orbit';
+    src: url('https://fonts.googleapis.com/css2?family=Orbit&display=swap')
+      format('woff2');
+    font-weight: 400;
+    font-style: normal;
+  }
+
   @font-face {
     font-family: 'SeoulAlrimTTF-Heavy';
     src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2505-1@1.0/SeoulAlrimTTF-Heavy.woff2')
@@ -44,11 +52,11 @@
   }
 
   body {
-    font-family: 'NoonnuBasicGothicRegular', sans-serif;
+    font-family: 'Orbit', sans-serif;
   }
 
   :root {
-    --background: 0 0% 100%;
+    --background: 0 0% 96%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;

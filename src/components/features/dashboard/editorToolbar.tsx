@@ -18,6 +18,11 @@ import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/useToast';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from '@/components/ui/carousel';
 
 interface EditorToolbarProps {
   editorRef: React.RefObject<ReactCodeMirrorRef>;
@@ -285,30 +290,52 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editorRef }) => {
     },
   ];
 
-  const renderToolbarItems = (items: typeof headingItems) =>
-    items.map((item) => (
-      <Button
-        key={item.id}
-        variant="outline"
-        size="icon"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={item.action}
-        title={item.title}
-        className="h-8 w-8"
-      >
-        {React.cloneElement(item.icon, { className: 'h-4 w-4' })}
-      </Button>
-    ));
+  const renderButtonGroup = (items: typeof headingItems) => (
+    <div className="flex gap-1">
+      {items.map((item) => (
+        <Button
+          key={item.id}
+          variant="outline"
+          size="icon"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={item.action}
+          title={item.title}
+          className="h-8 w-8"
+        >
+          {React.cloneElement(item.icon, { className: 'h-4 w-4' })}
+        </Button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="p-2 border-b bg-background">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1">{renderToolbarItems(headingItems)}</div>
-        <Separator orientation="vertical" className="h-8" />
-        <div className="flex flex-wrap gap-1">{renderToolbarItems(styleItems)}</div>
-        <Separator orientation="vertical" className="h-8" />
-        <div className="flex flex-wrap gap-1">{renderToolbarItems(otherItems)}</div>
-      </div>
+      <Carousel opts={{ align: 'start', dragFree: true }} className="w-full">
+        <CarouselContent className="-ml-1 items-center flex w-full justify-between">
+          {/* Group 1: Headings (4 items) */}
+          <CarouselItem className="basis-auto pl-1">
+            {renderButtonGroup(headingItems)}
+          </CarouselItem>
+
+          <CarouselItem className="basis-auto pl-1">
+            <Separator orientation="vertical" className="h-8 mx-2" />
+          </CarouselItem>
+
+          {/* Group 2: Styles (3 items) */}
+          <CarouselItem className="basis-auto pl-1">
+            {renderButtonGroup(styleItems)}
+          </CarouselItem>
+
+          <CarouselItem className="basis-auto pl-1">
+            <Separator orientation="vertical" className="h-8 mx-2" />
+          </CarouselItem>
+
+          {/* Group 3: Others (4 items) */}
+          <CarouselItem className="basis-auto pl-1">
+            {renderButtonGroup(otherItems)}
+          </CarouselItem>
+        </CarouselContent>
+      </Carousel>
       <input
         type="file"
         ref={fileInputRef}
