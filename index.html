@@ -111,6 +111,32 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Notia" />
+    <script>
+      (function() {
+        try {
+          var localTheme = localStorage.getItem('theme-storage');
+          var theme = 'system';
+          if (localTheme) {
+            var parsed = JSON.parse(localTheme);
+            if (parsed && parsed.state && parsed.state.theme) {
+              theme = parsed.state.theme;
+            }
+          }
+          
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          
+          if (theme === 'dark' || (theme === 'system' && systemDark)) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.backgroundColor = '#0f172a';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.backgroundColor = '#ffffff';
+          }
+        } catch (e) {
+          console.error('Theme init failed', e);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

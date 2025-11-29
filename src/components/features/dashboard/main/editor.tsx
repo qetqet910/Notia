@@ -309,7 +309,10 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       });
     }, [handleImageUpload]);
 
+    const isResettingRef = useRef(false);
+
     const resetStateFromNote = useCallback((noteToReset: Note) => {
+      isResettingRef.current = true;
       const initialContent = `${noteToReset.title}\n${noteToReset.content}`;
       setContent(initialContent);
 
@@ -354,9 +357,19 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       resetStateFromNote(note);
     }, [note, resetStateFromNote]);
 
+    const remindersRef = useRef(reminders);
     useEffect(() => {
+      remindersRef.current = reminders;
+    }, [reminders]);
+
+    useEffect(() => {
+      if (isResettingRef.current) {
+        isResettingRef.current = false;
+        return;
+      }
+
       const { tags: currentTags, reminders: currentRemindersRaw } =
-        parseNoteContent(content, new Date());
+        parseNoteContent(content, new Date(), remindersRef.current);
 
       setTags(currentTags.map((t) => t.text));
 
@@ -367,13 +380,25 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
           )
           .map((parsed) => {
+            // originalText가 같은 기존 리마인더를 찾습니다.
             const existing = prevReminders.find(
               (r) => r.original_text === parsed.originalText,
             );
+
+            // 기존 리마인더가 있다면, (DB에 저장된 것이든, 현재 편집 세션의 임시 것이든)
+            // '시간'을 새로 파싱된 시간(상대 시간의 경우 현재 기준 내일 등)으로 덮어쓰지 않고
+            // 기존에 확정된 시간을 유지합니다.
+            // 단, 텍스트가 변경되어 originalText가 달라진 경우는 새로운 리마인더로 취급되어
+            // 위 find에서 찾지 못하므로 자연스럽게 새로운 파싱 시간이 적용됩니다.
+            const resolvedDate = existing ? existing.date : parsed.parsedDate!;
+            
+            // id도 기존 것을 유지하거나, 없으면 임시 id 발급
+            const resolvedId = existing?.id || `temp-${parsed.originalText}-${Date.now()}`;
+
             return {
-              id: existing?.id || `temp-${parsed.originalText}-${Date.now()}`,
+              id: resolvedId,
               text: parsed.reminderText!,
-              date: parsed.parsedDate!,
+              date: resolvedDate,
               completed: existing?.completed || false,
               enabled: existing?.enabled ?? true,
               original_text: parsed.originalText,
@@ -557,7 +582,12 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   </ResizablePanel>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={50}>
-                    <PreviewPanel content={body} title={title} />
+                    <PreviewPanel
+                      content={body}
+                      title={title}
+                      displayTags={displayTags}
+                      displayReminders={displayReminders}
+                    />
                   </ResizablePanel>
                 </ResizablePanelGroup>
               ) : (
@@ -618,7 +648,12 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     value="preview"
                     className="flex-1 overflow-hidden data-[state=inactive]:hidden"
                   >
-                    <PreviewPanel content={body} title={title} />
+                    <PreviewPanel
+                      content={body}
+                      title={title}
+                      displayTags={displayTags}
+                      displayReminders={displayReminders}
+                    />
                   </TabsContent>
                 </Tabs>
               )}
@@ -656,72 +691,68 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   displayReminders,
 }) => (
   <div className="h-full overflow-y-auto custom-scrollbar">
-    {isReadOnly && (
-      <>
-        <h1 className="text-4xl pl-4 pt-4 font-bold mb-4">
-          {title || '제목 없음'}
-        </h1>
-        {(displayTags?.length > 0 || displayReminders?.length > 0) && (
-          <div className="sticky top-0 z-10 border-b border-t bg-background p-4 rounded-b-lg space-y-4">
-            {displayTags && displayTags.length > 0 && (
-              <div className="flex items-center">
-                <Tag className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                <Carousel
-                  opts={{ align: 'start', loop: false }}
-                  className="w-full"
-                >
-                  <CarouselContent className="-ml-1">
-                    {displayTags.map((tag, index) => (
-                      <CarouselItem
-                        key={index}
-                        className="basis-auto pl-1 pr-1"
-                      >
-                        <Badge variant="secondary">#{tag.text}</Badge>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                </Carousel>
-              </div>
-            )}
-            {displayReminders && displayReminders.length > 0 && (
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                <Carousel
-                  opts={{ align: 'start', loop: false }}
-                  className="w-full"
-                >
-                  <CarouselContent className="-ml-1">
-                    {displayReminders.map((reminder, index) => (
-                      <CarouselItem
-                        key={index}
-                        className="basis-auto pl-1 pr-1"
-                      >
-                        <div className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-background rounded-lg border border-border min-w-fit">
-                          <Clock className="h-4 w-4 text-blue-500" />
-                          <div className="flex-1 whitespace-nowrap">
-                            <div className="font-medium text-sm">
-                              {reminder.parsedDate ? (
-                                <span className="text-green-600 dark:text-green-400 mr-2">
-                                  {formatDate(reminder.parsedDate)}
-                                </span>
-                              ) : (
-                                <span className="text-orange-600 dark:text-orange-400 mr-2">
-                                  시간 파싱 실패
-                                </span>
-                              )}
-                              {reminder.reminderText}
-                            </div>
-                          </div>
-                        </div>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                </Carousel>
-              </div>
-            )}
+    <h1 className="text-4xl pl-4 pt-4 font-bold mb-4">
+      {title || '제목 없음'}
+    </h1>
+    {(displayTags?.length > 0 || displayReminders?.length > 0) && (
+      <div className="sticky top-0 z-10 border-b border-t bg-background p-4 rounded-b-lg space-y-4">
+        {displayTags && displayTags.length > 0 && (
+          <div className="flex items-center">
+            <Tag className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+            <Carousel
+              opts={{ align: 'start', loop: false }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-1">
+                {displayTags.map((tag, index) => (
+                  <CarouselItem
+                    key={index}
+                    className="basis-auto pl-1 pr-1"
+                  >
+                    <Badge variant="secondary">#{tag.text}</Badge>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
           </div>
         )}
-      </>
+        {displayReminders && displayReminders.length > 0 && (
+          <div className="flex items-center">
+            <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+            <Carousel
+              opts={{ align: 'start', loop: false }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-1">
+                {displayReminders.map((reminder, index) => (
+                  <CarouselItem
+                    key={index}
+                    className="basis-auto pl-1 pr-1"
+                  >
+                    <div className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-background rounded-lg border border-border min-w-fit">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                      <div className="flex-1 whitespace-nowrap">
+                        <div className="font-medium text-sm">
+                          {reminder.parsedDate ? (
+                            <span className="text-green-600 dark:text-green-400 mr-2">
+                              {formatDate(reminder.parsedDate)}
+                            </span>
+                          ) : (
+                            <span className="text-orange-600 dark:text-orange-400 mr-2">
+                              시간 파싱 실패
+                            </span>
+                          )}
+                          {reminder.reminderText}
+                        </div>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          </div>
+        )}
+      </div>
     )}
     <div className="p-4">
       <Suspense fallback={<MarkdownPreviewLoader />}>

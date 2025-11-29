@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   InputOTP,
   InputOTPGroup,
@@ -12,11 +12,13 @@ import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 export const InputOTPControlled: React.FC = () => {
   const [value, setValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const isSubmitting = useRef(false);
   const { loginWithKey } = useAuthStore();
   const { toast } = useToast();
 
   const handleSubmit = useCallback(
     async (key: string) => {
+      if (isSubmitting.current) return;
       if (key.length !== 16) {
         toast({
           title: '오류',
@@ -26,6 +28,7 @@ export const InputOTPControlled: React.FC = () => {
         return;
       }
 
+      isSubmitting.current = true;
       setIsProcessing(true);
       try {
         const { success, message } = await loginWithKey(key);
@@ -38,14 +41,14 @@ export const InputOTPControlled: React.FC = () => {
           setValue('');
         } else {
           toast({
-            title: '로그인 오류',
-            description: '예상치 못한 오류가 발생했습니다.',
-            variant: 'destructive',
+            title: '로그인 성공',
+            description: '환영합니다!',
           });
-          setValue('');
+          // Navigation is handled by the useEffect in Login.tsx or Auth wrapper
         }
       } finally {
         setIsProcessing(false);
+        isSubmitting.current = false;
       }
     },
     [loginWithKey, toast],
@@ -53,6 +56,7 @@ export const InputOTPControlled: React.FC = () => {
 
   const handleKeyUp = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter') {
+      event.preventDefault();
       handleSubmit(value);
     }
   };

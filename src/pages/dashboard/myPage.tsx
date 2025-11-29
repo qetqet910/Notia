@@ -104,9 +104,7 @@ export default function MyPage() {
 
   return (
     <div
-      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground no-scrollbar theme-${
-        isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
-      }`}
+      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground min-h-full no-scrollbar`}
     >
       <Toaster />
       <div className="max-w-5xl mx-auto">

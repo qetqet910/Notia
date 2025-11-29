@@ -247,9 +247,7 @@ export default function HelpPage() {
 
   return (
     <div
-      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground custom-scrollbar theme-${
-        isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
-      }`}
+      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground min-h-full custom-scrollbar`}
     >
       <Toaster />
       <div className="max-w-5xl mx-auto">
@@ -416,7 +414,7 @@ export default function HelpPage() {
             )}
             {activeTab === 'shortcuts' && (
               <div
-                className="space-y-6 custom-scrollbar"
+                className="space-y-6 custom-scrollbar mb-20"
                 style={{
                   maxHeight: 'calc(100vh - 200px)',
                   paddingRight: '1rem',
