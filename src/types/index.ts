@@ -4,7 +4,6 @@ export interface Note {
   content?: string;
   owner_id: string;
   is_public: boolean;
-  parent_id?: string;
   note_type?: string;
   tags: string[];
   created_at: string;

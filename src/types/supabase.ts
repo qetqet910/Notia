@@ -16,7 +16,6 @@ export type Database = {
           content: string;
           owner_id: string;
           is_public: boolean;
-          parent_id: string | null;
           note_type: string | null;
           tags: string[];
           created_at: string;
@@ -29,7 +28,6 @@ export type Database = {
           content: string;
           owner_id: string;
           is_public?: boolean;
-          parent_id?: string | null;
           note_type?: string | null;
           tags?: string[];
           created_at?: string;
@@ -42,7 +40,6 @@ export type Database = {
           content?: string;
           owner_id?: string;
           is_public?: boolean;
-          parent_id?: string | null;
           note_type?: string | null;
           tags?: string[];
           created_at?: string;

@@ -219,7 +219,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       const { data, error } = await supabase
         .from('notes')
         .select(
-          'id, title, owner_id, is_public, parent_id, note_type, tags, created_at, updated_at, content_preview, reminders(*)',
+          'id, title, owner_id, is_public, note_type, tags, created_at, updated_at, content_preview, reminders(*)',
         )
         .eq('owner_id', userId);
 
