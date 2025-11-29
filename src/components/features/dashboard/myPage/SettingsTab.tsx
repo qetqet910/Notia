@@ -41,7 +41,7 @@ import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
-  const { signOut, user } = useAuthStore();
+  const { signOut, user, deleteAccount } = useAuthStore();
   const { notes, createNote } = useDataStore();
   const { theme, setTheme } = useThemeStore();
   const { goalStats, updateUserGoals } = useNotes();
@@ -50,6 +50,7 @@ export const SettingsTab: React.FC = React.memo(() => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false); // New state for delete account loading
 
   const [isGoalSaving, setIsGoalSaving] = useState(false);
   const [weeklyNoteGoal, setWeeklyNoteGoal] = useState(
@@ -148,13 +149,26 @@ export const SettingsTab: React.FC = React.memo(() => {
   );
 
   const handleDeleteAccount = useCallback(async () => {
-    // TODO: Delete account logic
-    toast({
-      title: '요청됨',
-      description: '계정 삭제 절차가 시작되었습니다.',
-    });
-    setShowDeleteDialog(false);
-  }, [toast]);
+    setIsDeletingAccount(true); // Set loading true
+    try {
+      const { success, error } = await deleteAccount();
+      if (success) {
+        toast({
+          title: '삭제 완료',
+          description: '계정과 모든 데이터가 영구적으로 삭제되었습니다.',
+        });
+      } else {
+        toast({
+          title: '삭제 실패',
+          description: error?.message || '계정 삭제 중 오류가 발생했습니다.',
+          variant: 'destructive',
+        });
+      }
+      setShowDeleteDialog(false);
+    } finally {
+      setIsDeletingAccount(false); // Set loading false
+    }
+  }, [deleteAccount, toast]);
 
   const handleSaveGoals = useCallback(async () => {
     setIsGoalSaving(true);
@@ -398,7 +412,14 @@ export const SettingsTab: React.FC = React.memo(() => {
             >
               취소
             </Button>
-            <Button variant="destructive" onClick={handleDeleteAccount}>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={isDeletingAccount}
+            >
+              {isDeletingAccount && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
               삭제
             </Button>
           </DialogFooter>

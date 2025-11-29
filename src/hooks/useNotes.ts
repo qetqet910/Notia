@@ -180,119 +180,129 @@ export const useNotes = () => {
 
 
 
-  const saveReminders = useCallback(
-    async (noteId: string, finalReminders: EditorReminder[]) => {
-      if (!user) {
-        console.error('[세이브리마인더-에러] 사용자 정보가 없습니다.');
-        return [];
-      }
-
-      try {
-        // 1. Handle deletions: Find reminders in DB that are not in the editor anymore
-        const finalOriginalTexts = new Set(finalReminders.map(r => r.original_text));
-        const { data: existingReminders, error: fetchError } = await supabase
-          .from('reminders')
-          .select('id, original_text')
-          .eq('note_id', noteId);
-        if (fetchError) throw fetchError;
-
-        const idsToDelete = existingReminders
-          .filter(r => !finalOriginalTexts.has(r.original_text))
-          .map(r => r.id);
-
-        if (idsToDelete.length > 0) {
-          await supabase.from('reminders').delete().in('id', idsToDelete);
+      const saveReminders = useCallback(
+      async (noteId: string, finalReminders: EditorReminder[]) => {
+        if (!user) {
+          console.error('[세이브리마인더-에러] 사용자 정보가 없습니다.');
+          return [];
         }
-
-        // 2. Prepare and upsert the original reminders from the editor
-        const reminderDataToUpsert = finalReminders
-          .filter(r => r.date instanceof Date && !isNaN(r.date.getTime()))
-          .map(r => {
-            const roundedDate = new Date(r.date.getTime());
-            if (roundedDate.getSeconds() > 0) {
-              roundedDate.setMinutes(roundedDate.getMinutes() + 1);
-              roundedDate.setSeconds(0, 0);
-            }
-            return {
-              note_id: noteId,
-              owner_id: user.id,
-              reminder_text: r.text,
-              reminder_time: fromZonedTime(roundedDate, KOREA_TIMEZONE).toISOString(),
-              completed: r.completed || false,
-              enabled: r.enabled ?? true,
-              original_text: r.original_text,
-            };
-          });
-        
-        if (reminderDataToUpsert.length === 0) {
-          return []; // No valid reminders to process
-        }
-
-        const { data: upsertedReminders, error: upsertError } = await supabase
-          .from('reminders')
-          .upsert(reminderDataToUpsert, { onConflict: 'note_id, original_text' })
-          .select();
-
-        if (upsertError) throw upsertError;
-
-        // 3. For each upserted reminder, regenerate its notification schedules
-        for (const reminder of upsertedReminders) {
-          // A. Delete all old schedules for this reminder to ensure consistency
-          await supabase.from('notification_schedules').delete().eq('reminder_id', reminder.id);
-
-          // B. Create new schedules only if the reminder is enabled
-          if (reminder.enabled) {
-            const schedulesToCreate = [];
-            const originalTime = new Date(reminder.reminder_time);
-            const now = new Date();
-
-            const intervals = [
-              { minutes: 30, type: 'before_30m' },
-              { minutes: 20, type: 'before_20m' },
-              { minutes: 15, type: 'before_15m' },
-              { minutes: 10, type: 'before_10m' },
-              { minutes: 5, type: 'before_5m' },
-              { minutes: 3, type: 'before_3m' },
-              { minutes: 1, type: 'before_1m' },
-            ];
-
-            for (const interval of intervals) {
-              const beforeTime = new Date(originalTime.getTime() - interval.minutes * 60 * 1000);
-              if (beforeTime > now) {
-                schedulesToCreate.push({
-                  reminder_id: reminder.id,
-                  owner_id: user.id,
-                  notification_type: interval.type,
-                  scheduled_time: fromZonedTime(beforeTime, KOREA_TIMEZONE).toISOString(),
-                });
+  
+        try {
+          // 1. Handle deletions: Find reminders in DB that are not in the editor anymore
+          // We compare based on ID.
+          const { data: existingReminders, error: fetchError } = await supabase
+            .from('reminders')
+            .select('id')
+            .eq('note_id', noteId);
+          if (fetchError) throw fetchError;
+  
+          const incomingIds = new Set(finalReminders.map(r => r.id).filter(id => id)); // Filter out undefined/null just in case
+          const idsToDelete = existingReminders
+            .filter(r => !incomingIds.has(r.id))
+            .map(r => r.id);
+  
+          if (idsToDelete.length > 0) {
+            await supabase.from('reminders').delete().in('id', idsToDelete);
+          }
+  
+                  // 2. Prepare and upsert the reminders
+                  const reminderDataToUpsert = finalReminders
+                    .filter(r => r.date instanceof Date && !isNaN(r.date.getTime()))
+                    .map(r => {
+                      const roundedDate = new Date(r.date.getTime());
+                      if (roundedDate.getSeconds() > 0) {
+                        roundedDate.setMinutes(roundedDate.getMinutes() + 1);
+                        roundedDate.setSeconds(0, 0);
+                      }
+                      
+                      // If it's a new reminder (temp ID), generate a valid UUID.
+                      const isTempId = r.id && r.id.startsWith('temp-');
+                      const idToUse = isTempId ? uuidv4() : r.id;
+                      
+                      return {
+                        id: idToUse, // Use the valid UUID
+                        note_id: noteId,
+                        owner_id: user.id,
+                        reminder_text: r.text,
+                        reminder_time: fromZonedTime(roundedDate, KOREA_TIMEZONE).toISOString(),
+                        completed: r.completed || false,
+                        enabled: r.enabled ?? true,
+                        original_text: r.original_text,
+                      };
+                    });          
+          if (reminderDataToUpsert.length === 0) {
+            return [];
+          }
+  
+          // Upsert based on 'id'.
+          const { data: upsertedReminders, error: upsertError } = await supabase
+            .from('reminders')
+            .upsert(reminderDataToUpsert, { onConflict: 'id' })
+            .select();
+  
+          if (upsertError) throw upsertError;
+  
+          // 3. For each upserted reminder, regenerate its notification schedules
+          for (const reminder of upsertedReminders) {
+             // ... existing schedule logic ...
+             // (Optimized: Only regenerate if time/enabled changed? 
+             //  For now, keep existing logic for safety, but it creates churn.)
+            
+            // A. Delete all old schedules for this reminder
+            await supabase.from('notification_schedules').delete().eq('reminder_id', reminder.id);
+  
+            // B. Create new schedules only if the reminder is enabled
+            if (reminder.enabled) {
+              const schedulesToCreate = [];
+              const originalTime = new Date(reminder.reminder_time);
+              const now = new Date();
+  
+              const intervals = [
+                { minutes: 30, type: 'before_30m' },
+                { minutes: 20, type: 'before_20m' },
+                { minutes: 15, type: 'before_15m' },
+                { minutes: 10, type: 'before_10m' },
+                { minutes: 5, type: 'before_5m' },
+                { minutes: 3, type: 'before_3m' },
+                { minutes: 1, type: 'before_1m' },
+              ];
+  
+              for (const interval of intervals) {
+                const beforeTime = new Date(originalTime.getTime() - interval.minutes * 60 * 1000);
+                if (beforeTime > now) {
+                  schedulesToCreate.push({
+                    reminder_id: reminder.id,
+                    owner_id: user.id,
+                    notification_type: interval.type,
+                    scheduled_time: fromZonedTime(beforeTime, KOREA_TIMEZONE).toISOString(),
+                  });
+                }
+              }
+  
+              schedulesToCreate.push({
+                reminder_id: reminder.id,
+                owner_id: user.id,
+                notification_type: 'at_time',
+                scheduled_time: reminder.reminder_time,
+              });
+  
+              if (schedulesToCreate.length > 0) {
+                const { error: scheduleError } = await supabase
+                  .from('notification_schedules')
+                  .insert(schedulesToCreate);
+                if (scheduleError) throw scheduleError;
               }
             }
-
-            schedulesToCreate.push({
-              reminder_id: reminder.id,
-              owner_id: user.id,
-              notification_type: 'at_time',
-              scheduled_time: reminder.reminder_time,
-            });
-
-            if (schedulesToCreate.length > 0) {
-              const { error: scheduleError } = await supabase
-                .from('notification_schedules')
-                .insert(schedulesToCreate);
-              if (scheduleError) throw scheduleError;
-            }
           }
+  
+          return upsertedReminders;
+        } catch (err) {
+          console.error('[세이브리마인더-에러] 리마인더 동기화 중 오류 발생:', err);
+          return [];
         }
-
-        return upsertedReminders;
-      } catch (err) {
-        console.error('[세이브리마인더-에러] 리마인더 동기화 중 오류 발생:', err);
-        return [];
-      }
-    },
-    [user],
-  );
-
+      },
+      [user],
+    );
   // 노트 업데이트 (리마인더 포함)
   const updateNote = useCallback(
     async (

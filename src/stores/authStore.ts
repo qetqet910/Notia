@@ -73,6 +73,10 @@ interface AuthStore extends AuthState {
     success: boolean;
     error?: Error | null;
   }>;
+  deleteAccount: () => Promise<{
+    success: boolean;
+    error?: Error | null;
+  }>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -107,6 +111,24 @@ export const useAuthStore = create<AuthStore>()(
           userProfile: null,
         }),
       clearUserKey: () => set({ userKey: null }),
+
+      deleteAccount: async () => {
+        set({ isLogoutLoading: true }); // Reuse logout loading state or add new one
+        try {
+          const { error } = await supabase.functions.invoke('delete_account');
+          if (error) throw error;
+
+          // If successful, sign out to clear local state
+          await get().signOut();
+          return { success: true };
+        } catch (error) {
+          console.error('계정 삭제 오류:', error);
+          set({ error: error as Error });
+          return { success: false, error: error as Error };
+        } finally {
+          set({ isLogoutLoading: false });
+        }
+      },
 
       checkCreationLimit: async (clientIP: string) => {
         return await checkCreationLimit(clientIP);
@@ -287,8 +309,10 @@ export const useAuthStore = create<AuthStore>()(
       signOut: async () => {
         set({ isLogoutLoading: true });
         try {
-          const { error } = await supabase.auth.signOut();
-          if (error) throw error;
+          await supabase.auth.signOut();
+        } catch (error) {
+          console.warn('로그아웃 API 호출 중 오류 (로컬 상태는 초기화됩니다):', error);
+        } finally {
           set({
             user: null,
             session: null,
@@ -296,14 +320,9 @@ export const useAuthStore = create<AuthStore>()(
             userProfile: null,
             userKey: null,
             formattedKey: null,
+            isLogoutLoading: false,
           });
           return { success: true };
-        } catch (error) {
-          console.error('로그아웃 오류:', error);
-          set({ error: error as Error });
-          return { success: false, error: error as Error };
-        } finally {
-          set({ isLogoutLoading: false });
         }
       },
 

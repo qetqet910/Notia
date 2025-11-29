@@ -60,8 +60,36 @@ const CodeBlock: React.FC<CodeBlockProps> = React.memo(
 
 CodeBlock.displayName = 'CodeBlock';
 
+const preserveNewlines = (content: string): string => {
+  if (!content) return '';
+  
+  // Normalize CRLF to LF
+  const normalized = content.replace(/\r\n/g, '\n');
+  
+  const parts = normalized.split(/(```[\s\S]*?```)/g);
+  
+  return parts.map((part, index) => {
+    if (index % 2 === 1) return part; // Code block
+    
+    // Robust regex to match 2 or more newlines, ignoring spaces/tabs on empty lines
+    return part.replace(/\n([ \t]*\n)+/g, (match) => {
+      // Count effective newlines
+      const newlineCount = (match.match(/\n/g) || []).length;
+      
+      if (newlineCount < 2) return match;
+      if (newlineCount === 2) return '\n\n';
+      
+      // For 3 or more newlines, inject empty paragraphs with Unicode NBSP
+      // Using Unicode \u00A0 ensures it's treated as a character, preventing collapse
+      return '\n\n' + '\u00A0\n\n'.repeat(newlineCount - 2);
+    });
+  }).join('');
+};
+
 export const MarkdownPreview: React.FC<MarkdownPreviewProps> = React.memo(
   ({ content }) => {
+    const processedContent = React.useMemo(() => preserveNewlines(content || ''), [content]);
+
     return (
       <div className="prose prose-sm max-w-none dark:prose-invert">
         <ReactMarkdown
@@ -84,7 +112,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = React.memo(
               </h3>
             ),
             p: ({ children, ...props }) => (
-              <p className="mb-4 leading-relaxed" {...props}>
+              <p className="mb-2 min-h-[1.5em] leading-relaxed" {...props}>
                 {children}
               </p>
             ),
