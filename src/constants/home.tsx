@@ -80,7 +80,7 @@ export const initialContent = `# 회의 정리본
 > 데스크탑 앱 관련하여 Electron보다 Tauri가 이 프로젝트에 적합하다는 판단.
 [Tauri Docs/Windows](https://v1.tauri.app/v1/guides/building/windows)
 
-@모레 2시 3차 검증.
+@글피 2시 10분 A회의실 회의.
 `;
 
 // ---- Animation Variants ----

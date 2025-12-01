@@ -1,319 +1,368 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import Zap from 'lucide-react/dist/esm/icons/zap';
+import Calendar from 'lucide-react/dist/esm/icons/calendar';
+import Hash from 'lucide-react/dist/esm/icons/hash';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+
 import { Toaster } from '@/components/ui/toaster';
+import { Button } from '@/components/ui/button';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
+import { LandingEditor } from '@/components/features/landing/LandingEditor';
+import { useAuthStore } from '@/stores/authStore';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { faqItems } from '@/constants/home';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import landingAnimation from '/lottie/landingAnimation.lottie';
 import rocketAnimation from '/lottie/rocketAnimation.lottie';
-import bottomArrow from '/lottie/bottomArrow.lottie';
 import connectingAnimation from '/lottie/Connecting.lottie';
-import '@/styles/LandingTextAnimation.css';
-import { LandingEditor } from '@/components/features/landing/LandingEditor';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
-import {
-  features,
-  userProfiles,
-  faqItems,
-  fadeIn,
-  staggerContainer,
-} from '@/constants/home.tsx';
 
-export const Home: React.FC = () => {
+// --- Visual Components ---
+
+const GridPattern = () => (
+  <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:6rem_4rem]">
+    <div className="absolute bottom-0 left-0 right-0 top-0 bg-[radial-gradient(circle_800px_at_100%_200px,#d5c5ff30,transparent)]"></div>
+  </div>
+);
+
+// --- Main Component ---
+
+export default function Home() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
-  const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {
-    e.preventDefault();
-    const targetId = e.currentTarget.href.split('#')[1];
-    const targetElement = document.getElementById(targetId);
-
-    if (targetElement) {
-      targetElement.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // 1. Redirect Logic
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 overflow-hidden">
+    <div className="min-h-screen bg-white text-slate-900 font-['Orbit'] selection:bg-[#68C7C1]/30 selection:text-slate-900 overflow-x-hidden">
       <Toaster />
       <Header />
+      {/* GridPattern is optional on white background, but keeps subtle texture. Keeping it as requested 'current code' base but ensuring white bg underneath */}
+      <GridPattern />
 
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center px-6 lg:px-12 overflow-hidden hero-section">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-100 via-white to-transparent blur-3xl"></div>
-        {isMobile && (
-          <div className="absolute inset-0 z-0 flex items-center justify-center opacity-50">
-            <DotLottieReact
-              src={connectingAnimation}
-              loop
-              autoplay
-              className="w-full object-cover opacity-75"
-            />
-          </div>
-        )}
-        <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={staggerContainer}
-            className="text-center md:text-left"
-          >
-            <motion.h1
-              variants={fadeIn(0)}
-              className="text-4xl sm:text-4xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-6xl font-extrabold leading-tight tracking-tight"
-            >
-              <span>기억의 조각을</span>
-              <br/>
-              <span className="text-shadows">태그와 리마인더로</span>
-              <br/>
-              <span className='ml-2'>
-               <img src="/images/연.svg" alt="연" className="inline-block" style={{ width: '.95em', transform: 'translateY(-0.04em)' }} />
-               결하세요 
-              </span>
-
-            </motion.h1>
-            <motion.p
-              variants={fadeIn(0.2)}
-              className="mt-6 text-base md:text-lg text-muted-foreground max-w-xl mx-auto md:mx-0"
-            >
-              #태그, @리마인더를 통해 하나의 노트에서<br/> 
-              체계적으로 정리하고, 스케줄을 돕는 가장 빠른 도구입니다.
-            </motion.p>
-            <motion.div variants={fadeIn(0.4)} className="mt-8">
-              <Button
-                className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 text-white font-bold shadow-lg shadow-[#61C9A8]/30 transform hover:scale-105 transition-all duration-300"
-                size="lg"
-                onClick={() => navigate('/login')}
-              >
-                지금 바로 시작하기 <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </motion.div>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
-            className="hidden md:flex items-center justify-center"
-          >
-            <div className="w-full h-auto md:w-[450px] md:h-[450px] lg:w-[600px] lg:h-[600px]">
+      <main>
+        {/* Hero Section */}
+        <section className="relative h-screen flex items-center px-6 lg:px-12 overflow-hidden hero-section bg-white">
+          {/* Gradient Background - Pure White base */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-transparent blur-3xl"></div>
+          
+          {isMobile && (
+            <div className="absolute inset-0 z-0 flex items-center justify-center opacity-30 pointer-events-none" aria-hidden="true">
               <DotLottieReact
-                src={landingAnimation}
+                src={connectingAnimation}
                 loop
                 autoplay
-                className="w-full h-full"
-                style={{ width: '100%', height: '100%' }}
+                className="w-full object-cover"
               />
             </div>
-          </motion.div>
-        </div>
-        <motion.a
-          href="#interactive-demo"
-          onClick={handleScroll}
-          className="absolute bottom-10 left-0 right-0 mx-auto w-12 h-12 cursor-pointer z-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.8 }}
-          whileHover={{ scale: 1.1 }}
-        >
-          <DotLottieReact
-            src={bottomArrow}
-            loop
-            autoplay
-            className="w-full h-full"
-          />
-        </motion.a>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-24 dark-dot-pattern text-white features-section">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={staggerContainer}
-            className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8"
-          >
-            {features.map((feature, index) => (
-              <motion.div variants={fadeIn(index * 0.1)} key={index} className={`${index === 1 ? 'md:mt-[250px] lg:mt-0 xl:mt-0' : ''}`}>
-                <div className="max-w-lg p-8 mx-auto lg:h-full xl:h-full rounded-2xl border border-gray-700/50 hover:border-[#61C9A8]/50 hover:bg-white transition-all duration-300">
-                  <div className="flex flex-col items-center">
-                    <div className="bg-[#61C9A8] w-16 h-16 rounded-full flex items-center justify-center mb-6 shadow-lg">
-                      {feature.icon}
-                    </div>
-                    <h3 className="sm:text-md md:text-lg xl:text-xl 2xl:text-xl font-bold mb-3 text-black">
-                      {feature.title}
-                    </h3>
-                  </div>
-                  <p className=" sm:text-sm md:text-md lg:text-base text-gray-700 text-center">{feature.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Built For & Performance Section */}
-      <section className="py-24 px-6 lg:px-12">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl sm:text-4xl md:text-5x1 font-extrabold mb-4 tracking-tight">
-              당신의 생산성을 위한 모든 것
-            </h2>
-            <p className="text-md sm:text-lg text-muted-foreground max-w-1xl mx-auto">
-              콘텐츠 크리에이터부터 학습자까지, Notia는 다양한 역할에 최적화된
-              기능을 제공하며 어떤 환경에서도 최고의 성능을 보장합니다.
-            </p>
-          </motion.div>
-
-          <div className="flex flex-col md:flex-row items-stretch gap-8">
+          )}
+          <div className="relative z-10 max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center w-full h-full">
             <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              variants={staggerContainer}
-              className="space-y-8 md:w-1/2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="space-y-10 text-center md:text-left flex flex-col justify-center"
             >
-              {userProfiles.map((profile, index) => (
-                <motion.div key={index} variants={fadeIn(index * 0.1)}>
-                  <div className="flex items-start gap-6 / text-sm sm:text-sm lg:text-sm md:text-sm xl:text-md">
-                    <div className="flex-shrink-0">{profile.icon}</div>
-                    <div>
-                      <h3 className="text-xl font-bold mb-2">
-                        {profile.title}
-                      </h3>
-                      <p className="text-muted-foreground">
-                        {profile.description}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.3]">
+                <span>기억의 조각을</span>
+                <br />
+                <span className="text-[#68C7C1] inline-flex items-center gap-2">
+                   연결하세요
+                </span>
+              </h1>
+              <p className="text-xl text-slate-600 max-w-lg mx-auto md:mx-0 leading-relaxed">
+                #태그와 @리마인더를 통해 하나의 노트에서 <br className="hidden sm:block"/>
+                체계적으로 정리하고, 스케줄을 관리하세요.
+              </p>
+              <div className="flex flex-wrap gap-4 justify-center md:justify-start pt-4">
+                <Button
+                  size="lg"
+                  className="h-14 px-8 text-lg bg-[#68C7C1] hover:bg-[#5cb8b2] text-white rounded-full shadow-[0_8px_30px_rgb(104,199,193,0.4)] hover:shadow-xl transition-all hover:-translate-y-1"
+                  onClick={() => navigate('/login')}
+                >
+                  지금 바로 시작하기 <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-14 px-8 text-lg rounded-full border-slate-200 hover:bg-white hover:text-[#68C7C1]"
+                  onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  더 알아보기
+                </Button>
+              </div>
             </motion.div>
 
-            <div className="w-full h-px bg-gray-900/10 md:w-px md:h-auto"></div>
-
+            {/* Hero Visual: Restored Lottie Structure */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, amount: 0.5 }}
-              transition={{ duration: 0.7, ease: 'easeOut' }}
-              className="md:w-1/2"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
+              className="hidden md:flex items-center justify-center h-full"
             >
-              <div className="p-10 rounded-2xl text-center h-full flex flex-col justify-center">
-                <div className="flex justify-center mb-6">
-                  <div className="w-36 h-36">
-                    <DotLottieReact
-                      src={rocketAnimation}
-                      loop
-                      autoplay
-                      className="w-full h-full"
-                    />
-                  </div>
-                </div>
-                <h3 className="text-2xl font-bold mb-4">
-                  성능에 타협은 없습니다
-                </h3>
-                <p className="text-muted-foreground text-sm sm:text-sm lg:text-sm md:text-sm xl:text-md">
-                  어떤 환경에서도 즉각적인 반응 속도를 경험하세요. 불필요한
-                  기능은 덜어내고, 오직 핵심에만 집중하여 가볍고 빠르게
-                  만들었습니다.
-                </p>
+              <div className="w-full h-auto md:w-[450px] md:h-[450px] lg:w-[600px] lg:h-[600px]">
+                <DotLottieReact
+                  src={landingAnimation}
+                  loop
+                  autoplay
+                  className="w-full h-full"
+                  style={{ width: '100%', height: '100%' }}
+                />
               </div>
             </motion.div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Interactive Demo Section */}
-      <section
-        id="interactive-demo"
-        className="py-24 px-6 lg:px-12 dark-dot-pattern"
-      >
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-extrabold mb-4 tracking-tight text-gray-900">
-              미리보기
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-1x1 mx-auto">
-              아래 편집기에서 직접 #태그와 @리마인더 기능을 사용해보세요.
-              입력하는 대로 실시간으로 반응합니다.
-            </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-          >
-            <LandingEditor />
-          </motion.div>
-        </div>
-      </section>
+        {/* Feature Grid (Bento Box Style) */}
+        <section id="features" className="py-32 px-6 bg-white relative z-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-24">
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-8 leading-tight">
+                단 하나의 앱으로 <br className="hidden md:block" />
+                <span className="text-slate-400">완벽한 워크플로우를 완성하세요</span>
+              </h2>
+            </div>
 
-      {/* FAQ Section */}
-      <section className="py-24">
-        <div className="max-w-4xl mx-auto px-6 lg:px-12">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-4xl font-extrabold mb-4 tracking-tight">FAQ</h2>
-          </motion.div>
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={staggerContainer}
-          >
-            <Accordion type="single" collapsible className="w-full space-y-2">
-              {faqItems.map((item, index) => (
-                <motion.div key={index} variants={fadeIn(index * 0.1)}>
+            <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
+              {/* Feature 1: Editor */}
+              <motion.div 
+                whileHover={{ y: -5 }}
+                className="md:col-span-2 bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100 overflow-hidden relative group shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <div className="relative z-10">
+                  <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-8">
+                    <FileText className="w-7 h-7 text-slate-700" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">강력한 마크다운 에디터</h3>
+                  <p className="text-slate-500 max-w-md text-lg leading-relaxed">
+                    복잡한 설정 없이 바로 쓰세요. 코드 하이라이팅, 실시간 프리뷰, 
+                    그리고 드래그 앤 드롭 이미지 업로드가 지원됩니다.
+                  </p>
+                </div>
+                <div className="absolute right-0 bottom-0 w-1/2 h-4/5 bg-white rounded-tl-[2rem] shadow-2xl border border-slate-100 p-8 translate-x-8 translate-y-8 transition-transform group-hover:translate-x-4 group-hover:translate-y-4">
+                   <div className="font-mono text-sm text-slate-400 space-y-2">
+                      <span className="text-purple-500 font-bold"># Notia</span> <br/>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-[#68C7C1] rounded flex items-center justify-center text-white text-xs">✓</div>
+                        <span>마크다운 지원</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border border-slate-300 rounded"></div>
+                        <span>실시간 동기화</span>
+                      </div>
+                   </div>
+                </div>
+              </motion.div>
+
+              {/* Feature 2: Calendar */}
+              <motion.div 
+                whileHover={{ y: -5 }}
+                className="bg-slate-900 text-white rounded-[2.5rem] p-10 border border-slate-800 overflow-hidden relative group shadow-lg"
+              >
+                 <div className="relative z-10">
+                  <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm mb-8">
+                    <Calendar className="w-7 h-7 text-[#68C7C1]" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4">자동 일정 관리</h3>
+                  <p className="text-slate-400 text-lg leading-relaxed">
+                    노트에 적은 날짜는<br/>자동으로 캘린더에 등록됩니다.
+                  </p>
+                </div>
+                <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-[#68C7C1]/20 rounded-full blur-3xl group-hover:bg-[#68C7C1]/30 transition-colors"></div>
+              </motion.div>
+
+              {/* Feature 3: Tags */}
+              <motion.div 
+                whileHover={{ y: -5 }}
+                className="bg-gradient-to-br from-[#68C7C1]/5 to-indigo-50/50 rounded-[2.5rem] p-10 border border-[#68C7C1]/10 shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                 <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-8 text-[#68C7C1]">
+                    <Hash className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-4 text-slate-800">스마트 태그</h3>
+                  <p className="text-slate-600/80 mb-6 text-lg leading-relaxed">
+                    폴더의 한계를 넘어서세요.<br/>
+                    직관적인 태그 시스템으로 노트를 다차원적으로 연결합니다.
+                  </p>
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/80 border border-[#68C7C1]/20 text-[#68C7C1] text-sm font-medium shadow-sm">
+                     <Zap className="w-4 h-4 mr-2" /> MD 블로그 작성 가능
+                  </div>
+              </motion.div>
+
+              {/* Feature 4: Performance */}
+              <motion.div 
+                whileHover={{ y: -5 }}
+                className="md:col-span-2 bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/40"
+              >
+                 <div className="flex flex-col md:flex-row items-start md:items-center gap-12">
+                    <div className="flex-1">
+                       <div className="flex items-center gap-4 mb-6">
+                          <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center shadow-sm text-orange-500">
+                            <Zap className="w-7 h-7" />
+                          </div>
+                          <h3 className="text-2xl font-bold">압도적인 퍼포먼스</h3>
+                       </div>
+                      
+                      <p className="text-slate-500 mb-8 text-lg leading-relaxed">
+                        Electron이 아닌 Tauri 기반으로 제작되어, 상상 이상의 가벼움과 속도를 자랑합니다. 
+                        배터리 소모는 줄이고, 반응 속도는 높였습니다.
+                      </p>
+                      
+                      {/* Performance Bar */}
+                       <div className="space-y-5 w-full max-w-md bg-slate-50 rounded-2xl p-8 border border-slate-100">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                               <span className="font-medium text-slate-700">Notia</span>
+                               <span className="font-bold text-[#68C7C1]">0.5s Load</span>
+                            </div>
+                            <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                               <div className="h-full bg-[#68C7C1] w-[95%]"></div>
+                            </div>
+                          </div>
+                          <div className="space-y-2 opacity-60">
+                            <div className="flex items-center justify-between text-sm">
+                               <span className="font-medium text-slate-600">Others</span>
+                               <span className="font-bold text-slate-600">2.0s+</span>
+                            </div>
+                            <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                               <div className="h-full bg-slate-400 w-[40%]"></div>
+                            </div>
+                          </div>
+                       </div>
+                    </div>
+                    
+                    {/* Rocket Animation */}
+                    <div className="hidden md:block w-64 h-64">
+                       <DotLottieReact
+                        src={rocketAnimation}
+                        loop
+                        autoplay
+                        className="w-full h-full"
+                      />
+                    </div>
+                 </div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* Interactive Demo Section with Gradient Fade */}
+        <section id="interactive-demo" className="py-40 px-6 dark-dot-pattern bg-background text-white relative overflow-hidden">
+           {/* Before Gradient: White to Transparent */}
+          <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-white to-transparent z-10 pointer-events-none" />
+          
+          <div className="max-w-7xl mx-auto relative z-20">
+            <div className="text-center mb-20">
+              <h2 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900">직접 경험해보세요</h2>
+              <p className="text-muted-foreground text-lg">
+                별도의 설치나 가입 없이, Notia의 핵심 기능을 지금 바로 웹에서 체험할 수 있습니다.
+              </p>
+            </div>
+            
+            <motion.div 
+              initial={{ y: 40, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="w-full"
+            >
+                  <LandingEditor />
+            </motion.div>
+          </div>
+
+          {/* After Gradient: Transparent to White */}
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-white to-transparent z-10 pointer-events-none" />
+        </section>
+
+        {/* FAQ Section (Increased top spacing for separation) */}
+        <section className="py-40 bg-white">
+          <div className="max-w-4xl mx-auto px-6 lg:px-12">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-20"
+            >
+              <h2 className="text-4xl font-extrabold mb-4 tracking-tight">FAQ</h2>
+              <p className="text-slate-500 text-lg">자주 묻는 질문을 확인하세요.</p>
+            </motion.div>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="space-y-6"
+            >
+              <Accordion type="single" collapsible className="w-full space-y-6">
+                {faqItems.map((item, index) => (
                   <AccordionItem
+                    key={index}
                     value={`item-${index}`}
-                    className="shadow border-b-0 rounded-xl px-6"
+                    className="border border-slate-100 rounded-2xl px-8 data-[state=open]:bg-slate-50 data-[state=open]:border-[#68C7C1]/30 transition-all duration-300"
                   >
-                    <AccordionTrigger className="text-md md:text-md lg:text-lg font-medium text-left hover:no-underline">
+                    <AccordionTrigger className="text-lg md:text-xl font-medium text-left hover:no-underline py-6">
                       {item.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-sm md:text-md lg:text-lg text-muted-foreground pt-2 pb-4">
+                    <AccordionContent className="text-base md:text-lg text-slate-600 pb-8 leading-relaxed">
                       {item.answer}
                     </AccordionContent>
                   </AccordionItem>
-                </motion.div>
-              ))}
-            </Accordion>
-          </motion.div>
-        </div>
-      </section>
+                ))}
+              </Accordion>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-40 px-6 text-center relative overflow-hidden bg-white">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#68C7C1]/5 pointer-events-none"></div>
+          <div className="max-w-4xl mx-auto relative z-10">
+            <h2 className="text-4xl md:text-6xl font-bold mb-10 tracking-tight text-slate-900 leading-tight">
+              생산성의 새로운 기준,<br/>
+              <span className="text-[#68C7C1]">Notia</span>와 함께하세요.
+            </h2>
+            <p className="text-xl md:text-2xl text-slate-500 mb-12 leading-relaxed">
+              지금 시작하면 모든 기능을 평생 무료로 사용할 수 있습니다.<br/>
+              더 이상 흩어진 도구들 사이에서 길을 잃지 마세요.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Button 
+                size="lg" 
+                className="h-16 px-12 text-xl rounded-full bg-[#68C7C1] hover:bg-[#5cb8b2] text-white shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1"
+                onClick={() => navigate('/login')}
+              >
+                무료로 시작하기
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="h-16 px-12 text-xl rounded-full border-slate-200 hover:bg-white hover:text-[#68C7C1]"
+                onClick={() => navigate('/download')}
+              >
+                데스크탑 앱 다운로드
+              </Button>
+            </div>
+            <p className="mt-8 text-base text-slate-400">
+              macOS, Windows, Linux 지원 • 모바일 앱 출시 예정
+            </p>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>
   );
-};
-
-export default Home;
+}
