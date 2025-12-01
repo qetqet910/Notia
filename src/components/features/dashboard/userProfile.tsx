@@ -66,7 +66,7 @@ export function UserProfile() {
           title: '로그아웃 성공',
           description: '성공적으로 로그아웃되었습니다.',
         });
-        setTheme('system');
+        setTheme('light');
         navigate('/login');
       } else {
         // result.error가 Error 객체가 아닐 수 있으므로 instanceof로 체크

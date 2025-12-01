@@ -119,6 +119,7 @@ export const useAuthStore = create<AuthStore>()(
           if (error) throw error;
 
           // If successful, sign out to clear local state
+          
           await get().signOut();
           return { success: true };
         } catch (error) {
@@ -308,10 +309,12 @@ export const useAuthStore = create<AuthStore>()(
 
       signOut: async () => {
         set({ isLogoutLoading: true });
+        let result: { success: boolean; error?: Error | null } = { success: true };
         try {
           await supabase.auth.signOut();
         } catch (error) {
           console.warn('로그아웃 API 호출 중 오류 (로컬 상태는 초기화됩니다):', error);
+          result = { success: false, error: error as Error };
         } finally {
           set({
             user: null,
@@ -322,8 +325,8 @@ export const useAuthStore = create<AuthStore>()(
             formattedKey: null,
             isLogoutLoading: false,
           });
-          return { success: true };
         }
+        return result;
       },
 
       createAnonymousUserWithEdgeFunction: async (

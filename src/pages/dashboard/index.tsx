@@ -779,7 +779,7 @@ const MobileNavigation = ({
           title: '로그아웃 성공',
           description: '성공적으로 로그아웃되었습니다.',
         });
-        setTheme('system');
+        setTheme('light');
         navigate('/login');
       } else {
         throw result.error || new Error('로그아웃 실패');
