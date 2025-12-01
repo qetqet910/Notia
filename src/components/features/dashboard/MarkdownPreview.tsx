@@ -172,7 +172,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = React.memo(
             ),
           }}
         >
-          {content || '*내용이 없습니다.*'}
+          {processedContent || '*내용이 없습니다.*'}
         </ReactMarkdown>
       </div>
     );

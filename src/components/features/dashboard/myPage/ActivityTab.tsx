@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import Bell from 'lucide-react/dist/esm/icons/bell';
@@ -8,6 +8,7 @@ import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 import { StatItem } from '@/components/features/dashboard/myPage/StatItem';
 import { useNotes } from '@/hooks/useNotes';
+import { useDataStore } from '@/stores/dataStore';
 import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -16,51 +17,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { ActivityData } from '@/types/index';
-
-interface CalculationResult {
-  stats: {
-    totalNotes: number;
-    totalReminders: number;
-    completedReminders: number;
-    completionRate: number;
-    tagsUsed: number;
-  };
-  activityData: ActivityData[];
-}
 
 export const ActivityTab: React.FC = React.memo(() => {
   const { notes, goalStats } = useNotes();
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [calculationResult, setCalculationResult] =
-    useState<CalculationResult | null>(null);
+  const { calculateActivityData, activityCache, isCalculating } = useDataStore();
 
   useEffect(() => {
-    setIsCalculating(true);
-    const worker = new Worker(
-      new URL('@/workers/activityCalculator.worker.ts', import.meta.url),
-      { type: 'module' },
-    );
-
-    worker.onmessage = (event: MessageEvent<CalculationResult>) => {
-      setCalculationResult(event.data);
-      setIsCalculating(false);
-    };
-
-    worker.onerror = (error) => {
-      console.error('Worker error:', error);
-      setIsCalculating(false);
-    };
-
-    worker.postMessage(notes);
-
-    return () => {
-      worker.terminate();
-    };
-  }, [notes]);
+    if (notes.length > 0) {
+      calculateActivityData(notes);
+    }
+  }, [notes, calculateActivityData]);
 
   const { stats, activityData } = useMemo(() => {
-    if (!calculationResult) {
+    if (!activityCache) {
       return {
         stats: {
           totalNotes: 0,
@@ -72,8 +41,8 @@ export const ActivityTab: React.FC = React.memo(() => {
         activityData: [],
       };
     }
-    return calculationResult;
-  }, [calculationResult]);
+    return activityCache;
+  }, [activityCache]);
 
   const getLevelColor = useCallback((level: number) => {
     const colors = [

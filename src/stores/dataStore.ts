@@ -23,7 +23,9 @@ interface DataState {
   initialize: (userId: string) => Promise<void>;
   unsubscribeAll: () => Promise<void>;
   createNote: (
-    noteData: Pick<Note, 'owner_id' | 'title' | 'content' | 'tags'>,
+    noteData: Pick<Note, 'owner_id' | 'title' | 'content' | 'tags'> & {
+      reminders?: Omit<EditorReminder, 'id'>[];
+    },
   ) => Promise<Note | null>;
   updateNoteState: (updatedNote: Note) => void;
   updateReminderState: (
@@ -45,7 +47,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   isCalculating: false,
 
   calculateActivityData: (notes: Note[]) => {
-    if (get().isCalculating) return;
+    if (get().isCalculating || get().activityCache) return;
 
     set({ isCalculating: true });
 
@@ -158,12 +160,14 @@ export const useDataStore = create<DataState>((set, get) => ({
               ...state.notes,
               [updatedNote.id]: { ...existingNote, ...updatedNote },
             },
+            activityCache: null,
           };
         }
       } else {
         // Realtime INSERT 이벤트 등으로 노트가 새로 추가될 때
         return {
           notes: { ...state.notes, [updatedNote.id]: updatedNote },
+          activityCache: null,
         };
       }
       return state;
@@ -188,7 +192,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           break;
         }
       }
-      return { notes: newNotes };
+      return { notes: newNotes, activityCache: null };
     });
   },
 
@@ -198,6 +202,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         ...state.notes,
         [newNote.id]: newNote,
       },
+      activityCache: null,
     }));
   },
 
@@ -205,7 +210,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set((state) => {
       const newNotes = { ...state.notes };
       delete newNotes[noteId];
-      return { notes: newNotes };
+      return { notes: newNotes, activityCache: null };
     });
   },
 

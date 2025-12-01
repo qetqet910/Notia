@@ -147,6 +147,8 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     ref,
   ) => {
     const [content, setContent] = useState('');
+    // 파싱과 미리보기를 위한 디바운스된 콘텐츠
+    const [debouncedContent, setDebouncedContent] = useState(''); 
     const [tags, setTags] = useState<string[]>([]);
     const [reminders, setReminders] = useState<EditorReminder[]>([]);
     const [isUploading, setIsUploading] = useState(false);
@@ -156,6 +158,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const { user } = useAuth();
     const isDesktop = useMediaQuery('(min-width: 1024px)');
 
+    // 에디터 표시용 (즉시 반영)
     const { title, body } = useMemo(() => {
       const lines = content.split('\n');
       const title = lines[0] || '';
@@ -163,9 +166,19 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       return { title, body };
     }, [content]);
 
+    // 미리보기 및 파싱용 (지연 반영)
+    const { title: debouncedTitle, body: debouncedBody } = useMemo(() => {
+      const lines = debouncedContent.split('\n');
+      const title = lines[0] || '';
+      const body = lines.slice(1).join('\n');
+      return { title, body };
+    }, [debouncedContent]);
+
     const filteredLanguages = languages.filter((lang) =>
       ['javascript', 'css', 'python', 'json'].includes(lang.name),
     );
+
+    // ... (image upload logic remains the same)
 
     const handleImageUpload = useCallback(
       async (file: File): Promise<string | null> => {
@@ -310,11 +323,16 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     }, [handleImageUpload]);
 
     const isResettingRef = useRef(false);
+    const previewRef = useRef<HTMLDivElement>(null);
+    // 스크롤 동기화 루프 방지용 Ref ('editor' | 'preview' | null)
+    const isScrollingRef = useRef<string | null>(null);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const resetStateFromNote = useCallback((noteToReset: Note) => {
       isResettingRef.current = true;
       const initialContent = `${noteToReset.title}\n${noteToReset.content}`;
       setContent(initialContent);
+      setDebouncedContent(initialContent); // 초기화 시에는 즉시 동기화
 
       const existingEditorReminders: EditorReminder[] = (
         noteToReset.reminders || []
@@ -353,6 +371,54 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       );
     }, []);
 
+    // ... (useEffect hooks for resetStateFromNote and remindersRef remain same)
+
+    // 에디터 스크롤 핸들러 (CodeMirror -> Preview)
+    const handleEditorScroll = useCallback((view: EditorView) => {
+      if (isScrollingRef.current === 'preview') return;
+
+      const scrollDOM = view.scrollDOM;
+      const percentage =
+        scrollDOM.scrollTop / (scrollDOM.scrollHeight - scrollDOM.clientHeight);
+
+      if (previewRef.current) {
+        isScrollingRef.current = 'editor';
+        previewRef.current.scrollTop =
+          percentage *
+          (previewRef.current.scrollHeight - previewRef.current.clientHeight);
+        
+        // 락 해제 시간을 조금 더 짧게 조정
+        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = setTimeout(() => {
+          isScrollingRef.current = null;
+        }, 50);
+      }
+    }, []);
+
+    // 미리보기 스크롤 핸들러 (Preview -> CodeMirror)
+    const handlePreviewScroll = useCallback(() => {
+      if (isScrollingRef.current === 'editor' || !editorRef.current?.view || !previewRef.current) return;
+
+      const previewEl = previewRef.current;
+      const percentage =
+        previewEl.scrollTop / (previewEl.scrollHeight - previewEl.clientHeight);
+
+      const view = editorRef.current.view;
+      const scrollDOM = view.scrollDOM;
+      
+      isScrollingRef.current = 'preview';
+      // requestAnimationFrame으로 부드럽게 처리 시도
+      requestAnimationFrame(() => {
+          scrollDOM.scrollTop =
+            percentage * (scrollDOM.scrollHeight - scrollDOM.clientHeight);
+      });
+
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = setTimeout(() => {
+        isScrollingRef.current = null;
+      }, 50);
+    }, []);
+
     useEffect(() => {
       resetStateFromNote(note);
     }, [note, resetStateFromNote]);
@@ -362,49 +428,47 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       remindersRef.current = reminders;
     }, [reminders]);
 
+    // 무거운 파싱 로직을 디바운싱 처리
     useEffect(() => {
       if (isResettingRef.current) {
         isResettingRef.current = false;
         return;
       }
 
-      const { tags: currentTags, reminders: currentRemindersRaw } =
-        parseNoteContent(content, new Date(), remindersRef.current);
+      const timer = setTimeout(() => {
+        const { tags: currentTags, reminders: currentRemindersRaw } =
+          parseNoteContent(content, new Date(), remindersRef.current);
 
-      setTags(currentTags.map((t) => t.text));
+        setTags(currentTags.map((t) => t.text));
+        setDebouncedContent(content); // 파싱이 완료될 때 미리보기 콘텐츠 업데이트
 
-      setReminders((prevReminders) => {
-        return currentRemindersRaw
-          .filter(
-            (p) =>
-              p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
-          )
-          .map((parsed) => {
-            // originalText가 같은 기존 리마인더를 찾습니다.
-            const existing = prevReminders.find(
-              (r) => r.original_text === parsed.originalText,
-            );
+        setReminders((prevReminders) => {
+          return currentRemindersRaw
+            .filter(
+              (p) =>
+                p.parsedDate instanceof Date && !isNaN(p.parsedDate.getTime()),
+            )
+            .map((parsed) => {
+              const existing = prevReminders.find(
+                (r) => r.original_text === parsed.originalText,
+              );
 
-            // 기존 리마인더가 있다면, (DB에 저장된 것이든, 현재 편집 세션의 임시 것이든)
-            // '시간'을 새로 파싱된 시간(상대 시간의 경우 현재 기준 내일 등)으로 덮어쓰지 않고
-            // 기존에 확정된 시간을 유지합니다.
-            // 단, 텍스트가 변경되어 originalText가 달라진 경우는 새로운 리마인더로 취급되어
-            // 위 find에서 찾지 못하므로 자연스럽게 새로운 파싱 시간이 적용됩니다.
-            const resolvedDate = existing ? existing.date : parsed.parsedDate!;
-            
-            // id도 기존 것을 유지하거나, 없으면 임시 id 발급
-            const resolvedId = existing?.id || `temp-${parsed.originalText}-${Date.now()}`;
+              const resolvedDate = existing ? existing.date : parsed.parsedDate!;
+              const resolvedId = existing?.id || `temp-${parsed.originalText}-${Date.now()}`;
 
-            return {
-              id: resolvedId,
-              text: parsed.reminderText!,
-              date: resolvedDate,
-              completed: existing?.completed || false,
-              enabled: existing?.enabled ?? true,
-              original_text: parsed.originalText,
-            };
-          });
-      });
+              return {
+                id: resolvedId,
+                text: parsed.reminderText!,
+                date: resolvedDate,
+                completed: existing?.completed || false,
+                enabled: existing?.enabled ?? true,
+                original_text: parsed.originalText,
+              };
+            });
+        });
+      }, 300); // 300ms 딜레이
+
+      return () => clearTimeout(timer);
     }, [content]);
 
     const handleSave = useCallback(() => {
@@ -547,46 +611,59 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   <ResizablePanel defaultSize={50}>
                     <div className="p-4 pt-0 h-full flex flex-col">
                       <EditorToolbar editorRef={editorRef} />
-                      <CodeMirror
-                        ref={editorRef}
-                        value={content}
-                        height="100%"
-                        basicSetup={false}
-                        extensions={[
-                          markdown({
-                            base: markdownLanguage,
-                            codeLanguages: filteredLanguages,
-                          }),
-                          history(),
-                          indentOnInput(),
-                          bracketMatching(),
-                          closeBrackets(),
-                          keymap.of([
-                            ...customKeymap,
-                            ...defaultKeymap,
-                            ...historyKeymap,
-                            ...closeBracketsKeymap,
-                          ]),
-                          imageUploadExtension,
-                          EditorView.lineWrapping,
-                        ]}
-                        onChange={(value) => {
-                          setContent(value);
-                          onContentChange();
-                        }}
-                        className="w-full h-full text-lg"
-                        theme={codeMirrorTheme}
-                        placeholder="제목을 입력하세요..."
-                      />
+                      <div className="flex-1 min-h-0">
+                        <CodeMirror
+                          ref={editorRef}
+                          value={content}
+                          height="100%"
+                          basicSetup={false}
+                          extensions={[
+                            markdown({
+                              base: markdownLanguage,
+                              codeLanguages: filteredLanguages,
+                            }),
+                            history(),
+                            indentOnInput(),
+                            bracketMatching(),
+                            closeBrackets(),
+                            keymap.of([
+                              ...customKeymap,
+                              ...defaultKeymap,
+                              ...historyKeymap,
+                              ...closeBracketsKeymap,
+                            ]),
+                            imageUploadExtension,
+                            EditorView.lineWrapping,
+                            EditorView.theme({
+                              '.cm-content': { paddingBottom: '50px' },
+                              '.cm-scroller': { paddingBottom: '50px' },
+                            }),
+                          ]}
+                          onUpdate={(viewUpdate) => {
+                            if (viewUpdate.scrollChanged) {
+                              handleEditorScroll(viewUpdate.view);
+                            }
+                          }}
+                          onChange={(value) => {
+                            setContent(value);
+                            onContentChange();
+                          }}
+                          className="w-full h-full text-lg"
+                          theme={codeMirrorTheme}
+                          placeholder="제목을 입력하세요..."
+                        />
+                      </div>
                     </div>
                   </ResizablePanel>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={50}>
                     <PreviewPanel
-                      content={body}
-                      title={title}
+                      ref={previewRef}
+                      content={debouncedBody}
+                      title={debouncedTitle}
                       displayTags={displayTags}
                       displayReminders={displayReminders}
+                      onScroll={handlePreviewScroll}
                     />
                   </ResizablePanel>
                 </ResizablePanelGroup>
@@ -611,37 +688,48 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   >
                     <div className="p-4 pt-0 h-full flex flex-col">
                       <EditorToolbar editorRef={editorRef} />
-                      <CodeMirror
-                        ref={editorRef}
-                        value={content}
-                        height="100%"
-                        basicSetup={false}
-                        extensions={[
-                          markdown({
-                            base: markdownLanguage,
-                            codeLanguages: filteredLanguages,
-                          }),
-                          history(),
-                          indentOnInput(),
-                          bracketMatching(),
-                          closeBrackets(),
-                          keymap.of([
-                            ...customKeymap,
-                            ...defaultKeymap,
-                            ...historyKeymap,
-                            ...closeBracketsKeymap,
-                          ]),
-                          imageUploadExtension,
-                          EditorView.lineWrapping,
-                        ]}
-                        onChange={(value) => {
-                          setContent(value);
-                          onContentChange();
-                        }}
-                        className="w-full h-full text-lg"
-                        theme={codeMirrorTheme}
-                        placeholder="제목을 입력하세요..."
-                      />
+                      <div className="flex-1 min-h-0">
+                        <CodeMirror
+                          ref={editorRef}
+                          value={content}
+                          height="100%"
+                          basicSetup={false}
+                          extensions={[
+                            markdown({
+                              base: markdownLanguage,
+                              codeLanguages: filteredLanguages,
+                            }),
+                            history(),
+                            indentOnInput(),
+                            bracketMatching(),
+                            closeBrackets(),
+                            keymap.of([
+                              ...customKeymap,
+                              ...defaultKeymap,
+                              ...historyKeymap,
+                              ...closeBracketsKeymap,
+                            ]),
+                            imageUploadExtension,
+                            EditorView.lineWrapping,
+                            EditorView.theme({
+                              '.cm-content': { paddingBottom: '50px' },
+                              '.cm-scroller': { paddingBottom: '50px' },
+                            }),
+                          ]}
+                          onUpdate={(viewUpdate) => {
+                            if (viewUpdate.scrollChanged) {
+                              handleEditorScroll(viewUpdate.view);
+                            }
+                          }}
+                          onChange={(value) => {
+                            setContent(value);
+                            onContentChange();
+                          }}
+                          className="w-full h-full text-lg"
+                          theme={codeMirrorTheme}
+                          placeholder="제목을 입력하세요..."
+                        />
+                      </div>
                     </div>
                   </TabsContent>
                   <TabsContent
@@ -649,10 +737,12 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     className="flex-1 overflow-hidden data-[state=inactive]:hidden"
                   >
                     <PreviewPanel
-                      content={body}
-                      title={title}
+                      ref={previewRef}
+                      content={debouncedBody}
+                      title={debouncedTitle}
                       displayTags={displayTags}
                       displayReminders={displayReminders}
+                      onScroll={handlePreviewScroll}
                     />
                   </TabsContent>
                 </Tabs>
@@ -660,8 +750,8 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
             </>
           ) : (
             <PreviewPanel
+              ref={previewRef}
               content={body}
-              isReadOnly
               title={title}
               displayTags={displayTags}
               displayReminders={displayReminders}
@@ -677,20 +767,24 @@ Editor.displayName = 'Editor';
 
 interface PreviewPanelProps {
   content: string;
-  isReadOnly?: boolean;
   title?: string;
   displayTags?: { text: string }[];
   displayReminders?: { reminderText: string; parsedDate?: Date }[];
+  onScroll?: () => void;
 }
 
-const PreviewPanel: React.FC<PreviewPanelProps> = ({
+const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
   content,
-  isReadOnly = false,
   title,
   displayTags,
   displayReminders,
-}) => (
-  <div className="h-full overflow-y-auto custom-scrollbar">
+  onScroll,
+}, ref) => (
+  <div
+    ref={ref}
+    className="h-full overflow-y-auto custom-scrollbar"
+    onScroll={onScroll}
+  >
     <h1 className="text-4xl pl-4 pt-4 font-bold mb-4">
       {title || '제목 없음'}
     </h1>
@@ -760,4 +854,6 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
       </Suspense>
     </div>
   </div>
-);
+));
+
+PreviewPanel.displayName = 'PreviewPanel';
