@@ -7,6 +7,8 @@ import { changelogData } from '@/constants/changeLog';
 import { ChangeCategory } from '@/types';
 import { fadeIn } from '@/constants/animations';
 import { Badge } from '@/components/ui/badge';
+import { useAuthStore } from '@/stores/authStore';
+import { Navigate } from 'react-router-dom';
 
 const categoryStyles: Record<ChangeCategory, string> = {
   '✨ 기능': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -19,6 +21,13 @@ const categoryStyles: Record<ChangeCategory, string> = {
 };
 
 export const ChangelogPage: React.FC = () => {
+  const { user } = useAuthStore();
+
+  // 1. Redirect Logic
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Toaster />

@@ -344,7 +344,7 @@ interface LocationState {
 
 export const Login: React.FC = () => {
   const {
-    isAuthenticated,
+    user,
     formattedKey,
     isRegisterLoading,
     isLoginLoading,
@@ -361,6 +361,13 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const controls = useAnimation();
+
+  // 1. Redirect Logic
+  if (user) {
+     const state = location.state as LocationState;
+     const from = state?.from?.pathname || '/dashboard';
+     return <Navigate to={from} replace />;
+  }
 
   // Page Visibility API를 사용하여 애니메이션 제어
   useEffect(() => {
@@ -379,14 +386,6 @@ export const Login: React.FC = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [controls]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const state = location.state as LocationState;
-      const from = state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, location]);
 
   useEffect(() => {
     useAuthStore.getState().checkSession();

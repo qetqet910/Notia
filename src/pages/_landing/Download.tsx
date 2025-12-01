@@ -13,6 +13,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { usePwaStore } from '@/stores/pwaStore';
 import { changelogData } from '@/constants/changeLog';
 import FeatureUnderConstruction from '@/components/features/FeatureUnderConstruction';
+import { useAuthStore } from '@/stores/authStore';
+import { Navigate } from 'react-router-dom';
 
 // OS 아이콘 컴포넌트
 const OsIcon = ({ name }: { name: string }) => {
@@ -146,6 +148,12 @@ export const DownloadPage: React.FC = () => {
   const [selectedId, setSelectedId] = React.useState(platformData[0].id);
   const { deferredPrompt, setDeferredPrompt } = usePwaStore();
   const [isIOS, setIsIOS] = React.useState(false);
+  const { user } = useAuthStore();
+
+  // 1. Redirect Logic
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   React.useEffect(() => {
     setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
