@@ -150,11 +150,6 @@ export const DownloadPage: React.FC = () => {
   const [isIOS, setIsIOS] = React.useState(false);
   const { user } = useAuthStore();
 
-  // 1. Redirect Logic
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   React.useEffect(() => {
     setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
   }, []);
@@ -169,6 +164,11 @@ export const DownloadPage: React.FC = () => {
       }
     }
   };
+
+  // 1. Redirect Logic
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">

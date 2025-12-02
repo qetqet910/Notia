@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import Key from 'lucide-react/dist/esm/icons/key';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { motion, useAnimation } from 'framer-motion';
 
 import { Toaster } from '@/components/ui/toaster';
@@ -358,16 +358,8 @@ export const Login: React.FC = () => {
   const [copiedKey, setCopiedKey] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [showKey, setShowKey] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
   const controls = useAnimation();
-
-  // 1. Redirect Logic
-  if (user) {
-     const state = location.state as LocationState;
-     const from = state?.from?.pathname || '/dashboard';
-     return <Navigate to={from} replace />;
-  }
 
   // Page Visibility API를 사용하여 애니메이션 제어
   useEffect(() => {
@@ -576,6 +568,13 @@ export const Login: React.FC = () => {
       copyToClipboard,
     ],
   );
+
+  // 1. Redirect Logic
+  if (user) {
+     const state = location.state as LocationState;
+     const from = state?.from?.pathname || '/dashboard';
+     return <Navigate to={from} replace />;
+  }
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br overflow-hidden from-white to-[#e6f7f2]">

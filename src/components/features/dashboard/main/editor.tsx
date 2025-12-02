@@ -640,7 +640,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                             }),
                           ]}
                           onUpdate={(viewUpdate) => {
-                            if (viewUpdate.scrollChanged) {
+                            if (viewUpdate.viewportChanged) {
                               handleEditorScroll(viewUpdate.view);
                             }
                           }}
@@ -717,7 +717,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                             }),
                           ]}
                           onUpdate={(viewUpdate) => {
-                            if (viewUpdate.scrollChanged) {
+                            if (viewUpdate.viewportChanged) {
                               handleEditorScroll(viewUpdate.view);
                             }
                           }}

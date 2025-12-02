@@ -24,6 +24,7 @@ const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Login = lazy(() => import('@/pages/_auth/Login'));
 const TermsAgreement = lazy(() => import('@/pages/_auth/TermsAgreement'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
+const GlobalError = lazy(() => import('@/pages/GlobalError'));
 
 import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
@@ -60,6 +61,11 @@ const AppLayout = () => {
 const router = createBrowserRouter([
   {
     element: <AppLayout />,
+    errorElement: (
+      <Suspense fallback={<div className="h-screen flex items-center justify-center">Loading...</div>}>
+        <GlobalError />
+      </Suspense>
+    ),
     children: [
       {
         path: '/',
