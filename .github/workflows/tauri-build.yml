@@ -54,3 +54,8 @@ jobs:
           releaseBody: 'See the assets to download this version.'
           releaseDraft: true
           prerelease: false
+
+      - name: List Windows artifacts
+        if: matrix.platform == 'windows-latest'
+        run: |
+          ls -R src-tauri/target/release
