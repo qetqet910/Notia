@@ -4,7 +4,7 @@ set -e
 # Update package lists and install Tauri dependencies
 echo "Updating package lists and installing Tauri dependencies..."
 sudo apt-get update
-sudo apt-get install -y libwebkit2gtk-4.0-dev \
+sudo apt-get install -y libwebkit2gtk-4.1-dev \
     build-essential \
     curl \
     wget \
