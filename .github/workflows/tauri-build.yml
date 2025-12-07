@@ -1,9 +1,10 @@
 name: Create Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
-      - 'v*'
+      - '*'
 
 jobs:
   create-release:
@@ -58,4 +59,4 @@ jobs:
       - name: List Windows artifacts
         if: matrix.platform == 'windows-latest'
         run: |
-          ls -R src-tauri/target/release
+          Get-ChildItem -Recurse src-tauri/target/release
