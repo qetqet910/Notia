@@ -141,18 +141,16 @@ export default function Home() {
                 className="sm:col-span-2 md:col-span-2 bg-slate-50 rounded-[2rem] sm:rounded-[2.5rem] p-6 border border-slate-100 overflow-hidden relative group shadow-sm hover:shadow-md transition-all duration-300"
               >
                 <div className="relative z-10">
-                                         <div className="flex items-center gap-4 mb-2 ">
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center">
-                    <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-slate-700" />
-
-                          </div>
+                  <div className="flex items-center gap-4 mb-2 ">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center">
+                      <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-slate-700" />
+                    </div>
                   <h3 className="text-xl sm:text-2xl mb-2 font-bold">강력한 마크다운 에디터</h3>
-
-                       </div>
-                  <p className="ml-4 text-slate-500 max-w-md text-base sm:text-s md:text-m lg:text-l leading-relaxed break-keep">
-                    복잡한 설정 없이 바로 쓰세요. 코드 하이라이팅, 실시간 프리뷰<br/>
-                    그리고 드래그 앤 드롭 이미지 업로드가 지원됩니다.
-                  </p>
+                </div>
+                <p className="ml-4 text-slate-500 max-w-md text-base sm:text-s md:text-m lg:text-l leading-relaxed break-keep">
+                  복잡한 설정 없이 바로 쓰세요. 코드 하이라이팅, 실시간 프리뷰<br/>
+                  그리고 드래그 앤 드롭 이미지 업로드가 지원됩니다.
+                </p>
                 </div>
                 <div className="absolute right-0 bottom-0 w-1/2 h-4/5 bg-white rounded-tl-[2rem] shadow-2xl border border-slate-100 p-4 sm:p-8 translate-x-8 translate-y-4 transition-transform group-hover:translate-x-4 group-hover:translate-y-4 hidden sm:block">
                    <div className="font-mono text-xs sm:text-sm text-slate-400 space-y-2">
@@ -179,10 +177,13 @@ export default function Home() {
                 className="md:col-span-1 sm:col-span-2 bg-slate-900 text-white rounded-[2rem] sm:rounded-[2.5rem] p-6  border border-slate-800 overflow-hidden relative group shadow-lg"
               >
                  <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-2 ">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm mb-4">
                     <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-[#68C7C1]" />
                   </div>
                   <h3 className="text-xl sm:text-2xl mb-2 font-bold">자동 일정 관리</h3>
+
+                  </div>
                   <p className="text-slate-400 text-base sm:text-s md:text-m lg:text-l leading-relaxed break-keep">
                     노트에 적은 날짜는<br/>자동으로 캘린더에 등록됩니다.
                   </p>
@@ -195,10 +196,12 @@ export default function Home() {
                 whileHover={{ y: -5 }}
                 className="md:col-span-1 sm:col-span-2 bg-gradient-to-br from-[#68C7C1]/5 to-indigo-50/50 rounded-[2rem] sm:rounded-[2.5rem] p-6  border border-[#68C7C1]/10 shadow-sm hover:shadow-md transition-all duration-300"
               >
-                 <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4 text-[#68C7C1]">
+                <div className="flex items-center gap-4 mb-2 ">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-4 text-[#68C7C1]">
                     <Hash className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
                   <h3 className="text-xl sm:text-2xl mb-2 font-bold text-slate-800">스마트 태그</h3>
+                  </div>
                   <p className="text-slate-600/80 mb-6 text-base sm:text-s md:text-m lg:text-l leading-relaxed break-keep">
                     폴더의 한계를 넘어서세요.<br/>
                     직관적인 태그 시스템으로 노트를 다차원적으로 연결합니다.
