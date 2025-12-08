@@ -42,6 +42,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
+      - name: Create .env file
+        shell: bash
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
+
       - name: Get app version
         shell: bash
         run: echo "APP_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV

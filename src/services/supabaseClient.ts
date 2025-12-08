@@ -5,9 +5,29 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    'Supabase URL과 Anon Key가 환경 변수에 설정되어 있지 않습니다.',
-  );
+  const errorMessage =
+    'Supabase URL과 Anon Key가 환경 변수에 설정되어 있지 않습니다. .env 파일을 확인해주세요.';
+  console.error(errorMessage);
+  // 렌더링 전에 에러가 발생하면 흰 화면만 보일 수 있으므로, body에 직접 에러 메시지를 씁니다.
+  document.body.innerHTML = `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f8d7da;
+      color: #721c24;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    ">
+      <h1 style="margin-bottom: 10px;">Critical Configuration Error</h1>
+      <p style="font-size: 1.2rem;">${errorMessage}</p>
+      <p style="font-size: 1rem; margin-top: 20px;">Please contact support or check your environment settings.</p>
+    </div>
+  `;
+  throw new Error(errorMessage);
 }
 
 export const supabase = createClient<Database>(
