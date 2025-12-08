@@ -6,14 +6,6 @@ import { readFileSync } from 'fs';
 
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
-import path from 'path';
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
-import { readFileSync } from 'fs';
-
-const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
-
 export default defineConfig({
   base: './', // 상대 경로로 통일하여 웹/앱 호환성 확보
   cacheDir: '.vite-cache',
