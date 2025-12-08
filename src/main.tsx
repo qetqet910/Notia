@@ -91,10 +91,21 @@ async function initializePlatform(platformName: string): Promise<boolean> {
     // 동적 임포트 디버깅을 위한 로그
     console.log(`Attempting to import platform module: ${platformName}`);
 
-    const module = (await import(
-      /* @vite-ignore */
-      `./platforms/${platformName}/index.tsx`
-    )) as PlatformModule;
+    let module: PlatformModule;
+
+    switch (platformName) {
+      case 'web':
+        module = await import('./platforms/web/index.tsx');
+        break;
+      case 'webapp':
+        module = await import('./platforms/webapp/index.tsx');
+        break;
+      case 'extension':
+        module = await import('./platforms/extension/index.tsx');
+        break;
+      default:
+        throw new Error(`Unknown platform: ${platformName}`);
+    }
     
     if (!module || !module.default) {
       throw new Error(`Platform module '${platformName}' loaded but 'default' export is missing.`);
