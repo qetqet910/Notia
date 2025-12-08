@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import {
   createBrowserRouter,
+  createHashRouter,
   RouterProvider,
   useLocation,
   Outlet,
@@ -58,7 +59,14 @@ const AppLayout = () => {
   );
 };
 
-const router = createBrowserRouter([
+// Tauri 환경(파일 시스템)에서는 HashRouter, 웹에서는 BrowserRouter 사용
+// vite.config.ts에서 mode: 'tauri'로 빌드될 때만 적용됨
+const isTauri = import.meta.env.MODE === 'tauri';
+console.log(`Router Mode Check: isTauri=${isTauri}, Mode=${import.meta.env.MODE}`);
+
+const createRouter = isTauri ? createHashRouter : createBrowserRouter;
+
+const router = createRouter([
   {
     element: <AppLayout />,
     errorElement: (
