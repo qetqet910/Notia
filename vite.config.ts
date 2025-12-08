@@ -83,11 +83,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          web: ['./src/platforms/web'],
-          webapp: ['./src/platforms/webapp'],
-          extension: ['./src/platforms/extension'],
-        },
+        // manualChunks 제거: Vite 기본 분할 전략 사용
       },
     },
   },

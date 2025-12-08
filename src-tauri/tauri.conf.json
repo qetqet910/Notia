@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Notia",
-  "version": "1.3.14",
+  "version": "1.3.15",
   "identifier": "site.notia.app",
   "build": {
     "frontendDist": "../dist",

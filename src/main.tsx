@@ -95,13 +95,13 @@ async function initializePlatform(platformName: string): Promise<boolean> {
 
     switch (platformName) {
       case 'web':
-        module = await import('./platforms/web/index.tsx');
+        module = await import('@/platforms/web/index.tsx');
         break;
       case 'webapp':
-        module = await import('./platforms/webapp/index.tsx');
+        module = await import('@/platforms/webapp/index.tsx');
         break;
       case 'extension':
-        module = await import('./platforms/extension/index.tsx');
+        module = await import('@/platforms/extension/index.tsx');
         break;
       default:
         throw new Error(`Unknown platform: ${platformName}`);
