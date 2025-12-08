@@ -77,38 +77,35 @@ function registerServiceWorker() {
   }
 }
 
+// 모든 플랫폼 모듈을 정적으로 임포트
+import * as webPlatform from '@/platforms/web/index.tsx';
+import * as webappPlatform from '@/platforms/webapp/index.tsx';
+import * as extensionPlatform from '@/platforms/extension/index.tsx';
+
+// 플랫폼 모듈 맵
+const platformModules = {
+  web: webPlatform,
+  webapp: webappPlatform,
+  extension: extensionPlatform,
+};
+
 /**
  * 플랫폼별 초기화 모듈을 로드하고 실행합니다.
  * @param platformName 초기화할 플랫폼 이름
  * @returns 초기화 성공 여부
  */
-async function initializePlatform(platformName: string): Promise<boolean> {
+function initializePlatform(platformName: string): boolean { // async 제거
   try {
     type PlatformModule = {
       default: () => void;
     };
 
-    // 동적 임포트 디버깅을 위한 로그
-    console.log(`Attempting to import platform module: ${platformName}`);
+    console.log(`Attempting to initialize platform module: ${platformName}`);
 
-    let module: PlatformModule;
-
-    switch (platformName) {
-      case 'web':
-        module = await import('@/platforms/web/index.tsx');
-        break;
-      case 'webapp':
-        module = await import('@/platforms/webapp/index.tsx');
-        break;
-      case 'extension':
-        module = await import('@/platforms/extension/index.tsx');
-        break;
-      default:
-        throw new Error(`Unknown platform: ${platformName}`);
-    }
+    const module = platformModules[platformName as keyof typeof platformModules];
     
     if (!module || !module.default) {
-      throw new Error(`Platform module '${platformName}' loaded but 'default' export is missing.`);
+      throw new Error(`Platform module '${platformName}' is missing or 'default' export is missing.`);
     }
 
     const initPlatform = module.default;
@@ -125,7 +122,7 @@ async function initializePlatform(platformName: string): Promise<boolean> {
 /**
  * 애플리케이션 초기화를 위한 단일 진입점 함수
  */
-async function initializeApp(): Promise<void> {
+async function initializeApp(): Promise<void> { // async 유지 (service worker 등록, await는 initializePlatform에서 제거됨)
   try {
     // 서비스 워커 등록 코드를 다시 추가합니다.
     registerServiceWorker();
@@ -135,7 +132,7 @@ async function initializeApp(): Promise<void> {
     console.log('Current Platform:', platform);
 
     // 2. 플랫폼별 초기화 모듈 로드 및 실행 (렌더링 포함)
-    const platformInitialized = await initializePlatform(platform);
+    const platformInitialized = initializePlatform(platform); // await 제거
 
     // 3. 전체 초기화 결과 로깅
     if (platformInitialized) {
