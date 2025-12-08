@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import {
+  createBrowserRouter,
   createHashRouter,
   RouterProvider,
   useLocation,
@@ -58,7 +59,12 @@ const AppLayout = () => {
   );
 };
 
-const router = createHashRouter([
+// Tauri 환경(파일 시스템)에서는 HashRouter, 웹에서는 BrowserRouter 사용
+const createRouter = import.meta.env.VITE_IS_TAURI === 'true' 
+  ? createHashRouter 
+  : createBrowserRouter;
+
+const router = createRouter([
   {
     element: <AppLayout />,
     errorElement: (
