@@ -1,52 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
   <head>
-    <script>
-      // Critical Error Handler for White Screen Debugging
-      (function() {
-        function showError(title, message, details) {
-          if (document.getElementById('critical-error-display')) return; // Prevent duplicates
-          document.body.innerHTML = `
-            <div id="critical-error-display" style="
-              position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-              background-color: #450a0a; color: #fecaca;
-              padding: 2rem; box-sizing: border-box; font-family: monospace;
-              overflow: auto; z-index: 99999;
-            ">
-              <h1 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; color: #ef4444;">
-                ⚠️ App Startup Error (${title})
-              </h1>
-              <p style="font-size: 1.1rem; margin-bottom: 1rem; color: #ffffff;">${message}</p>
-              ${details ? `<pre style="background: rgba(0,0,0,0.5); padding: 1rem; border-radius: 0.5rem; overflow-x: auto;">${details}</pre>` : ''}
-              <div style="margin-top: 2rem;">
-                <button onclick="window.location.reload()" style="
-                  padding: 0.5rem 1rem; background: #fff; color: #450a0a; 
-                  border: none; border-radius: 0.25rem; font-weight: bold; cursor: pointer;
-                ">Reload App</button>
-              </div>
-            </div>
-          `;
-        }
-
-        // 1. Capture Global Script Errors
-        window.onerror = function(msg, url, line, col, error) {
-          showError('Runtime Error', msg, `File: ${url}\nLine: ${line}:${col}\nStack: ${error?.stack}`);
-          return false;
-        };
-
-        // 2. Capture Unhandled Promise Rejections
-        window.onunhandledrejection = function(event) {
-          showError('Unhandled Promise Rejection', event.reason?.message || event.reason, event.reason?.stack);
-        };
-
-        // 3. Capture Resource Loading Errors (img, script, css) - Use Capture Phase
-        window.addEventListener('error', function(event) {
-          if (event.target && (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
-             showError('Resource Load Failed', `Failed to load ${event.target.tagName.toLowerCase()}: ${event.target.src || event.target.href}`, 'Please check your network connection or build configuration.');
-          }
-        }, true);
-      })();
-    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 

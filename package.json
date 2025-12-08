@@ -1,16 +1,15 @@
 {
   "name": "notia",
   "homepage": "https://notia.site",
-  "version": "1.3.10",
+  "version": "1.3.11",
   "license": "GPL-3.0-or-later",
   "author": "HYEONMIN KIM",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:tauri": "tsc && vite build --mode tauri",
-    "build:web": "tsc && vite build",
     "build:webapp": "tsc && VITE_PLATFORM=webapp vite build",
+    "build:extension": "tsc && VITE_PLATFORM=extension vite build",
     "build:extension": "tsc && VITE_PLATFORM=extension vite build",
     "lint": "eslint src --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
