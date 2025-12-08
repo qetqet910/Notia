@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import Key from 'lucide-react/dist/esm/icons/key';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
 import { motion, useAnimation } from 'framer-motion';
 
 import { Toaster } from '@/components/ui/toaster';

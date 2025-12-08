@@ -98,11 +98,11 @@ export const TermsPageLoader = () => {
 
 export const LoginPageLoader = () => {
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen overflow-hidden">
+    <div className="flex flex-col lg:flex-row min-h-screen overflow-hidden bg-background">
       <div className=""></div> {/* This div seems empty, keeping as is */}
       <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
         <div>
-          <div className="rounded-xl border relative w-full max-w-md shadow-lg border-[#d8f2ea] overflow-visible">
+          <div className="rounded-xl border relative w-full max-w-md shadow-lg border-border bg-card overflow-visible">
             <div className="p-6 pt-8 pb-6">
               <div className="flex justify-center items-center mb-6">
                 <div className="w-1/2 flex justify-center">
@@ -113,7 +113,7 @@ export const LoginPageLoader = () => {
               <div className="space-y-4">
                 {/* Tab Navigation Placeholder */}
                 <div className="h-10 items-center justify-center rounded-md bg-muted p-1 grid grid-cols-2 gap-4">
-                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all bg-background shadow-sm bg-[#e6f7f2]">
+                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all bg-background shadow-sm">
                     <Skeleton className="w-12 h-6" />
                   </div>
                   <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all">
@@ -126,7 +126,7 @@ export const LoginPageLoader = () => {
                       <div className="space-y-4">
                         <div className="min-h-[120px]">
                           <div className="space-y-4">
-                            <div className="bg-[#f0faf7] p-4 rounded-lg">
+                            <div className="bg-secondary/50 p-4 rounded-lg">
                               <div className="space-y-4 w-full max-w-md mx-auto">
                                 {/* OTP / Code Input Placeholder */}
                                 <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export const LoginPageLoader = () => {
                     {/* Divider Placeholder */}
                     <div className="relative my-4">
                       <Skeleton className="h-[1px] w-full" />
-                      <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2">
+                      <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background px-2">
                         <Skeleton className="w-16 h-5" />
                       </span>
                     </div>
