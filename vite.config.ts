@@ -7,7 +7,7 @@ import { readFileSync } from 'fs';
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
-  base: './', // 상대 경로로 통일하여 웹/앱 호환성 확보
+  base: '/',
   cacheDir: '.vite-cache',
   define: {
     'process.env.APP_VERSION': JSON.stringify(packageJson.version),

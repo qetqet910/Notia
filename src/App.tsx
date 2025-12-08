@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import {
-  createHashRouter,
+  createBrowserRouter,
   RouterProvider,
   useLocation,
   Outlet,
@@ -58,8 +58,7 @@ const AppLayout = () => {
   );
 };
 
-// 모든 환경에서 HashRouter 사용 (가장 안전한 선택)
-const router = createHashRouter([
+const router = createBrowserRouter([
   {
     element: <AppLayout />,
     errorElement: (
