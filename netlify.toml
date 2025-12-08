@@ -27,6 +27,22 @@ for = "/*.html"
 [headers.values]
 Cache-Control = "public, max-age=0, must-revalidate"
 
+# PWA 관련 파일은 캐시하지 않음
+[[headers]]
+for = "/sw.js"
+[headers.values]
+Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+for = "/registerSW.js"
+[headers.values]
+Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+for = "/manifest.webmanifest"
+[headers.values]
+Cache-Control = "public, max-age=0, must-revalidate"
+
 # JS/CSS는 영구 캐시 (파일명에 해시가 있으므로)
 [[headers]]
 for = "/assets/*"
