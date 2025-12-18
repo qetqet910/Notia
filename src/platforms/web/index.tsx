@@ -22,8 +22,8 @@ const init = () => {
     }
   }
 
-  // 서비스 워커 등록
-  if ('serviceWorker' in navigator) {
+  // 서비스 워커 등록 (Tauri 환경 제외)
+  if ('serviceWorker' in navigator && import.meta.env.VITE_IS_TAURI !== 'true') {
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/service-worker.js')

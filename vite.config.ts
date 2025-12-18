@@ -5,12 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync } from 'fs';
 
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const isTauri = process.env.VITE_IS_TAURI === 'true';
 
 export default defineConfig({
   base: './',
   cacheDir: '.vite-cache',
   define: {
     'process.env.APP_VERSION': JSON.stringify(packageJson.version),
+    'import.meta.env.VITE_IS_TAURI': JSON.stringify(process.env.VITE_IS_TAURI),
   },
   server: {
     hmr: {
@@ -26,7 +28,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    VitePWA({
+    !isTauri && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
         'favicon.ico',

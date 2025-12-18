@@ -67,6 +67,12 @@ window.onunhandledrejection = function (event) {
  * 서비스 워커를 등록합니다.
  */
 function registerServiceWorker() {
+  // Tauri 환경에서는 서비스 워커를 등록하지 않습니다.
+  if (import.meta.env.VITE_IS_TAURI === 'true') {
+    console.log('Skipping ServiceWorker registration in Tauri environment.');
+    return;
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker
