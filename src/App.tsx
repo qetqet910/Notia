@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import {
-  createBrowserRouter,
+  createHashRouter,
   RouterProvider,
   useLocation,
   Outlet,
@@ -58,7 +58,7 @@ const AppLayout = () => {
   );
 };
 
-const router = createBrowserRouter([
+const router = createHashRouter([
   {
     element: <AppLayout />,
     errorElement: (
