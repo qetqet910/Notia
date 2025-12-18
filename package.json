@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "vite",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc && vite build",
-    "build:web": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc && vite build",
-    "build:tauri": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc && cross-env VITE_IS_TAURI=true vite build && npx rimraf dist/service-worker.js dist/manifest.json dist/sw.js dist/registerSW.js dist/manifest.webmanifest",
-    "build:webapp": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc && cross-env VITE_PLATFORM=webapp vite build",
+    "build:web": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc && vite build",
+    "build:tauri": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc && cross-env VITE_IS_TAURI=true vite build && npx rimraf dist/service-worker.js dist/manifest.json dist/sw.js dist/registerSW.js dist/manifest.webmanifest",
+    "build:webapp": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc && cross-env VITE_PLATFORM=webapp vite build",
     "build:extension": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc && cross-env VITE_PLATFORM=extension vite build",
     "lint": "eslint src --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
