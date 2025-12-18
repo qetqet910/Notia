@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="ko">
   <head>
+    <script>
+      // CRITICAL DEBUGGING: Inline error handler to catch ALL errors including resource loading errors
+      window.addEventListener('error', function(e) {
+        var msg = '';
+        if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+           msg = 'Resource Load Failure: ' + (e.target.src || e.target.href);
+        } else {
+           msg = e.message + ' at ' + e.filename + ':' + e.lineno;
+        }
+        window.alert('CRITICAL INIT ERROR:\n' + msg);
+      }, true); // useCapture=true to catch resource errors
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
