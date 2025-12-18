@@ -5,6 +5,8 @@ import '@/styles/global.css';
 // 프로덕션 빌드에서 흰 화면만 뜨는 문제를 디버깅하기 위해 필수적입니다.
 window.onerror = function (message, source, lineno, colno, error) {
   console.error('Global Error Caught:', message, error);
+  // Tauri 환경에서 즉시 확인 가능한 alert 추가
+  window.alert(`CRITICAL ERROR:\n${message}\n${source}:${lineno}`);
   document.body.innerHTML = `
     <div style="
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -34,6 +36,8 @@ window.onerror = function (message, source, lineno, colno, error) {
 
 window.onunhandledrejection = function (event) {
   console.error('Unhandled Rejection:', event.reason);
+  // Tauri 환경에서 즉시 확인 가능한 alert 추가
+  window.alert(`PROMISE ERROR:\n${event.reason?.message || event.reason}`);
   document.body.innerHTML = `
     <div style="
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
