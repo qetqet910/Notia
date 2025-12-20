@@ -138,6 +138,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
+      target: 'es2015',
+      sourcemap: true,
+      minify: 'esbuild', // 다시 활성화 (메모리 절약)
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),

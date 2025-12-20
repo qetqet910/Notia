@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc && vite build",
     "build:web": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc && vite build",
-    "build:tauri": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc && vite build --mode tauri",
+    "build:tauri": "cross-env NODE_OPTIONS=--max-old-space-size=1536 tsc --skipLibCheck && vite build --mode tauri",
     "build:webapp": "cross-env NODE_OPTIONS=--max-old-space-size=2048 tsc && cross-env VITE_PLATFORM=webapp vite build",
     "build:extension": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc && cross-env VITE_PLATFORM=extension vite build",
     "lint": "eslint src --report-unused-disable-directives --max-warnings 0",
