@@ -247,7 +247,7 @@ export default function HelpPage() {
 
   return (
     <div
-      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground min-h-full custom-scrollbar`}
+      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground flex-1 w-full`}
     >
       <Toaster />
       <div className="max-w-5xl mx-auto">

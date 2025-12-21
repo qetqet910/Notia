@@ -664,7 +664,7 @@ export const Dashboard: React.FC = () => {
               popularTags={popularTags}
             />
           </div>
-          <main className="flex-1 overflow-auto no-scrollbar">
+          <main className="flex-1 overflow-auto no-scrollbar flex flex-col">
             {renderMainContent()}
           </main>
         </div>
