@@ -104,7 +104,7 @@ export default function MyPage() {
 
   return (
     <div
-      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground flex-1 w-full`}
+      className={`p-4 md:p-6 lg:p-8 bg-background text-foreground min-h-screen w-full`}
     >
       <Toaster />
       <div className="max-w-5xl mx-auto">
