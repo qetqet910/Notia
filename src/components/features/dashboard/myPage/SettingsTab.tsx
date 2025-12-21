@@ -38,6 +38,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { isTauri } from '@/utils/isTauri';
 
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
@@ -151,8 +152,7 @@ export const SettingsTab: React.FC = React.memo(() => {
 
   const handleSignOut = useCallback(async () => {
     await signOut();
-    const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
-    navigate(isTauri ? '/' : '/login');
+    navigate(isTauri() ? '/' : '/login');
   }, [signOut, navigate]);
 
   const handleDeleteAccount = useCallback(async () => {

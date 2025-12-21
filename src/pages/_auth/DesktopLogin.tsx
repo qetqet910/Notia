@@ -3,14 +3,14 @@ import { useLocation, Navigate } from 'react-router-dom';
 import { motion, useAnimation } from 'framer-motion';
 
 import { Toaster } from '@/components/ui/toaster';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import { animations } from '@/constants/animations';
 
 import logoImage from '@/assets/images/Logo.png';
+import logoDarkImage from '@/assets/images/LogoDark.png'; // Assuming you have dark logo or use same
 
-import { LoginForm, SignupForm } from '@/components/features/auth/AuthComponents';
+import { LoginForm } from '@/components/features/auth/AuthComponents';
 import { useAuthPageLogic } from '@/hooks/useAuthPageLogic';
+import { useThemeStore } from '@/stores/themeStore';
 
 // --- Main Component ---
 
@@ -23,21 +23,11 @@ interface LocationState {
 const DesktopLogin: React.FC = () => {
   const {
     user,
-    formattedKey,
-    isRegisterLoading,
     isLoginLoading,
-    email,
-    setEmail,
-    copiedKey,
-    activeTab,
-    setActiveTab,
-    showKey,
-    handleCreateEmailKey,
     handleSocialLogin,
-    handleCreateAnonymousKey,
-    copyToClipboard,
   } = useAuthPageLogic();
 
+  const { isDarkMode, isDeepDarkMode } = useThemeStore();
   const location = useLocation();
   const controls = useAnimation();
 
@@ -52,81 +42,62 @@ const DesktopLogin: React.FC = () => {
      return <Navigate to={from} replace />;
   }
 
+  const logoSrc = isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage;
+
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-white to-[#e6f7f2] p-4">
+    <div className="flex flex-col min-h-screen items-center justify-center bg-background p-4 font-['Orbit']">
       <Toaster />
+      
       <motion.div
         initial="hidden"
         animate={controls}
-        variants={animations.card}
-        className="w-full max-w-sm"
+        variants={animations.item} // Use simple item animation instead of card
+        className="w-full max-w-[320px]"
       >
-        <Card className="relative w-full shadow-lg border-[#d8f2ea] overflow-visible">
-          <CardContent className="pt-8 pb-6">
-            <motion.div
-              className="flex justify-center items-center mb-6"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="w-1/2 flex justify-center">
-                <img src={logoImage || '/placeholder.svg'} alt="로고" className="object-contain" />
-              </div>
-            </motion.div>
+        {/* Header Section */}
+        <div className="text-center mb-10 space-y-3">
+          <motion.img 
+            src={logoSrc} 
+            alt="Notia" 
+            className="h-10 mx-auto"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              다시 오신 것을 환영합니다
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              계속하려면 로그인하세요
+            </p>
+          </motion.div>
+        </div>
 
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="space-y-4"
-            >
-              <TabsList className="grid grid-cols-2 gap-4">
-                <TabsTrigger
-                  value="login"
-                  className={
-                    activeTab === 'login' ? 'text-[#61C9A8] bg-[#e6f7f2]' : ''
-                  }
-                >
-                  로그인
-                </TabsTrigger>
-                <TabsTrigger
-                  value="signup"
-                  className={
-                    activeTab === 'signup'
-                      ? 'text-[#61C9A8] bg-[#e6f7f2]'
-                      : ''
-                  }
-                >
-                  만들기
-                </TabsTrigger>
-              </TabsList>
+        {/* Login Form Section */}
+        <div className="backdrop-blur-sm">
+           <LoginForm 
+             isLoginLoading={isLoginLoading}
+             onSocialLogin={handleSocialLogin}
+           />
+        </div>
 
-              <div
-                className="relative min-h-[280px]"
-                style={{ transformOrigin: 'top' }}
-              >
-                {activeTab === 'login' ? (
-                  <LoginForm
-                    isLoginLoading={isLoginLoading}
-                    onSocialLogin={handleSocialLogin}
-                  />
-                ) : (
-                  <SignupForm
-                    isRegisterLoading={isRegisterLoading}
-                    email={email}
-                    setEmail={setEmail}
-                    formattedKey={formattedKey}
-                    showKey={showKey}
-                    copiedKey={copiedKey}
-                    handleCreateEmailKey={handleCreateEmailKey}
-                    handleCreateAnonymousKey={handleCreateAnonymousKey}
-                    copyToClipboard={copyToClipboard}
-                    onSocialLogin={handleSocialLogin}
-                  />
-                )}
-              </div>
-            </Tabs>
-          </CardContent>
-        </Card>
+        {/* Footer */}
+        <motion.div 
+          className="mt-12 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <p className="text-xs text-muted-foreground/50">
+            Notia Desktop App v{process.env.APP_VERSION || '1.0'}
+          </p>
+        </motion.div>
+
       </motion.div>
     </div>
   );

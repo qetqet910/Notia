@@ -62,6 +62,8 @@ import { CalendarLoader } from '@/components/loader/dashboard/CalendarLoader';
 import { TimelineLoader } from '@/components/loader/dashboard/TimelineLoader';
 import { NoteListLoader } from '@/components/loader/dashboard/NoteListLoader';
 
+import { isTauri } from '@/utils/isTauri';
+
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/noteList').then((module) => ({
     default: module.NoteList,
@@ -780,8 +782,7 @@ const MobileNavigation = ({
           description: '성공적으로 로그아웃되었습니다.',
         });
         setTheme('light');
-        const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
-        navigate(isTauri ? '/' : '/login');
+        navigate(isTauri() ? '/' : '/login');
       } else {
         throw result.error || new Error('로그아웃 실패');
       }
