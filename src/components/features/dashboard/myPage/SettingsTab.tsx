@@ -152,7 +152,7 @@ export const SettingsTab: React.FC = React.memo(() => {
   const handleSignOut = useCallback(async () => {
     await signOut();
     const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
-    navigate(isTauri ? '/desktop-login' : '/login');
+    navigate(isTauri ? '/' : '/login');
   }, [signOut, navigate]);
 
   const handleDeleteAccount = useCallback(async () => {

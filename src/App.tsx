@@ -75,14 +75,13 @@ const router = createRouter([
     children: [
       {
         path: '/',
-        element:
-          import.meta.env.VITE_IS_TAURI === 'true' ? (
-            <Navigate to="/desktop-login" replace />
-          ) : (
-            <Suspense fallback={<LandingPageLoader />}>
-              <Home />
-            </Suspense>
-          ),
+        element: isTauri ? (
+          <DesktopLogin />
+        ) : (
+          <Suspense fallback={<LandingPageLoader />}>
+            <Home />
+          </Suspense>
+        ),
       },
       {
         path: '/login',
@@ -91,10 +90,6 @@ const router = createRouter([
             <Login />
           </Suspense>
         ),
-      },
-      {
-        path: '/desktop-login',
-        element: <DesktopLogin />,
       },
       {
         path: '/terms-agreement',

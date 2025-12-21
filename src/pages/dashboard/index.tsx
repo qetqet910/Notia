@@ -781,7 +781,7 @@ const MobileNavigation = ({
         });
         setTheme('light');
         const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
-        navigate(isTauri ? '/desktop-login' : '/login');
+        navigate(isTauri ? '/' : '/login');
       } else {
         throw result.error || new Error('로그아웃 실패');
       }
