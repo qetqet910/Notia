@@ -1,14 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// 1. window.__ENV__ (HTML 주입) 확인
+// 2. import.meta.env (Vite define 치환) 확인
+const SUPABASE_URL = 
+  window.__ENV__?.VITE_SUPABASE_URL || 
+  import.meta.env.VITE_SUPABASE_URL;
+
+const SUPABASE_ANON_KEY = 
+  window.__ENV__?.VITE_SUPABASE_ANON_KEY || 
+  import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   const errorMessage =
-    'Supabase URL과 Anon Key가 환경 변수에 설정되어 있지 않습니다. .env 파일을 확인해주세요.';
-  console.error(errorMessage);
-  // 렌더링 전에 에러가 발생하면 흰 화면만 보일 수 있으므로, body에 직접 에러 메시지를 씁니다.
+    'Supabase URL과 Anon Key가 환경 변수에 설정되어 있지 않습니다.';
+  
+  console.error(errorMessage, {
+    URL_Exists: !!SUPABASE_URL,
+    Key_Exists: !!SUPABASE_ANON_KEY,
+    Source: window.__ENV__ ? 'window.__ENV__' : 'import.meta.env'
+  });
+
   document.body.innerHTML = `
     <div style="
       display: flex;
@@ -24,7 +36,12 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     ">
       <h1 style="margin-bottom: 10px;">Critical Configuration Error</h1>
       <p style="font-size: 1.2rem;">${errorMessage}</p>
-      <p style="font-size: 1rem; margin-top: 20px;">Please contact support or check your environment settings.</p>
+      <div style="text-align: left; background: rgba(0,0,0,0.1); padding: 10px; margin-top: 20px; border-radius: 4px;">
+        <p><strong>URL:</strong> ${SUPABASE_URL ? '✅ Loaded' : '❌ Missing'}</p>
+        <p><strong>Key:</strong> ${SUPABASE_ANON_KEY ? '✅ Loaded' : '❌ Missing'}</p>
+        <p><strong>Inject Method:</strong> ${window.__ENV__ ? 'HTML Injection' : 'Vite Define'}</p>
+      </div>
+      <p style="font-size: 1rem; margin-top: 20px;">Please check .env file and rebuild.</p>
     </div>
   `;
   throw new Error(errorMessage);
@@ -37,7 +54,7 @@ export const supabase = createClient<Database>(
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true,
+      detectSessionInUrl: false,
       flowType: 'pkce',
       storage: localStorage,
     },
