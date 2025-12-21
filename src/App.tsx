@@ -172,6 +172,18 @@ function App() {
   const { setDeferredPrompt } = usePwaStore();
 
   useEffect(() => {
+    // 1. Supabase Auth Callback Handling for HashRouter
+    // Supabase redirects to /?code=... but HashRouter expects /#/auth/callback?code=...
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      const newUrl = new URL(window.location.href);
+      newUrl.search = ''; // Clear root query params
+      newUrl.hash = `#/auth/callback?code=${code}`; // Move code to hash
+      window.location.replace(newUrl.toString());
+      return;
+    }
+
     console.log('Environment Check:', {
       VITE_IS_TAURI: import.meta.env.VITE_IS_TAURI,
       Mode: import.meta.env.MODE
