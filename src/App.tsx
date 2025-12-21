@@ -33,6 +33,7 @@ import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
 import { ThemeProvider } from '@/components/features/themeProvider';
 import { usePwaStore } from './stores/pwaStore';
+import { isTauri } from '@/utils/isTauri';
 
 const ScrollToTop = () => {
   const location = useLocation();
@@ -61,8 +62,7 @@ const AppLayout = () => {
   );
 };
 
-const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
-const createRouter = isTauri ? createHashRouter : createBrowserRouter;
+const createRouter = isTauri() ? createHashRouter : createBrowserRouter;
 
 const router = createRouter([
   {
@@ -75,7 +75,7 @@ const router = createRouter([
     children: [
       {
         path: '/',
-        element: isTauri ? (
+        element: isTauri() ? (
           <DesktopLogin />
         ) : (
           <Suspense fallback={<LandingPageLoader />}>
@@ -170,7 +170,7 @@ function App() {
     // 1. Supabase Auth Callback Handling for HashRouter (Tauri Only)
     // Supabase redirects to /?code=... but HashRouter expects /#/auth/callback?code=...
     // For Web (BrowserRouter), this is not needed as /auth/callback?code=... works natively.
-    if (isTauri) {
+    if (isTauri()) {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       if (code) {
@@ -183,7 +183,7 @@ function App() {
     }
 
     console.log('Environment Check:', {
-      VITE_IS_TAURI: isTauri,
+      isTauri: isTauri(),
       Mode: import.meta.env.MODE
     });
     

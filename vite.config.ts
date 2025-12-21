@@ -1,6 +1,6 @@
 import path from 'path';
 import react from '@vitejs/plugin-react';
-import { defineConfig, Plugin } from 'vite';
+import { defineConfig, Plugin, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync, rmSync, existsSync } from 'fs';
 
@@ -38,6 +38,10 @@ function cleanPWAFiles(): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
+  // 현재 모드에 맞는 환경 변수 로드 (우선순위: .env.tauri > .env)
+  // loadEnv는 내부적으로 dotenv를 사용하여 .env 파일을 로드합니다.
+  const env = loadEnv(mode, process.cwd(), '');
+
   // Tauri 빌드 환경 감지
   const isTauri = 
     mode === 'tauri' ||
@@ -48,6 +52,9 @@ export default defineConfig(({ mode }) => {
   console.log('Mode:', mode);
   console.log('TAURI_PLATFORM:', process.env.TAURI_PLATFORM);
   console.log('Is Tauri Build:', isTauri);
+  // 디버깅: 키 존재 여부만 로그 (값은 숨김)
+  console.log('VITE_SUPABASE_URL Exists:', !!env.VITE_SUPABASE_URL);
+  console.log('VITE_SUPABASE_ANON_KEY Exists:', !!env.VITE_SUPABASE_ANON_KEY);
   console.log('---------------------------');
 
   const plugins: (Plugin | Plugin[] | false)[] = [react()];
@@ -119,6 +126,9 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.APP_VERSION': JSON.stringify(packageJson.version),
       'import.meta.env.VITE_IS_TAURI': JSON.stringify(isTauri ? 'true' : 'false'),
+      // 환경 변수 명시적 주입 (누락 방지)
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
     },
     server: {
       hmr: {
@@ -131,7 +141,23 @@ export default defineConfig(({ mode }) => {
         'Service-Worker-Allowed': '/',
       },
     },
-    plugins,
+    plugins: [
+      ...plugins,
+      {
+        name: 'html-env-injection',
+        transformIndexHtml(html) {
+          const envScript = `
+            <script>
+              window.__ENV__ = {
+                VITE_SUPABASE_URL: ${JSON.stringify(env.VITE_SUPABASE_URL)},
+                VITE_SUPABASE_ANON_KEY: ${JSON.stringify(env.VITE_SUPABASE_ANON_KEY)}
+              };
+            </script>
+          `;
+          return html.replace('<head>', `<head>${envScript}`);
+        }
+      }
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
