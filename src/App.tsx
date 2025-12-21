@@ -172,6 +172,11 @@ function App() {
   const { setDeferredPrompt } = usePwaStore();
 
   useEffect(() => {
+    console.log('Environment Check:', {
+      VITE_IS_TAURI: import.meta.env.VITE_IS_TAURI,
+      Mode: import.meta.env.MODE
+    });
+    
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);

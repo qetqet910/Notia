@@ -6,7 +6,7 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run dev:tauri",
     "beforeBuildCommand": "npm run build:tauri"
   },
   "app": {
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' tauri: http://tauri.localhost assets: blob: data: filesystem: ws: wss: https://* http://*;"
+      "csp": "default-src * 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' data: blob: filesystem: about: ws: wss:;"
     }
   },
   "bundle": {

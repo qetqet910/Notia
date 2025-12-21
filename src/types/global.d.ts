@@ -12,14 +12,8 @@ interface BeforeInstallPromptEvent extends Event {
 interface Window {
   deferredInstallPrompt: BeforeInstallPromptEvent | null;
   browser?: typeof chrome;
-}
-
-interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL: string;
-  readonly VITE_SUPABASE_ANON_KEY: string;
-  readonly VITE_PLATFORM: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
+  __ENV__?: {
+    VITE_SUPABASE_URL: string;
+    VITE_SUPABASE_ANON_KEY: string;
+  };
 }
