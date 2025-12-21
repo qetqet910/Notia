@@ -4,6 +4,7 @@ import {
   RouterProvider,
   useLocation,
   Outlet,
+  Navigate,
 } from 'react-router-dom';
 import { LandingPageLoader } from '@/components/loader/landing/LandingPageLoader';
 import { ChangelogPageLoader } from '@/components/loader/landing/ChangelogPageLoader';
@@ -69,11 +70,14 @@ const router = createHashRouter([
     children: [
       {
         path: '/',
-        element: (
-          <Suspense fallback={<LandingPageLoader />}>
-            <Home />
-          </Suspense>
-        ),
+        element:
+          import.meta.env.VITE_IS_TAURI === 'true' ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <Suspense fallback={<LandingPageLoader />}>
+              <Home />
+            </Suspense>
+          ),
       },
       {
         path: '/login',
