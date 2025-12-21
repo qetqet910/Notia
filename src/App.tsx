@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import {
   createHashRouter,
+  createBrowserRouter,
   RouterProvider,
   useLocation,
   Outlet,
@@ -60,7 +61,10 @@ const AppLayout = () => {
   );
 };
 
-const router = createHashRouter([
+const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
+const createRouter = isTauri ? createHashRouter : createBrowserRouter;
+
+const router = createRouter([
   {
     element: <AppLayout />,
     errorElement: (
@@ -172,20 +176,23 @@ function App() {
   const { setDeferredPrompt } = usePwaStore();
 
   useEffect(() => {
-    // 1. Supabase Auth Callback Handling for HashRouter
+    // 1. Supabase Auth Callback Handling for HashRouter (Tauri Only)
     // Supabase redirects to /?code=... but HashRouter expects /#/auth/callback?code=...
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code) {
-      const newUrl = new URL(window.location.href);
-      newUrl.search = ''; // Clear root query params
-      newUrl.hash = `#/auth/callback?code=${code}`; // Move code to hash
-      window.location.replace(newUrl.toString());
-      return;
+    // For Web (BrowserRouter), this is not needed as /auth/callback?code=... works natively.
+    if (isTauri) {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        const newUrl = new URL(window.location.href);
+        newUrl.search = ''; // Clear root query params
+        newUrl.hash = `#/auth/callback?code=${code}`; // Move code to hash
+        window.location.replace(newUrl.toString());
+        return;
+      }
     }
 
     console.log('Environment Check:', {
-      VITE_IS_TAURI: import.meta.env.VITE_IS_TAURI,
+      VITE_IS_TAURI: isTauri,
       Mode: import.meta.env.MODE
     });
     
