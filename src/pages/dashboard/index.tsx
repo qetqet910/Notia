@@ -780,7 +780,8 @@ const MobileNavigation = ({
           description: '성공적으로 로그아웃되었습니다.',
         });
         setTheme('light');
-        navigate('/login');
+        const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
+        navigate(isTauri ? '/desktop-login' : '/login');
       } else {
         throw result.error || new Error('로그아웃 실패');
       }

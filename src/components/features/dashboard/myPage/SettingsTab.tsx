@@ -36,11 +36,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { useNotes } from '@/hooks/useNotes';
+import { useNavigate } from 'react-router-dom';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { signOut, user, deleteAccount } = useAuthStore();
   const { notes, createNote } = useDataStore();
   const { theme, setTheme } = useThemeStore();
@@ -147,6 +148,12 @@ export const SettingsTab: React.FC = React.memo(() => {
     },
     [user, createNote, toast],
   );
+
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    const isTauri = import.meta.env.VITE_IS_TAURI === 'true';
+    navigate(isTauri ? '/desktop-login' : '/login');
+  }, [signOut, navigate]);
 
   const handleDeleteAccount = useCallback(async () => {
     setIsDeletingAccount(true); // Set loading true
@@ -379,7 +386,7 @@ export const SettingsTab: React.FC = React.memo(() => {
           <Button
             variant="outline"
             className="w-full justify-center"
-            onClick={signOut}
+            onClick={handleSignOut}
           >
             <LogOut className="h-4 w-4 mr-2" />
             로그아웃

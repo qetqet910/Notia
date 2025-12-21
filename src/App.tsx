@@ -16,6 +16,7 @@ import {
 } from '@/components/loader/landing/AuthPageLoader';
 import { NotFoundPageLoader } from '@/components/loader/landing/NotFoundPageLoader';
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
+import DesktopLogin from '@/pages/_auth/DesktopLogin';
 const MyPage = lazy(() => import('@/pages/dashboard/myPage'));
 const HelpPage = lazy(() => import('@/pages/dashboard/help'));
 
@@ -24,7 +25,6 @@ const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
 const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Login = lazy(() => import('@/pages/_auth/Login'));
-const DesktopLogin = lazy(() => import('@/pages/_auth/DesktopLogin'));
 const TermsAgreement = lazy(() => import('@/pages/_auth/TermsAgreement'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
 const GlobalError = lazy(() => import('@/pages/GlobalError'));
@@ -94,11 +94,7 @@ const router = createRouter([
       },
       {
         path: '/desktop-login',
-        element: (
-          <Suspense fallback={<LoginPageLoader />}>
-            <DesktopLogin />
-          </Suspense>
-        ),
+        element: <DesktopLogin />,
       },
       {
         path: '/terms-agreement',
