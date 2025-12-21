@@ -23,6 +23,7 @@ const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
 const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Login = lazy(() => import('@/pages/_auth/Login'));
+const DesktopLogin = lazy(() => import('@/pages/_auth/DesktopLogin'));
 const TermsAgreement = lazy(() => import('@/pages/_auth/TermsAgreement'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
 const GlobalError = lazy(() => import('@/pages/GlobalError'));
@@ -72,7 +73,7 @@ const router = createHashRouter([
         path: '/',
         element:
           import.meta.env.VITE_IS_TAURI === 'true' ? (
-            <Navigate to="/login" replace />
+            <Navigate to="/desktop-login" replace />
           ) : (
             <Suspense fallback={<LandingPageLoader />}>
               <Home />
@@ -84,6 +85,14 @@ const router = createHashRouter([
         element: (
           <Suspense fallback={<LoginPageLoader />}>
             <Login />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/desktop-login',
+        element: (
+          <Suspense fallback={<LoginPageLoader />}>
+            <DesktopLogin />
           </Suspense>
         ),
       },
