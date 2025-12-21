@@ -83,6 +83,7 @@ const DesktopLogin: React.FC = () => {
            <LoginForm 
              isLoginLoading={isLoginLoading}
              onSocialLogin={handleSocialLogin}
+             transparent
            />
         </div>
 

@@ -782,7 +782,7 @@ const MobileNavigation = ({
           description: '성공적으로 로그아웃되었습니다.',
         });
         setTheme('light');
-        navigate(isTauri() ? '/' : '/login');
+        navigate('/');
       } else {
         throw result.error || new Error('로그아웃 실패');
       }

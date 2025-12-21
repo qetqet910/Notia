@@ -45,7 +45,8 @@ SocialLoginButton.displayName = 'SocialLoginButton';
 export const LoginForm = React.memo<{
   isLoginLoading: boolean;
   onSocialLogin: (provider: 'github' | 'google') => void;
-}>(({ isLoginLoading, onSocialLogin }) => (
+  transparent?: boolean;
+}>(({ isLoginLoading, onSocialLogin, transparent }) => (
   <motion.div
     key="login-form-tab"
     initial="hidden"
@@ -66,7 +67,7 @@ export const LoginForm = React.memo<{
         >
           <motion.div
             key="key-input"
-            className="bg-[#f0faf7] p-4 rounded-lg"
+            className={`${transparent ? '' : 'bg-[#f0faf7] p-4'} rounded-lg`}
             variants={animations.item}
           >
             <InputOTPControlled />
