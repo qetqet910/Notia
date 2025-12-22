@@ -1,4 +1,5 @@
 import '@/styles/global.css';
+import { isTauri } from '@/utils/isTauri';
 
 // --- Global Error Handlers (Must be first) ---
 // 초기화 단계에서 발생하는 에러를 화면에 표시하기 위한 핸들러입니다.
@@ -67,9 +68,9 @@ window.onunhandledrejection = function (event) {
  * 서비스 워커를 등록합니다.
  */
 function registerServiceWorker() {
-  // Tauri 환경에서는 서비스 워커를 등록하지 않습니다.
-  if (import.meta.env.VITE_IS_TAURI === 'true') {
-    console.log('Skipping ServiceWorker registration in Tauri environment.');
+  // Tauri 환경에서는 서비스 워커를 절대 등록하지 않습니다.
+  if (isTauri()) {
+    console.log('[Security] Tauri environment detected. Blocking ServiceWorker registration.');
     return;
   }
 
@@ -134,6 +135,15 @@ function initializePlatform(platformName: string): boolean { // async 제거
  */
 async function initializeApp(): Promise<void> { // async 유지 (service worker 등록, await는 initializePlatform에서 제거됨)
   try {
+    console.log('--- Notia Initialization ---');
+    console.log('Current URL:', window.location.href);
+    console.log('Environment:', {
+      isTauri: isTauri(),
+      hasTauriInternals: typeof window !== 'undefined' && !!window.__TAURI_INTERNALS__,
+      platform: import.meta.env.VITE_PLATFORM || 'web',
+      mode: import.meta.env.MODE
+    });
+
     // 서비스 워커 등록 코드를 다시 추가합니다.
     registerServiceWorker();
 

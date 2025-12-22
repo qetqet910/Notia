@@ -110,6 +110,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Notia" />
     <script>
+      // Tauri 환경에서 서비스 워커 강제 해제 (캐시 문제 해결)
+      if (typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__)) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (var i = 0; i < registrations.length; i++) {
+              registrations[i].unregister();
+            }
+          });
+        }
+      }
       (function() {
         try {
           var localTheme = localStorage.getItem('theme-storage');

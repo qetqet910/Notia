@@ -6,13 +6,15 @@ import { readFileSync, rmSync, existsSync } from 'fs';
 
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
-// Tauri 빌드 후 PWA 파일 삭제 플러그인
-function cleanPWAFiles(): Plugin {
+/**
+ * Tauri 빌드 환경에서 PWA 관련 파일이 생성되거나 캐시되는 것을 방지하기 위한 플러그인
+ */
+function tauriCleanPlugin(): Plugin {
   return {
-    name: 'clean-pwa-files',
+    name: 'tauri-clean-plugin',
+    apply: 'build',
     closeBundle() {
       const outDir = path.resolve(__dirname, 'dist');
-      
       const pwaFiles = [
         'manifest.json',
         'manifest.webmanifest',
@@ -21,15 +23,14 @@ function cleanPWAFiles(): Plugin {
         'registerSW.js',
         'workbox-*.js',
       ];
-      
       pwaFiles.forEach(file => {
         const filePath = path.join(outDir, file);
         if (existsSync(filePath)) {
           try {
             rmSync(filePath, { force: true });
-            console.log(`🗑️  Removed: ${file}`);
+            console.log(`🧹 [Tauri Clean] Removed PWA file: ${file}`);
           } catch (err) {
-            console.warn(`⚠️  Failed to remove ${file}:`, err);
+            console.warn(`⚠️ [Tauri Clean] Failed to remove ${file}:`, err);
           }
         }
       });
@@ -38,141 +39,93 @@ function cleanPWAFiles(): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
-  // 현재 모드에 맞는 환경 변수 로드 (우선순위: .env.tauri > .env)
-  // loadEnv는 내부적으로 dotenv를 사용하여 .env 파일을 로드합니다.
   const env = loadEnv(mode, process.cwd(), '');
 
-  // Tauri 빌드 환경 감지 (오직 tauri 모드일 때만 true)
-  const isTauri = mode === 'tauri';
+  // Tauri 빌드 판정 (npm 스크립트 명칭, Vite 모드, TAURI_PLATFORM 등을 모두 고려)
+  const isTauri = 
+    mode === 'tauri' || 
+    process.env.VITE_IS_TAURI === 'true' || 
+    process.env.TAURI_PLATFORM !== undefined ||
+    (process.env.npm_lifecycle_event && process.env.npm_lifecycle_event.includes('tauri'));
   
-  console.log('--- Build Configuration ---');
-  console.log('Mode:', mode);
-  console.log('Is Tauri Build:', isTauri);
-  // 디버깅: 키 존재 여부만 로그 (값은 숨김)
-  console.log('VITE_SUPABASE_URL Exists:', !!env.VITE_SUPABASE_URL);
-  console.log('VITE_SUPABASE_ANON_KEY Exists:', !!env.VITE_SUPABASE_ANON_KEY);
-  console.log('---------------------------');
+  console.log(`
+🚀 [Notia Build] Mode: ${mode}, isTauri: ${isTauri}, Script: ${process.env.npm_lifecycle_event}
+`);
 
   const plugins: (Plugin | Plugin[] | false)[] = [react()];
   
-  // PWA 플러그인은 웹 빌드에만 추가
-  if (!isTauri) {
+  if (isTauri) {
+    plugins.push(tauriCleanPlugin());
+  } else {
+    // 웹 빌드 시에만 PWA 활성화
     plugins.push(
       VitePWA({
         registerType: 'autoUpdate',
-        injectRegister: 'inline',
-        includeAssets: [
-          'favicon.ico',
-          'icon16x16.png',
-          'icon32x32.png',
-          'apple-touch-icon.png',
-          'android-chrome-192x192',
-          'android-chrome-512x512',
-        ],
+        injectRegister: 'inline', // 외부 JS 파일 의존성 제거
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
         manifest: {
           name: 'Notia',
           short_name: 'Notia',
-          description:
-            '마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며, 일상 속 중요한 약속까지 관리하세요. 당신의 생산성을 위한 가장 가볍고 빠른 도구입니다.',
           theme_color: '#cec',
           start_url: '/',
           scope: '/',
           display: 'standalone',
-          screenshots: [
-            {
-              src: 'og-image.webp',
-              sizes: '1280x640',
-              type: 'image/png',
-              form_factor: 'wide',
-              label: 'Notia in Action',
-            },
-          ],
           icons: [
-            {
-              src: 'favicon/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-            },
-            {
-              src: 'favicon/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-            },
-            {
-              src: 'favicon/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable',
-            },
+            { src: 'favicon/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+            { src: 'favicon/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           ],
         },
       })
     );
-  } else {
-    // Tauri 빌드 시 PWA 파일 정리
-    plugins.push(cleanPWAFiles());
   }
 
   return {
-    base: isTauri ? './' : '/',
+    // 개발 모드와 배포 모드 모두 절대 경로('/')를 기본으로 사용합니다.
+    // 이는 SPA 라우팅 및 쿼리 파라미터 환경에서 가장 안정적입니다.
+    base: '/', 
     cacheDir: '.vite-cache',
-    
-    // public 폴더는 항상 사용 (lottie 파일 등을 위해)
     publicDir: 'public',
     
     define: {
       'process.env.APP_VERSION': JSON.stringify(packageJson.version),
       'import.meta.env.VITE_IS_TAURI': JSON.stringify(isTauri ? 'true' : 'false'),
       'import.meta.env.VITE_PLATFORM': JSON.stringify(env.VITE_PLATFORM || ''),
-      // 환경 변수 명시적 주입 (누락 방지)
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
     },
-    server: {
-      hmr: {
-        overlay: false,
-      },
-      fs: {
-        allow: ['.'],
-      },
-      headers: {
-        'Service-Worker-Allowed': '/',
-      },
-    },
+    
     plugins: [
       ...plugins,
       {
         name: 'html-env-injection',
         transformIndexHtml(html) {
-          const envScript = `
+          const envScript = `<script>window.__ENV__ = { VITE_SUPABASE_URL: ${JSON.stringify(env.VITE_SUPABASE_URL)}, VITE_SUPABASE_ANON_KEY: ${JSON.stringify(env.VITE_SUPABASE_ANON_KEY)} };</script>`;
+          // Tauri 환경에서는 서비스 워커를 강제로 해제하는 스크립트 주입
+          const swKiller = isTauri ? `
             <script>
-              window.__ENV__ = {
-                VITE_SUPABASE_URL: ${JSON.stringify(env.VITE_SUPABASE_URL)},
-                VITE_SUPABASE_ANON_KEY: ${JSON.stringify(env.VITE_SUPABASE_ANON_KEY)}
-              };
-            </script>
-          `;
-          return html.replace('<head>', `<head>${envScript}`);
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                  for (let registration of registrations) { registration.unregister(); }
+                });
+              }
+            </script>` : '';
+          return html.replace('<head>', `<head>${envScript}${swKiller}`);
         }
       }
     ],
+    
     resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './src'),
-      },
+      alias: { '@': path.resolve(__dirname, './src') },
     },
+    
     build: {
       target: 'es2015',
-      sourcemap: true,
-      minify: 'esbuild', // 다시 활성화 (메모리 절약)
-      chunkSizeWarningLimit: 1000, // 1000kB로 상향 조정
+      outDir: 'dist',
+      emptyOutDir: true,
+      sourcemap: false,
+      minify: 'esbuild',
       rollupOptions: {
-        input: {
-          main: path.resolve(__dirname, 'index.html'),
-        },
-        output: {
-          // 안정성을 위해 자동 청킹 사용
-        },
+        input: { main: path.resolve(__dirname, 'index.html') },
       },
     },
     assetsInclude: ['**/*.lottie'],

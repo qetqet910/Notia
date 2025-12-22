@@ -12,6 +12,8 @@ interface BeforeInstallPromptEvent extends Event {
 interface Window {
   deferredInstallPrompt: BeforeInstallPromptEvent | null;
   browser?: typeof chrome;
+  __TAURI_INTERNALS__?: any;
+  __TAURI__?: any;
   __ENV__?: {
     VITE_SUPABASE_URL: string;
     VITE_SUPABASE_ANON_KEY: string;
