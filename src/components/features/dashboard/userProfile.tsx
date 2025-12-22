@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/useToast';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from '@/components/ui/themeToggle';
 import { useThemeStore } from '@/stores/themeStore';
+import { isTauri } from '@/utils/isTauri';
 
 export function UserProfile() {
   // userProfile을 사용하여 커스텀 users 테이블의 데이터를 가져옵니다.
@@ -67,7 +68,7 @@ export function UserProfile() {
           description: '성공적으로 로그아웃되었습니다.',
         });
         setTheme('light');
-        navigate('/login');
+        navigate(isTauri() ? '/' : '/login');
       } else {
         // result.error가 Error 객체가 아닐 수 있으므로 instanceof로 체크
         throw result.error instanceof Error
@@ -88,7 +89,7 @@ export function UserProfile() {
       // 로그아웃 성공/실패 여부와 관계없이 항상 로그인 페이지로 이동
       // toast 메시지가 먼저 표시될 시간을 주기 위해 setTimeout 사용
       setTimeout(() => {
-        navigate('/login');
+        navigate(isTauri() ? '/' : '/login');
       }, 100);
     }
   };

@@ -2,6 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
+import { isTauri } from '@/utils/isTauri';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({
   children,
-  redirectTo = '/login',
+  redirectTo = isTauri() ? '/' : '/login',
 }: ProtectedRouteProps) => {
   const {
     isAuthenticated,
@@ -42,7 +43,7 @@ export const ProtectedRoute = ({
             사용자 프로필을 불러오지 못했습니다.
           </p>
           <Button onClick={() => signOut()} className="mt-4">
-            로그인 페이지로 돌아가기
+            돌아가기
           </Button>
         </div>
       </div>
