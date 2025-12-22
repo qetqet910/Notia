@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
+import { isTauri } from '@/utils/isTauri';
 
 export const AuthCallback = () => {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export const AuthCallback = () => {
 
         if (sessionError || !sessionData?.session || !sessionData?.user) {
           console.error('인증 오류:', sessionError?.message || '세션/유저 없음');
-          navigate('/login');
+          navigate(isTauri() ? '/' : '/login');
           return;
         }
 
@@ -69,7 +70,7 @@ export const AuthCallback = () => {
           isRegisterLoading: false,
           isAuthenticated: false,
         });
-        navigate('/login');
+        navigate(isTauri() ? '/' : '/login');
       }
     };
 

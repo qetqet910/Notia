@@ -26,8 +26,8 @@ export const SocialLoginButton = React.memo<{
   >
     <Button
       variant="outline"
-      className="w-full flex items-center justify-center gap-2 h-11 mb-2 hover:shadow-sm"
-      style={{ borderColor: color, color }}
+      className="w-full flex items-center justify-center gap-2 h-11 mb-2 bg-white/20 dark:bg-white/5 backdrop-blur-md border-white/30 dark:border-white/10 hover:bg-white/40 dark:hover:bg-white/10 transition-all hover:shadow-sm"
+      style={{ color }}
       onClick={() => onClick(provider)}
       disabled={disabled}
     >
@@ -94,13 +94,14 @@ export const LoginForm = React.memo<{
 
     <motion.div
       key="login-separator"
-      className="relative my-4"
+      className="relative my-6 flex items-center justify-center"
       variants={animations.item}
     >
-      <Separator />
-      <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
+      <div className="flex-1 h-[2px] bg-border/80"></div>
+      <span className="text-xs font-medium text-muted-foreground bg-transparent px-3">
         또는
       </span>
+      <div className="flex-1 h-[2px] bg-border/80"></div>
     </motion.div>
 
     <motion.div
