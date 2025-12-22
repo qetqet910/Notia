@@ -14,6 +14,34 @@ from = "/sitemap.xml"
 to = "/sitemap.xml"
 status = 200
 
+# [중요] 인증 콜백은 Prerender를 거치지 않고 즉시 index.html로 (PKCE 유실 방지)
+[[redirects]]
+from = "/auth/callback"
+to = "/index.html"
+status = 200
+force = true
+
+# PWA 파일 예외 처리 (SPA Fallback 방지)
+[[redirects]]
+from = "/manifest.webmanifest"
+to = "/manifest.webmanifest"
+status = 200
+
+[[redirects]]
+from = "/registerSW.js"
+to = "/registerSW.js"
+status = 200
+
+[[redirects]]
+from = "/sw.js"
+to = "/sw.js"
+status = 200
+
+[[redirects]]
+from = "/service-worker.js"
+to = "/service-worker.js"
+status = 200
+
 # 정적 파일은 함수를 거치지 않고 직접 제공
 [[redirects]]
 from = "/assets/*"
@@ -49,7 +77,7 @@ for = "/assets/*"
 [headers.values]
 Cache-Control = "public, max-age=31536000, immutable"
 
-# 나머지 요청은 prerender 함수로
+# 나머지 요청은 prerender 함수로 (SPA Fallback)
 [[redirects]]
 from = "/*"
 to = "/.netlify/functions/prerender"

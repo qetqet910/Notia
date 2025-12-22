@@ -41,7 +41,7 @@ export const KeyDisplay: React.FC<KeyDisplayProps> = ({
           <Input
             readOnly
             value={formattedKey}
-            className="font-mono text-center tracking-wide border-[#c5e9de]"
+            className="font-mono text-center tracking-wide border-[#c5e9de] bg-white text-slate-900 shadow-sm"
             onClick={onCopy} // 입력 필드 클릭 시에도 복사
           />
         </div>

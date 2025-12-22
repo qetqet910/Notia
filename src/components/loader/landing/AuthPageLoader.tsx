@@ -98,106 +98,53 @@ export const TermsPageLoader = () => {
 
 export const LoginPageLoader = () => {
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen overflow-hidden bg-background">
-      <div className=""></div> {/* This div seems empty, keeping as is */}
-      <div className="w-full lg:w-1/2 p-4 md:p-8 flex items-start lg:mt-32 lg:mb-16 justify-center lg:justify-end lg:pr-24">
-        <div>
-          <div className="rounded-xl border relative w-full max-w-md shadow-lg border-border bg-card overflow-visible">
-            <div className="p-6 pt-8 pb-6">
-              <div className="flex justify-center items-center mb-6">
-                <div className="w-1/2 flex justify-center">
-                  {/* Logo Placeholder */}
-                  <Skeleton className="w-32 h-8" />
-                </div>
-              </div>
-              <div className="space-y-4">
-                {/* Tab Navigation Placeholder */}
-                <div className="h-10 items-center justify-center rounded-md bg-muted p-1 grid grid-cols-2 gap-4">
-                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all bg-background shadow-sm">
-                    <Skeleton className="w-12 h-6" />
-                  </div>
-                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all">
-                    <Skeleton className="w-12 h-6" />
-                  </div>
-                </div>
-                <div className="relative min-h-[280px]">
-                  <div className="space-y-4">
-                    <form className="space-y-4 mb-6">
-                      <div className="space-y-4">
-                        <div className="min-h-[120px]">
-                          <div className="space-y-4">
-                            <div className="bg-secondary/50 p-4 rounded-lg">
-                              <div className="space-y-4 w-full max-w-md mx-auto">
-                                {/* OTP / Code Input Placeholder */}
-                                <div className="flex items-center gap-2">
-                                  <div className="flex flex-col w-full justify-center gap-1 sm:gap-2">
-                                    <div className="flex justify-center gap-0.5 sm:gap-1">
-                                      <div className="flex items-center gap-0.5 sm:gap-1">
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                      </div>
-                                      <div className="sm:mt-0.5 md:mt-1">
-                                        <Skeleton className="w-3 h-0.5" />
-                                      </div>
-                                      <div className="flex items-center gap-0.5 sm:gap-1">
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                      </div>
-                                    </div>
-                                    <div className="flex justify-center gap-0.5 sm:gap-1">
-                                      <div className="flex items-center gap-0.5 sm:gap-1">
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                      </div>
-                                      <div className="sm:mt-0.5 md:mt-1">
-                                        <Skeleton className="w-3 h-0.5" />
-                                      </div>
-                                      <div className="flex items-center gap-0.5 sm:gap-1">
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                        <Skeleton className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-md" />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                <Skeleton className="h-5 mx-auto w-48" />{' '}
-                                {/* Prompt text */}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Submit Button Placeholder */}
-                        <div>
-                          <Skeleton className="w-full h-11" />
-                        </div>
-                      </div>
-                    </form>
-                    {/* Divider Placeholder */}
-                    <div className="relative my-4">
-                      <Skeleton className="h-[1px] w-full" />
-                      <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background px-2">
-                        <Skeleton className="w-16 h-5" />
-                      </span>
-                    </div>
-                    {/* Social Login Buttons Placeholder */}
-                    <div className="space-y-2">
-                      <div>
-                        <Skeleton className="w-full h-11 mb-2 rounded-md" />
-                      </div>
-                      <div>
-                        <Skeleton className="w-full h-11 mb-2 rounded-md" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+    <div className="flex flex-col min-h-screen items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <div className="relative z-10 w-full max-w-[420px] mx-4">
+        {/* Card Skeleton matching Liquid Glass style */}
+        <div className="bg-white/40 dark:bg-black/40 backdrop-blur-2xl border border-white/40 dark:border-white/10 shadow-lg rounded-[32px] p-6 sm:p-8 pt-10 pb-8 space-y-8">
+          
+          {/* Header (Logo & Title) */}
+          <div className="flex flex-col items-center space-y-4">
+            <Skeleton className="w-32 h-10 rounded-lg bg-white/50 dark:bg-white/10" />
+            <div className="space-y-2 flex flex-col items-center w-full">
+              <Skeleton className="w-48 h-6 rounded bg-white/50 dark:bg-white/10" />
+              <Skeleton className="w-64 h-4 rounded bg-white/50 dark:bg-white/10" />
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="h-11 w-full bg-black/5 dark:bg-white/5 p-1 rounded-2xl grid grid-cols-2 gap-2">
+            <Skeleton className="h-full rounded-xl bg-white/60 dark:bg-white/20 shadow-sm" />
+            <div /> 
+          </div>
+
+          {/* Form Content */}
+          <div className="space-y-6">
+            {/* Inputs Area */}
+            <div className="space-y-4 bg-white/20 dark:bg-white/5 p-4 rounded-xl">
+               <div className="flex justify-center gap-2 mb-4">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-8 w-8 rounded bg-white/50 dark:bg-white/10" />
+                  ))}
+                  <div className="w-2" />
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i+4} className="h-8 w-8 rounded bg-white/50 dark:bg-white/10" />
+                  ))}
+               </div>
+               <Skeleton className="h-11 w-full rounded-md bg-primary/20" />
+            </div>
+            
+            {/* Divider */}
+            <div className="flex items-center gap-4 px-2">
+              <Skeleton className="h-[2px] flex-1 bg-black/10 dark:bg-white/10" />
+              <Skeleton className="w-8 h-3 bg-black/10 dark:bg-white/10 rounded-full" />
+              <Skeleton className="h-[2px] flex-1 bg-black/10 dark:bg-white/10" />
+            </div>
+
+            {/* Social Buttons */}
+            <div className="space-y-3">
+              <Skeleton className="h-11 w-full rounded-md bg-white/40 dark:bg-white/10 border border-white/20" />
+              <Skeleton className="h-11 w-full rounded-md bg-white/40 dark:bg-white/10 border border-white/20" />
             </div>
           </div>
         </div>

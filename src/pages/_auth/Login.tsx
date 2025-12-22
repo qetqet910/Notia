@@ -1,68 +1,76 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, Navigate } from 'react-router-dom';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { motion, useAnimation } from 'framer-motion';
 
 import { Toaster } from '@/components/ui/toaster';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
-import { animations } from '@/constants/animations';
-
 import logoImage from '@/assets/images/Logo.png';
-import loginAnimation from '/lottie/loginAnimation.lottie';
+import logoDarkImage from '@/assets/images/LogoDark.png';
 
 import { LoginForm, SignupForm } from '@/components/features/auth/AuthComponents';
 import { useAuthPageLogic } from '@/hooks/useAuthPageLogic';
+import { useThemeStore } from '@/stores/themeStore';
+import { cn } from '@/utils/shadcnUtils';
 
-// --- Memoized Sub-components ---
+// --- Visual Components (Synced with DesktopLogin) ---
 
-const AnimationSection = React.memo(() => {
+const BackgroundOrbs = React.memo(() => {
   return (
-    <motion.div
-      className="w-full flex items-center justify-center p-8 order-first md:order-last bg-gradient-to-b md:bg-gradient-to-r from-white to-[#e6f7f2]"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.8, delay: 0.2 }}
-    >
-      <div className="w-full max-w-md">
-        <div className="w-full aspect-square mx-auto">
-          <DotLottieReact
-            src={loginAnimation}
-            loop
-            autoplay={true}
-            className="drop-shadow-xl w-full h-full"
-          />
-        </div>
-        <motion.div
-          className="text-center mt-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          <motion.h2
-            className="text-xl md:text-2xl font-bold text-[#61C9A8]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
-            순간을 기록하세요,
-          </motion.h2>
-          <motion.p
-            className="text-gray-600 mt-2 max-w-sm mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-          >
-            중요한 순간으로 내일을 만들어 드릴게요.
-            <br />
-            언제, 어디서나 기록하세요.
-          </motion.p>
-        </motion.div>
-      </div>
-    </motion.div>
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-slate-50 dark:bg-slate-950">
+      {/* Base Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-white to-cyan-50/50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900" />
+
+      {/* Orb 1: Purple (Top Right) */}
+      <motion.div
+        className="absolute -top-[20%] -right-[10%] w-[80vw] h-[80vw] rounded-full bg-purple-300/40 dark:bg-purple-800/20 blur-[120px] mix-blend-multiply dark:mix-blend-screen"
+        animate={{
+          x: [0, -100, 50, 0],
+          y: [0, 50, -100, 0],
+          scale: [1, 1.1, 0.9, 1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          repeatType: "mirror",
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* Orb 2: Mint/Teal (Bottom Left) */}
+      <motion.div
+        className="absolute -bottom-[20%] -left-[10%] w-[80vw] h-[80vw] rounded-full bg-[#61C9A8]/40 dark:bg-[#61C9A8]/20 blur-[120px] mix-blend-multiply dark:mix-blend-screen"
+        animate={{
+          x: [0, 100, -50, 0],
+          y: [0, -100, 50, 0],
+          scale: [1, 1.2, 0.95, 1],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          repeatType: "mirror",
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* Orb 3: White/Ice Blue Accent (Center-ish) - High Quality Highlight */}
+      <motion.div
+        className="absolute top-[20%] left-[20%] w-[70vw] h-[70vw] rounded-full bg-white/60 dark:bg-slate-200/10 blur-[130px] mix-blend-overlay dark:mix-blend-screen"
+        animate={{
+          x: [0, -70, 70, 0],
+          y: [0, 70, -70, 0],
+          scale: [1, 1.2, 0.8, 1],
+        }}
+        transition={{
+          duration: 22,
+          repeat: Infinity,
+          repeatType: "mirror",
+          ease: "easeInOut",
+        }}
+      />
+    </div>
   );
 });
-AnimationSection.displayName = 'AnimationSection';
+BackgroundOrbs.displayName = 'BackgroundOrbs';
 
 // --- Main Component ---
 
@@ -90,25 +98,12 @@ export const Login: React.FC = () => {
     copyToClipboard,
   } = useAuthPageLogic();
 
+  const { isDarkMode, isDeepDarkMode } = useThemeStore();
   const location = useLocation();
   const controls = useAnimation();
 
-  // Page Visibility API를 사용하여 애니메이션 제어
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        controls.start('visible');
-      }
-    };
-
-    if (document.visibilityState === 'visible') {
-      controls.start('visible');
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    controls.start('visible');
   }, [controls]);
 
   // 1. Redirect Logic
@@ -118,90 +113,132 @@ export const Login: React.FC = () => {
      return <Navigate to={from} replace />;
   }
 
+  const logoSrc = isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage;
+
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-gradient-to-br overflow-hidden from-white to-[#e6f7f2]">
+    <div className="relative flex flex-col min-h-screen items-center justify-center overflow-hidden font-['Orbit'] selection:bg-primary/20">
       <Toaster />
-      <div className="w-full md:w-1/2 p-4 md:p-8 flex items-start md:mt-32 md:mb-16 justify-center md:justify-end md:pr-24">
-        <motion.div
-          initial="hidden"
-          animate={controls}
-          variants={animations.card}
+      
+      {/* 0. Background Layer */}
+      <BackgroundOrbs />
+      
+      {/* 1. Content Layer (Z-Index 10) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className={cn(
+          "relative z-10 w-full max-w-[420px] mx-4",
+          // Liquid Glass Styles - High Quality Refinement
+          "bg-white/40 dark:bg-black/40", 
+          "backdrop-blur-3xl", // Stronger Blur for depth
+          "bg-gradient-to-b from-white/70 to-white/30 dark:from-white/10 dark:to-transparent", // More pronounced gradient
+          
+          // Borders & Shadows - Enhanced for 3D feel
+          "border border-white/60 dark:border-white/10",
+          "shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]", 
+          "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]", // Inner glow ring
+          
+          "rounded-[32px]",
+          "p-6 sm:p-8 pt-10 pb-8"
+        )}
+      >
+        {/* Header Section */}
+        <div className="text-center mb-8 space-y-4">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="flex justify-center"
+          >
+            <Link to="/" className="block">
+              <img 
+                src={logoSrc} 
+                alt="Notia" 
+                className="h-11 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform duration-300"
+              />
+            </Link>
+          </motion.div>
+          
+          <motion.div
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              {activeTab === 'login' ? '다시 오신 것을 환영합니다' : '새로운 여정을 시작하세요'}
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">
+              {activeTab === 'login' ? '기억의 조각을 연결하세요' : '당신의 기억을 연결해 드릴게요'}
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Tabs & Forms */}
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
         >
-          <Card className="relative w-full max-w-md shadow-lg border-[#d8f2ea] overflow-visible md:mt-0 mt-20">
-            <CardContent className="pt-8 pb-6">
-              <motion.div
-                className="flex justify-center items-center mb-6"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Link
-                  to="/"
-                  className="w-1/2 object-contain pointer flex justify-center"
-                >
-                  <img src={logoImage || '/placeholder.svg'} alt="로고" />
-                </Link>
-              </motion.div>
+          <TabsList className="grid grid-cols-2 gap-2 bg-black/5 dark:bg-white/5 p-1 rounded-2xl">
+            <TabsTrigger
+              value="login"
+              className={cn(
+                "rounded-xl text-sm font-medium transition-all duration-300",
+                "data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm",
+                "data-[state=active]:dark:bg-white/10 data-[state=active]:dark:text-white"
+              )}
+            >
+              로그인
+            </TabsTrigger>
+            <TabsTrigger
+              value="signup"
+              className={cn(
+                "rounded-xl text-sm font-medium transition-all duration-300",
+                "data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm",
+                "data-[state=active]:dark:bg-white/10 data-[state=active]:dark:text-white"
+              )}
+            >
+              만들기
+            </TabsTrigger>
+          </TabsList>
 
-              <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="space-y-4"
-              >
-                <TabsList className="grid grid-cols-2 gap-4">
-                  <TabsTrigger
-                    value="login"
-                    className={
-                      activeTab === 'login' ? 'text-[#61C9A8] bg-[#e6f7f2]' : ''
-                    }
-                  >
-                    로그인
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="signup"
-                    className={
-                      activeTab === 'signup'
-                        ? 'text-[#61C9A8] bg-[#e6f7f2]'
-                        : ''
-                    }
-                  >
-                    만들기
-                  </TabsTrigger>
-                </TabsList>
+          <div className="relative min-h-[280px]">
+            {activeTab === 'login' ? (
+              <LoginForm
+                isLoginLoading={isLoginLoading}
+                onSocialLogin={handleSocialLogin}
+                transparent
+              />
+            ) : (
+              <SignupForm
+                isRegisterLoading={isRegisterLoading}
+                email={email}
+                setEmail={setEmail}
+                formattedKey={formattedKey}
+                showKey={showKey}
+                copiedKey={copiedKey}
+                handleCreateEmailKey={handleCreateEmailKey}
+                handleCreateAnonymousKey={handleCreateAnonymousKey}
+                copyToClipboard={copyToClipboard}
+                onSocialLogin={handleSocialLogin}
+              />
+            )}
+          </div>
+        </Tabs>
+      </motion.div>
 
-                <div
-                  className="relative min-h-[280px]"
-                  style={{ transformOrigin: 'top' }}
-                >
-                  {activeTab === 'login' ? (
-                    <LoginForm
-                      isLoginLoading={isLoginLoading}
-                      onSocialLogin={handleSocialLogin}
-                    />
-                  ) : (
-                    <SignupForm
-                      isRegisterLoading={isRegisterLoading}
-                      email={email}
-                      setEmail={setEmail}
-                      formattedKey={formattedKey}
-                      showKey={showKey}
-                      copiedKey={copiedKey}
-                      handleCreateEmailKey={handleCreateEmailKey}
-                      handleCreateAnonymousKey={handleCreateAnonymousKey}
-                      copyToClipboard={copyToClipboard}
-                      onSocialLogin={handleSocialLogin}
-                    />
-                  )}
-                </div>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      <div className="hidden md:flex w-full md:w-1/2">
-        <AnimationSection />
-      </div>
+      {/* Footer */}
+      <motion.div 
+        className="relative z-10 absolute bottom-6 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8, duration: 1 }}
+      >
+        <p className="text-[10px] text-slate-400 font-semibold tracking-widest uppercase opacity-80 mix-blend-multiply dark:mix-blend-screen">
+          Notia Web v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
+        </p>
+      </motion.div>
     </div>
   );
 };

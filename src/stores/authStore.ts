@@ -173,13 +173,9 @@ export const useAuthStore = create<AuthStore>()(
             .from('users')
             .select('*')
             .eq('id', userId)
-            .single();
+            .maybeSingle();
 
           if (error) {
-            if (error.code === 'PGRST116') {
-              set({ userProfile: null });
-              return null;
-            }
             throw error;
           }
 
@@ -296,9 +292,10 @@ export const useAuthStore = create<AuthStore>()(
         if (get().isLoginLoading) return;
         set({ isLoginLoading: true, isRegisterLoading: true });
         try {
+          const redirectTo = `${window.location.origin}/auth/callback`;
           const { error } = await supabase.auth.signInWithOAuth({
             provider,
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
+            options: { redirectTo },
           });
           if (error) throw error;
         } catch (error) {
@@ -351,22 +348,12 @@ export const useAuthStore = create<AuthStore>()(
             },
           );
 
-          if (error || !data?.success) {
-            return {
-              success: false,
-              error: data?.error || '익명 사용자 생성에 실패했습니다.',
-              code: data?.code || 'UNEXPECTED_ERROR',
-            };
-          }
-
           if (data.user) {
             set({
-              user: data.user,
-              session: data.session || null,
               userKey: key,
               formattedKey: formatKey(key),
             });
-            await get().fetchUserProfile(data.user.id);
+            // Auto-login removed per user request. User must verify key manually.
             return { success: true, user: data.user };
           }
           return {
@@ -430,12 +417,10 @@ export const useAuthStore = create<AuthStore>()(
 
           if (data.user) {
             set({
-              user: data.user,
-              session: data.session || null,
               userKey: key,
               formattedKey: formatKey(key),
             });
-            await get().fetchUserProfile(data.user.id);
+            // Auto-login removed per user request.
             return { success: true, user: data.user };
           }
           return {

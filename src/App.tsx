@@ -5,7 +5,6 @@ import {
   RouterProvider,
   useLocation,
   Outlet,
-  Navigate,
 } from 'react-router-dom';
 import { LandingPageLoader } from '@/components/loader/landing/LandingPageLoader';
 import { ChangelogPageLoader } from '@/components/loader/landing/ChangelogPageLoader';
@@ -33,7 +32,7 @@ import { AuthCallback } from '@/pages/_auth/authCallback';
 import { ProtectedRoute } from '@/components/features/protectedRoute';
 import { ThemeProvider } from '@/components/features/themeProvider';
 import { usePwaStore } from './stores/pwaStore';
-import { isTauri } from '@/utils/isTauri';
+import { isTauri, isAppMode } from '@/utils/isTauri';
 
 const ScrollToTop = () => {
   const location = useLocation();
@@ -75,7 +74,7 @@ const router = createRouter([
     children: [
       {
         path: '/',
-        element: isTauri() ? (
+        element: isAppMode() ? (
           <DesktopLogin />
         ) : (
           <Suspense fallback={<LandingPageLoader />}>
@@ -169,22 +168,28 @@ function App() {
   useEffect(() => {
     // 1. Supabase Auth Callback Handling for HashRouter (Tauri Only)
     // Supabase redirects to /?code=... but HashRouter expects /#/auth/callback?code=...
-    // For Web (BrowserRouter), this is not needed as /auth/callback?code=... works natively.
-    if (isTauri()) {
+    // IMPORTANT: This logic MUST only run in Tauri to avoid destroying PKCE state on web.
+    const isTauriEnv = isTauri();
+    const hasTauriInternals = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
+    
+    if (isTauriEnv && hasTauriInternals) {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       if (code) {
+        console.log('Tauri Auth Redirect: Converting to Hash...');
         const newUrl = new URL(window.location.href);
-        newUrl.search = ''; // Clear root query params
-        newUrl.hash = `#/auth/callback?code=${code}`; // Move code to hash
+        newUrl.search = ''; 
+        newUrl.hash = `#/auth/callback?code=${code}`; 
         window.location.replace(newUrl.toString());
         return;
       }
     }
 
-    console.log('Environment Check:', {
-      isTauri: isTauri(),
-      Mode: import.meta.env.MODE
+    console.log('Environment Debug:', {
+      isTauri: isTauriEnv,
+      hasTauriInternals,
+      mode: import.meta.env.MODE,
+      VITE_IS_TAURI: import.meta.env.VITE_IS_TAURI
     });
     
     const handleBeforeInstallPrompt = (e: Event) => {

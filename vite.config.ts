@@ -42,15 +42,11 @@ export default defineConfig(({ mode }) => {
   // loadEnv는 내부적으로 dotenv를 사용하여 .env 파일을 로드합니다.
   const env = loadEnv(mode, process.cwd(), '');
 
-  // Tauri 빌드 환경 감지
-  const isTauri = 
-    mode === 'tauri' ||
-    process.env.TAURI_PLATFORM !== undefined ||
-    process.env.TAURI_ENV_PLATFORM !== undefined;
+  // Tauri 빌드 환경 감지 (오직 tauri 모드일 때만 true)
+  const isTauri = mode === 'tauri';
   
   console.log('--- Build Configuration ---');
   console.log('Mode:', mode);
-  console.log('TAURI_PLATFORM:', process.env.TAURI_PLATFORM);
   console.log('Is Tauri Build:', isTauri);
   // 디버깅: 키 존재 여부만 로그 (값은 숨김)
   console.log('VITE_SUPABASE_URL Exists:', !!env.VITE_SUPABASE_URL);
@@ -64,6 +60,7 @@ export default defineConfig(({ mode }) => {
     plugins.push(
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: 'inline',
         includeAssets: [
           'favicon.ico',
           'icon16x16.png',
@@ -78,8 +75,8 @@ export default defineConfig(({ mode }) => {
           description:
             '마크다운으로 자유롭게 기록하고, 태그 하나로 생각을 정리하며, 일상 속 중요한 약속까지 관리하세요. 당신의 생산성을 위한 가장 가볍고 빠른 도구입니다.',
           theme_color: '#cec',
-          start_url: './',
-          scope: './',
+          start_url: '/',
+          scope: '/',
           display: 'standalone',
           screenshots: [
             {
@@ -117,7 +114,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    base: './',
+    base: isTauri ? './' : '/',
     cacheDir: '.vite-cache',
     
     // public 폴더는 항상 사용 (lottie 파일 등을 위해)
@@ -126,6 +123,7 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.APP_VERSION': JSON.stringify(packageJson.version),
       'import.meta.env.VITE_IS_TAURI': JSON.stringify(isTauri ? 'true' : 'false'),
+      'import.meta.env.VITE_PLATFORM': JSON.stringify(env.VITE_PLATFORM || ''),
       // 환경 변수 명시적 주입 (누락 방지)
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
@@ -167,12 +165,13 @@ export default defineConfig(({ mode }) => {
       target: 'es2015',
       sourcemap: true,
       minify: 'esbuild', // 다시 활성화 (메모리 절약)
+      chunkSizeWarningLimit: 1000, // 1000kB로 상향 조정
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),
         },
         output: {
-          // 기본 청킹 전략 사용
+          // 안정성을 위해 자동 청킹 사용
         },
       },
     },

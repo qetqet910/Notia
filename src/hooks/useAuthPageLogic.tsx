@@ -69,8 +69,18 @@ export const useAuthPageLogic = () => {
       try {
         const key = generateRandomKey(16);
         const formattedKeyValue = formatKey(key);
-        const ipResponse = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await ipResponse.json();
+        
+        let ip = 'unknown';
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          if (ipResponse.ok) {
+             const data = await ipResponse.json();
+             ip = data.ip;
+          }
+        } catch (e) {
+          console.warn('IP fetch failed', e);
+        }
+
         const result = await createEmailUserWithEdgeFunction(
           email,
           formattedKeyValue,
@@ -153,8 +163,18 @@ export const useAuthPageLogic = () => {
         setShowKey(false);
         const key = generateRandomKey(16);
         const formattedKeyValue = formatKey(key);
-        const ipResponse = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await ipResponse.json();
+        
+        let ip = 'unknown';
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          if (ipResponse.ok) {
+             const data = await ipResponse.json();
+             ip = data.ip;
+          }
+        } catch (e) {
+          console.warn('IP fetch failed', e);
+        }
+
         const result = await createAnonymousUserWithEdgeFunction(
           formattedKeyValue,
           ip,

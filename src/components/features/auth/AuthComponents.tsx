@@ -2,12 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { InputOTPControlled } from '@/components/features/inputOtpControl';
 import { KeyDisplay } from '@/components/features/keyDisplay';
 import { animations } from '@/constants/animations';
+import { useAuthStore } from '@/stores/authStore';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import Key from 'lucide-react/dist/esm/icons/key';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 
 export const SocialLoginButton = React.memo<{
   provider: 'github' | 'google';
@@ -25,8 +26,8 @@ export const SocialLoginButton = React.memo<{
     transition={{ duration: 0.3 }}
   >
     <Button
-      variant="outline"
-      className="w-full flex items-center justify-center gap-2 h-11 mb-2 bg-white/20 dark:bg-white/5 backdrop-blur-md border-white/30 dark:border-white/10 hover:bg-white/40 dark:hover:bg-white/10 transition-all hover:shadow-sm"
+      variant="ghost"
+      className="w-full flex items-center justify-center gap-2 h-11 mb-2 border !bg-white/80 dark:!bg-black/60 backdrop-blur-md border-white/40 dark:border-white/10 hover:!bg-white dark:hover:!bg-black/80 transition-all hover:shadow-md shadow-sm"
       style={{ color }}
       onClick={() => onClick(provider)}
       disabled={disabled}
@@ -203,8 +204,8 @@ export const SignupForm = React.memo<{
         >
           <Button
             type="button"
-            variant="outline"
-            className="w-full h-11 border-[#c5e9de] hover:bg-[#f0faf7] hover:border-[#61C9A8]"
+            variant="ghost"
+            className="w-full h-11 border border-white/40 dark:border-white/10 !bg-white/80 dark:!bg-black/60 hover:!bg-white dark:hover:!bg-black/80 backdrop-blur-md transition-all hover:shadow-md shadow-sm"
             disabled={isRegisterLoading}
             onClick={handleCreateAnonymousKey}
           >
@@ -223,23 +224,26 @@ export const SignupForm = React.memo<{
         </motion.div>
 
         {!!formattedKey && !!showKey && (
-          <KeyDisplay
-            formattedKey={formattedKey}
-            onCopy={() => copyToClipboard(formattedKey)}
-            copied={copiedKey}
-          />
+          <div className="space-y-4">
+            <KeyDisplay
+              formattedKey={formattedKey}
+              onCopy={() => copyToClipboard(formattedKey)}
+              copied={copiedKey}
+            />
+          </div>
         )}
       </div>
 
       <motion.div
         key="signup-separator"
-        className="relative my-4"
+        className="relative my-6 flex items-center justify-center"
         variants={animations.item}
       >
-        <Separator />
-        <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-sm text-gray-500">
+        <div className="flex-1 h-[2px] bg-border/80"></div>
+        <span className="text-xs font-medium text-muted-foreground bg-transparent px-3">
           또는
         </span>
+        <div className="flex-1 h-[2px] bg-border/80"></div>
       </motion.div>
 
       <motion.div
