@@ -12,7 +12,6 @@ import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { usePwaStore } from '@/stores/pwaStore';
 import { changelogData } from '@/constants/changeLog';
-import FeatureUnderConstruction from '@/components/features/FeatureUnderConstruction';
 import { useAuthStore } from '@/stores/authStore';
 import { Navigate } from 'react-router-dom';
 
@@ -43,11 +42,11 @@ const platformData = [
       'Windows 10 64-bit 이상',
       '4GB RAM 이상 권장',
       'Intel Core i5 (8세대) 또는 동급 CPU',
-      'Intel UHD 630 또는 동급 내장 그래픽',
+      'F12 개발자 도구 비활성화 적용',
     ],
     download: {
       label: 'Download for Windows',
-      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-f7aee171c83956090b5c/Notia_1.3.0_x64-setup.exe',
+      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_1.3.1_x64-setup.exe',
     },
   },
   {
@@ -57,29 +56,27 @@ const platformData = [
       'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
     requirements: [
       'macOS 12 Monterey 이상',
-      'Apple Silicon / Intel 프로세서 지원',
-      'Intel Core i5 (8세대) 또는 동급 CPU',
-      'Intel UHD 630 또는 동급 내장 그래픽',
+      'Apple Silicon / Intel 프로세서 지원 (Universal)',
+      '안정적인 OAuth 로그인 지원',
     ],
     download: {
       label: 'Download for macOS',
-      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-f7aee171c83956090b5c/Notia_aarch64.app.tar.gz',
+      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_universal.app.tar.gz',
     },
   },
   {
     id: 'Linux',
     label: 'Linux',
     description:
-      '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. AppImage 또는 .deb 패키지로 제공됩니다.',
+      '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. .AppImage 또는 .deb 패키지로 제공됩니다.',
     requirements: [
       'Ubuntu 20.04, Fedora 36, Arch 등',
       'glibc 2.31 이상',
-      'Intel Core i5 (8세대) 또는 동급 CPU',
-      'Intel UHD 630 또는 동급 내장 그래픽',
+      '가벼운 실행 환경 보장',
     ],
     download: {
       label: 'Download for Linux (.AppImage)',
-      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-f7aee171c83956090b5c/Notia_1.3.0_amd64.AppImage',
+      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_1.3.1_amd64.AppImage',
     },
   },
   {
@@ -89,7 +86,7 @@ const platformData = [
       '설치 없이 웹에서 바로 사용하거나, 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.',
     requirements: [
       '최신 버전의 Chrome, Safari, Edge',
-      '홈 화면에 추가하여 사용',
+      '홈 화면에 추가하여 사용 (PWA)',
       '오프라인 사용 지원',
     ],
     download: {
@@ -171,12 +168,12 @@ export const DownloadPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-['Orbit']">
       <Toaster />
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 pt-24 pb-16 sm:pt-32 sm:pb-24">
-        {/* Installation Guide Section as the new header */}
+        {/* Installation Guide Section */}
         <section className="mb-16">
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl font-bold mb-4">
@@ -194,13 +191,13 @@ export const DownloadPage: React.FC = () => {
                 key={step.step}
                 className="relative flex flex-col items-center text-center"
               >
-                <div className="w-12 h-12 rounded-full bg-[#61C9A8] text-white flex items-center justify-center text-xl font-bold border-4 border-slate-50 dark:border-slate-900">
+                <div className="w-12 h-12 rounded-full bg-[#61C9A8] text-white flex items-center justify-center text-xl font-bold border-4 border-slate-50 dark:border-slate-900 shadow-sm">
                   {step.step}
                 </div>
                 <h3 className="text-xl font-semibold mt-4 mb-2">
                   {step.title}
                 </h3>
-                <p className="text-muted-foreground">{step.description}</p>
+                <p className="text-muted-foreground text-sm">{step.description}</p>
               </div>
             ))}
           </div>
@@ -211,12 +208,12 @@ export const DownloadPage: React.FC = () => {
           onValueChange={setSelectedId}
           className="w-full"
         >
-          <TabsList className="flex flex-wrap justify-around w-full">
+          <TabsList className="flex flex-wrap justify-around w-full bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl">
             {platformData.map((platform) => (
               <TabsTrigger
                 key={platform.id}
                 value={platform.id}
-                className="data-[state=active]:bg-[#61C9A8] data-[state=active]:text-white w-max"
+                className="data-[state=active]:bg-[#61C9A8] data-[state=active]:text-white rounded-lg transition-all duration-300"
               >
                 {platform.label}
               </TabsTrigger>
@@ -234,37 +231,37 @@ export const DownloadPage: React.FC = () => {
                   transition={{ duration: 0.3 }}
                   className="mt-6"
                 >
-                  <Card>
-                    <CardContent className="p-6 sm:p-8 text-center">
+                  <Card className="border-none shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl">
+                    <CardContent className="p-8 sm:p-12 text-center">
                       <div className="flex flex-col items-center">
                         <OsIcon name={platform.id} />
-                        <h3 className="text-2xl font-semibold mb-2">
+                        <h3 className="text-2xl sm:text-3xl font-bold mb-2">
                           Notia for {platform.label}
                         </h3>
-                        <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                        <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
                           {platform.description}
                         </p>
 
-                        <div className="flex flex-wrap justify-center gap-3 mb-6">
-                          <Badge variant="outline">
+                        <div className="flex flex-wrap justify-center gap-3 mb-8">
+                          <Badge variant="secondary" className="px-3 py-1">
                             최신 버전: {changelogData[0].version}
                           </Badge>
-                          <Badge variant="outline">
+                          <Badge variant="secondary" className="px-3 py-1">
                             최근 업데이트: {changelogData[0].date}
                           </Badge>
                           <a
                             href="/changelog"
-                            className="text-xs text-[#61C9A8] hover:underline self-center"
+                            className="text-xs text-[#61C9A8] font-semibold hover:underline self-center"
                           >
                             변경 사항 보기
                           </a>
                         </div>
 
-                        <div className="space-y-2 mb-8 text-left w-full max-w-xs mx-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 mb-10 text-left w-full max-w-xl mx-auto bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
                           {platform.requirements.map((req, index) => (
                             <div
                               key={index}
-                              className="flex items-center gap-3 text-sm text-muted-foreground"
+                              className="flex items-center gap-3 text-sm text-muted-foreground font-medium"
                             >
                               <Checkmark />
                               <span>{req}</span>
@@ -274,51 +271,43 @@ export const DownloadPage: React.FC = () => {
 
                         {platform.id === 'Mobile / Desktop' ? (
                           isIOS ? (
-                            <div className="w-full max-w-xs text-center p-4 bg-muted rounded-lg">
-                              <h4 className="font-semibold mb-2">
+                            <div className="w-full max-w-xs text-center p-6 bg-[#61C9A8]/10 rounded-2xl border border-[#61C9A8]/20">
+                              <h4 className="font-bold mb-2 text-[#61C9A8]">
                                 iOS에서 설치하는 방법
                               </h4>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-sm text-slate-600 dark:text-slate-300">
                                 Safari 브라우저의 하단 공유 버튼
                                 <br />
                                 ( <IoShareOutline className="inline h-4 w-4 mx-1" />)
                                 을 탭한 후,
                                 <br />
-                                `홈 화면에 추가`를 선택하세요.
+                                <strong>`홈 화면에 추가`</strong>를 선택하세요.
                               </p>
                             </div>
                           ) : (
                             <>
                               <Button
                                 size="lg"
-                                className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 w-full max-w-xs"
+                                className="bg-[#61C9A8] hover:bg-[#52a38a] w-full max-w-xs h-14 text-lg rounded-2xl shadow-lg shadow-[#61C9A8]/30 transition-all hover:-translate-y-1"
                                 onClick={handlePwaInstall}
                                 disabled={!deferredPrompt}
                               >
                                 {platform.download.label}
                               </Button>
                               {!deferredPrompt && (
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  앱이 이미 설치되었거나, 브라우저 메뉴를 통해 직접 설치할 수 있습니다.
+                                <p className="text-xs text-muted-foreground mt-4 font-medium">
+                                  이미 설치되었거나 메뉴를 통해 설치할 수 있습니다.
                                 </p>
                               )}
                             </>
                           )
-                        ) : ['Windows', 'macOS', 'Linux'].includes(
-                            platform.id,
-                          ) ? (
-                          <div className="w-full max-w-xs">
-                            <FeatureUnderConstruction
-                              featureName={`${platform.label} 앱`}
-                            />
-                          </div>
                         ) : (
                           <Button
                             size="lg"
-                            className="bg-[#61C9A8] hover:bg-[#61C9A8]/90 w-full max-w-xs"
+                            className="bg-[#61C9A8] hover:bg-[#52a38a] w-full max-w-xs h-14 text-lg rounded-2xl shadow-lg shadow-[#61C9A8]/30 transition-all hover:-translate-y-1"
                             asChild
                           >
-                            <a href={platform.download.link}>
+                            <a href={platform.download.link} target="_blank" rel="noopener noreferrer">
                               {platform.download.label}
                             </a>
                           </Button>
