@@ -47,7 +47,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   isCalculating: false,
 
   calculateActivityData: (notes: Note[]) => {
-    if (get().isCalculating || get().activityCache) return;
+    if (get().isCalculating) return;
 
     set({ isCalculating: true });
 
@@ -55,29 +55,34 @@ export const useDataStore = create<DataState>((set, get) => ({
       worker.terminate();
     }
 
-    worker = new Worker(
-      new URL('@/workers/activityCalculator.worker.ts', import.meta.url),
-      { type: 'module' },
-    );
+    try {
+      worker = new Worker(
+        new URL('../workers/activityCalculator.worker.ts', import.meta.url),
+        { type: 'module' },
+      );
 
-    worker.onmessage = (event: MessageEvent<CalculationResult>) => {
-      set({ activityCache: event.data, isCalculating: false });
-      if (worker) {
-        worker.terminate();
-        worker = null;
-      }
-    };
+      worker.onmessage = (event: MessageEvent<CalculationResult>) => {
+        set({ activityCache: event.data, isCalculating: false });
+        if (worker) {
+          worker.terminate();
+          worker = null;
+        }
+      };
 
-    worker.onerror = (error) => {
-      console.error('Web worker error:', error);
+      worker.onerror = (error) => {
+        console.error('Web worker error:', error);
+        set({ isCalculating: false });
+        if (worker) {
+          worker.terminate();
+          worker = null;
+        }
+      };
+
+      worker.postMessage(notes);
+    } catch (err) {
+      console.error('Failed to create web worker:', err);
       set({ isCalculating: false });
-      if (worker) {
-        worker.terminate();
-        worker = null;
-      }
-    };
-
-    worker.postMessage(notes);
+    }
   },
 
   createNote: async (

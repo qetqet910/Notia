@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { ProfileTab } from '@/components/features/dashboard/myPage/ProfileTab';
 import { ActivityTab } from '@/components/features/dashboard/myPage/ActivityTab';
 import { SettingsTab } from '@/components/features/dashboard/myPage/SettingsTab';
+import { TabErrorBoundary } from '@/components/features/TabErrorBoundary';
 import { useThemeStore } from '@/stores/themeStore';
 import User from 'lucide-react/dist/esm/icons/user';
 import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
@@ -87,15 +88,25 @@ export default function MyPage() {
   }, [handleKeyboardShortcuts]);
 
   const renderContent = () => {
+    let content;
     switch (activeTab) {
       case 'activity':
-        return <ActivityTab />;
+        content = <ActivityTab />;
+        break;
       case 'settings':
-        return <SettingsTab />;
+        content = <SettingsTab />;
+        break;
       case 'profile':
       default:
-        return <ProfileTab />;
+        content = <ProfileTab />;
+        break;
     }
+
+    return (
+      <TabErrorBoundary key={activeTab}>
+        {content}
+      </TabErrorBoundary>
+    );
   };
 
   if (!user) {

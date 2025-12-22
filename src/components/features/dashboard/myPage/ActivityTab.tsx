@@ -19,14 +19,15 @@ import {
 } from '@/components/ui/tooltip';
 
 export const ActivityTab: React.FC = React.memo(() => {
-  const { notes, goalStats } = useNotes();
+  const { notes, goalStats, loading: isNotesLoading } = useNotes();
   const { calculateActivityData, activityCache, isCalculating } = useDataStore();
 
   useEffect(() => {
-    if (notes.length > 0) {
+    // notes가 로딩 중이 아닐 때만 계산 실행
+    if (!isNotesLoading) {
       calculateActivityData(notes);
     }
-  }, [notes, calculateActivityData]);
+  }, [notes, isNotesLoading, calculateActivityData]);
 
   const { stats, activityData } = useMemo(() => {
     if (!activityCache) {
@@ -60,70 +61,59 @@ export const ActivityTab: React.FC = React.memo(() => {
     [activityData],
   );
 
-const weeks = useMemo(() => {
-  if (!firstActivity) return [];
+  const weeks = useMemo(() => {
+    if (!firstActivity || !activityData.length) return [];
 
-  // 1. 활동 데이터를 Map으로 변환
-  const allDays = new Map<string, { count: number; level: number }>();
-  activityData.forEach((d) => {
-    allDays.set(d.date, { count: d.count, level: d.level });
-  });
+    const allDays = new Map<string, { count: number; level: number }>();
+    activityData.forEach((d) => {
+      allDays.set(d.date, { count: d.count, level: d.level });
+    });
 
-  // 2. 시작일과 종료일 설정
-  const startDate = new Date(firstActivity.date + 'T00:00:00Z');
-  const endDate = new Date(startDate);
-  endDate.setUTCMonth(startDate.getUTCMonth() + 6);
+    const startDate = new Date(firstActivity.date + 'T00:00:00Z');
+    const endDate = new Date(startDate);
+    endDate.setUTCMonth(startDate.getUTCMonth() + 6);
 
-  // 3. 주의 시작일 (일요일) 계산
-  const weekStartDate = new Date(startDate);
-  weekStartDate.setUTCDate(startDate.getUTCDate() - startDate.getUTCDay());
+    const weekStartDate = new Date(startDate);
+    weekStartDate.setUTCDate(startDate.getUTCDate() - startDate.getUTCDay());
 
-  // 4. 총 주 수 계산
-  const totalDays = Math.ceil(
-    (endDate.getTime() - weekStartDate.getTime()) / (1000 * 3600 * 24),
-  );
-  const totalWeeks = Math.ceil(totalDays / 7);
+    const totalDays = Math.max(7, Math.ceil(
+      (endDate.getTime() - weekStartDate.getTime()) / (1000 * 3600 * 24),
+    ));
+    const totalWeeks = Math.ceil(totalDays / 7);
 
-  // 5. Helper 함수: 오프셋으로 날짜 생성
-  const getDateByOffset = (offsetDays: number): Date => {
-    const date = new Date(weekStartDate);
-    date.setUTCDate(weekStartDate.getUTCDate() + offsetDays);
-    return date;
-  };
+    const getDateByOffset = (offsetDays: number): Date => {
+      const date = new Date(weekStartDate);
+      date.setUTCDate(weekStartDate.getUTCDate() + offsetDays);
+      return date;
+    };
 
-  // 6. Helper 함수: Date를 YYYY-MM-DD 문자열로 변환
-  const formatDate = (date: Date): string => {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+    const formatDate = (date: Date): string => {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-  // 7. 주별 데이터 생성
-  const generatedWeeks: { date: string; count: number; level: number }[][] = [];
+    const generatedWeeks: { date: string; count: number; level: number }[][] = [];
 
-  for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
-    const week: { date: string; count: number; level: number }[] = [];
+    for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
+      const week: { date: string; count: number; level: number }[] = [];
+      for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+        const currentDay = getDateByOffset(weekIndex * 7 + dayIndex);
+        const dateStr = formatDate(currentDay);
 
-    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-      const currentDay = getDateByOffset(weekIndex * 7 + dayIndex);
-      const dateStr = formatDate(currentDay);
-
-      // 범위 내 날짜인지 확인
-      if (currentDay >= startDate && currentDay <= endDate) {
-        const data = allDays.get(dateStr) || { count: 0, level: 0 };
-        week.push({ date: dateStr, ...data });
-      } else {
-        // 범위 밖의 placeholder
-        week.push({ date: dateStr, count: -1, level: -1 });
+        if (currentDay >= startDate && currentDay <= endDate) {
+          const data = allDays.get(dateStr) || { count: 0, level: 0 };
+          week.push({ date: dateStr, ...data });
+        } else {
+          week.push({ date: dateStr, count: -1, level: -1 });
+        }
       }
+      generatedWeeks.push(week);
     }
 
-    generatedWeeks.push(week);
-  }
-
-  return generatedWeeks;
-}, [activityData, firstActivity]);
+    return generatedWeeks;
+  }, [activityData, firstActivity]);
 
   const monthLabels = useMemo(() => {
     if (!weeks.length) return [];
@@ -152,46 +142,46 @@ const weeks = useMemo(() => {
   }, [weeks]);
 
   const renderActivityHeatmap = () => {
-    if (isCalculating) {
+    if (isNotesLoading || (isCalculating && !activityCache)) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-5 w-48 bg-muted" />
+            <Skeleton className="h-5 w-24 bg-muted" />
           </div>
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full rounded-xl bg-muted/50" />
         </div>
       );
     }
 
-    if (!firstActivity) {
+    if (!firstActivity || activityData.length === 0) {
       return (
-        <div className="text-center py-8 text-muted-foreground">
-          <Calendar className="mx-auto h-12 w-12" />
-          <p className="mt-4">활동 기록이 없습니다.</p>
-          <p>리마인더를 완료하여 활동 기록을 남겨보세요.</p>
+        <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-3xl border border-dashed">
+          <Calendar className="mx-auto h-12 w-12 opacity-20" />
+          <p className="mt-4 font-medium">활동 기록이 아직 없습니다</p>
+          <p className="text-sm">리마인더를 완료하여 나의 활동을 기록해 보세요.</p>
         </div>
       );
     }
 
     return (
       <TooltipProvider delayDuration={100}>
-        <div className="space-y-2">
+        <div className="space-y-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>
-              지난 6개월간 {stats.completedReminders}개의 리마인더 완료
+              지난 6개월간 <strong>{stats.completedReminders}개</strong>의 리마인더 완료
             </span>
-            <div className="flex items-center gap-1 text-xs">
-              적음{' '}
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="opacity-60">적음</span>
               {[0, 1, 2, 3, 4].map((level) => (
                 <div
                   key={level}
-                  className={`w-2.5 h-2.5 rounded-sm ${getLevelColor(
+                  className={`w-3 h-3 rounded-sm ${getLevelColor(
                     level,
-                  )} border border-black/10`}
+                  )} border border-black/5 dark:border-white/5`}
                 />
-              ))}{' '}
-              많음
+              ))}
+              <span className="opacity-60">많음</span>
             </div>
           </div>
           <div className="overflow-x-auto pb-2 custom-scrollbar">
@@ -200,14 +190,14 @@ const weeks = useMemo(() => {
                 {weeks.map((_, weekIndex) => (
                   <div
                     key={weekIndex}
-                    className="w-5 text-xs text-muted-foreground text-center"
+                    className="w-5 text-[10px] text-muted-foreground text-center"
                   >
                     {monthLabels.find((m) => m.weekIndex === weekIndex)?.name}
                   </div>
                 ))}
               </div>
               <div className="flex">
-                <div className="flex flex-col gap-1.5 pr-2 text-xs text-muted-foreground pt-1">
+                <div className="flex flex-col gap-1.5 pr-3 text-[10px] text-muted-foreground pt-1.5">
                   {['일', '', '수', '', '금', ''].map((label, index) => (
                     <span key={index} className="h-5 flex items-center">
                       {label}
@@ -225,13 +215,14 @@ const weeks = useMemo(() => {
                           <Tooltip key={dayIndex}>
                             <TooltipTrigger asChild>
                               <div
-                                className={`w-5 h-5 rounded-sm border border-black/10 ${getLevelColor(
+                                className={`w-5 h-5 rounded-sm border border-black/5 dark:border-white/5 ${getLevelColor(
                                   day.level,
-                                )} cursor-pointer`}
+                                )} cursor-pointer transition-transform hover:scale-125 hover:z-10`}
                               />
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{`${day.date}: ${day.count}개 완료`}</p>
+                            <TooltipContent side="top">
+                              <p className="font-medium text-xs">{`${day.date}`}</p>
+                              <p className="text-[10px] opacity-80">{`${day.count}개 완료`}</p>
                             </TooltipContent>
                           </Tooltip>
                         );
@@ -248,13 +239,13 @@ const weeks = useMemo(() => {
   };
 
   const renderStats = () => {
-    if (isCalculating) {
+    if (isNotesLoading || (isCalculating && !activityCache)) {
       return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
         </div>
       );
     }

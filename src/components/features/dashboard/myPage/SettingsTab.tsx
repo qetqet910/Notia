@@ -38,6 +38,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { useNotes } from '@/hooks/useNotes';
 import { isTauri } from '@/utils/isTauri';
 
 export const SettingsTab: React.FC = React.memo(() => {
