@@ -80,8 +80,29 @@ Notia의 핵심은 간단한 기호를 사용한 빠른 정리입니다.
 
 #### 잡담
 
-- 사지방에서 쓰려고 만들었는데 다 만들고 보니 전역이 D-10
 - 개선사항 매우 환영 [Contributing](./CONTRIBUTING.md) 
 LICENSE [BSD-2-Clause license](./LICENSE)
+
+<br>
+
+## 🛡️ Security & Signing Policy
+
+Notia는 사용자의 보안과 신뢰를 최우선으로 생각합니다. 본 프로젝트는 [SignPath Foundation](https://signpath.org/)의 지원을 받아 코드 서명을 진행할 예정이며, 다음과 같은 보안 정책을 준수합니다.
+
+- **Automated Builds**: 모든 공식 릴리스 아티팩트는 [GitHub Actions](https://github.com/qetqet910/Notia/actions)를 통해 투명하게 빌드됩니다.
+- **Code Signing**: 공식 배포 판은 SignPath Foundation의 인증서를 사용하여 서명됩니다. 이를 통해 사용자는 설치하려는 소프트웨어가 변조되지 않았음을 확인할 수 있습니다.
+- **Identity Verification**: 프로젝트 관리자는 모든 소스 코드 변경 및 릴리스 프로세스에 대해 2단계 인증(2FA)을 사용합니다.
+- **Vulnerability Reporting**: 보안 취약점을 발견하신 경우 GitHub Issues를 통해 제보해 주시면 신속히 대응하겠습니다.
+
+<br>
+
+## 🔒 Privacy Policy
+
+Notia는 사용자의 개인정보를 최소한으로 수집하며, 다음과 같이 관리합니다.
+
+- **Data Ownership**: 사용자가 작성한 모든 노트와 데이터는 [Supabase](https://supabase.com/)를 통해 안전하게 암호화되어 저장됩니다.
+- **Collection**: 서비스 제공을 위해 필요한 이메일 주소(로그인용) 외에 불필요한 개인정보를 수집하지 않습니다.
+- **Third-party**: 수집된 데이터는 제3자에게 판매하거나 제공되지 않습니다.
+- **Local Storage**: 일부 설정값은 최적의 사용자 경험을 위해 브라우저 또는 앱의 로컬 스토리지에 저장될 수 있습니다.
 
   
