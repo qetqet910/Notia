@@ -9,6 +9,7 @@ import { fadeIn } from '@/constants/animations';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/authStore';
 import { Navigate } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const categoryStyles: Record<ChangeCategory, string> = {
   '✨ 기능': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -27,6 +28,25 @@ export const ChangelogPage: React.FC = () => {
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
+
+  const renderChanges = (changes: { category: ChangeCategory; description: string }[]) => (
+    <div className="mt-4 space-y-3 border-l-2 border-slate-200 dark:border-slate-700 pl-6 ml-1">
+      {changes.length > 0 ? (
+        changes.map((change, changeIndex) => (
+          <div key={changeIndex} className="flex items-start space-x-3">
+            <Badge className={`${categoryStyles[change.category]} mt-1 shrink-0`}>
+              {change.category.split(' ')[0]}
+            </Badge>
+            <p className="text-gray-700 dark:text-gray-300 flex-1 break-keep">
+              {change.description}
+            </p>
+          </div>
+        ))
+      ) : (
+        <p className="text-gray-400 italic">해당 버전에서 이 카테고리의 변경 사항이 없습니다.</p>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -47,37 +67,56 @@ export const ChangelogPage: React.FC = () => {
           </p>
         </motion.div>
 
-        <div className="space-y-12">
-          {changelogData.map((release, index) => (
-            <motion.div
-              key={release.version}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
-              <div className="flex items-baseline space-x-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {release.version}
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  {release.date}
-                </p>
-              </div>
-              <div className="mt-4 space-y-3 border-l-2 border-slate-200 dark:border-slate-700 pl-6 ml-1">
-                {release.changes.map((change, changeIndex) => (
-                  <div key={changeIndex} className="flex items-start space-x-3">
-                    <Badge className={`${categoryStyles[change.category]} mt-1`}>
-                      {change.category.split(' ')[0]}
-                    </Badge>
-                    <p className="text-gray-700 dark:text-gray-300 flex-1">
-                      {change.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        <Tabs defaultValue="user" className="w-full">
+          <div className="flex justify-center mb-12">
+            <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+              <TabsTrigger value="user">사용자 (User)</TabsTrigger>
+              <TabsTrigger value="dev">개발자 (Dev)</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="user" className="space-y-12">
+            {changelogData.map((release, index) => (
+              <motion.div
+                key={release.version}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <div className="flex items-baseline space-x-4">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {release.version}
+                  </h2>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    {release.date}
+                  </p>
+                </div>
+                {renderChanges(release.userChanges)}
+              </motion.div>
+            ))}
+          </TabsContent>
+
+          <TabsContent value="dev" className="space-y-12">
+            {changelogData.map((release, index) => (
+              <motion.div
+                key={release.version}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <div className="flex items-baseline space-x-4">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {release.version}
+                  </h2>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    {release.date}
+                  </p>
+                </div>
+                {renderChanges(release.devChanges)}
+              </motion.div>
+            ))}
+          </TabsContent>
+        </Tabs>
       </main>
       <Footer />
     </div>

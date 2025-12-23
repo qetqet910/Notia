@@ -104,7 +104,11 @@ export type ChangeCategory =
 export interface ChangelogEntry {
   version: string;
   date: string;
-  changes: {
+  userChanges: {
+    category: ChangeCategory;
+    description: string;
+  }[];
+  devChanges: {
     category: ChangeCategory;
     description: string;
   }[];

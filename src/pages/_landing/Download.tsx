@@ -38,12 +38,6 @@ const platformData = [
     label: 'Windows',
     description:
       'Windows 10/11에 최적화된 데스크톱 앱으로 가장 강력한 기능을 모두 사용해 보세요.',
-    requirements: [
-      'Windows 10 64-bit 이상',
-      '4GB RAM 이상 권장',
-      'Intel Core i5 (8세대) 또는 동급 CPU',
-      'F12 개발자 도구 비활성화 적용',
-    ],
     download: {
       label: 'Download for Windows',
       link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_1.3.1_x64-setup.exe',
@@ -54,11 +48,6 @@ const platformData = [
     label: 'macOS',
     description:
       'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
-    requirements: [
-      'macOS 12 Monterey 이상',
-      'Apple Silicon / Intel 프로세서 지원 (Universal)',
-      '안정적인 OAuth 로그인 지원',
-    ],
     download: {
       label: 'Download for macOS',
       link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_universal.app.tar.gz',
@@ -69,11 +58,6 @@ const platformData = [
     label: 'Linux',
     description:
       '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. .AppImage 또는 .deb 패키지로 제공됩니다.',
-    requirements: [
-      'Ubuntu 20.04, Fedora 36, Arch 등',
-      'glibc 2.31 이상',
-      '가벼운 실행 환경 보장',
-    ],
     download: {
       label: 'Download for Linux (.AppImage)',
       link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_1.3.1_amd64.AppImage',
@@ -84,11 +68,6 @@ const platformData = [
     label: 'Mobile / Desktop',
     description:
       '설치 없이 웹에서 바로 사용하거나, 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.',
-    requirements: [
-      '최신 버전의 Chrome, Safari, Edge',
-      '홈 화면에 추가하여 사용 (PWA)',
-      '오프라인 사용 지원',
-    ],
     download: {
       label: '앱 설치',
       link: '#',
@@ -113,24 +92,6 @@ const installationSteps = [
     description: '계정에 로그인하면 모든 노트가 안전하게 동기화됩니다.',
   },
 ];
-
-const Checkmark = () => (
-  <div className="w-4 h-4 rounded-full bg-[#61C9A8] flex items-center justify-center flex-shrink-0">
-    <svg
-      className="w-2.5 h-2.5 text-white"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="3"
-        d="M5 13l4 4L19 7"
-      />
-    </svg>
-  </div>
-);
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -185,7 +146,7 @@ export const DownloadPage: React.FC = () => {
             </p>
           </div>
           <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -translate-y-1/2 hidden md:block" />
+            <div className="absolute top-[56%] left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -translate-y-1/2 hidden md:block" />
             {installationSteps.map((step) => (
               <div
                 key={step.step}
@@ -242,7 +203,7 @@ export const DownloadPage: React.FC = () => {
                           {platform.description}
                         </p>
 
-                        <div className="flex flex-wrap justify-center gap-3 mb-8">
+                        <div className="flex flex-wrap justify-center gap-3 mb-12">
                           <Badge variant="secondary" className="px-3 py-1">
                             최신 버전: {changelogData[0].version}
                           </Badge>
@@ -255,18 +216,6 @@ export const DownloadPage: React.FC = () => {
                           >
                             변경 사항 보기
                           </a>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 mb-10 text-left w-full max-w-xl mx-auto bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700">
-                          {platform.requirements.map((req, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-3 text-sm text-muted-foreground font-medium"
-                            >
-                              <Checkmark />
-                              <span>{req}</span>
-                            </div>
-                          ))}
                         </div>
 
                         {platform.id === 'Mobile / Desktop' ? (

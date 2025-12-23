@@ -5,10 +5,8 @@ import { Input } from '@/components/ui/input';
 import { InputOTPControlled } from '@/components/features/inputOtpControl';
 import { KeyDisplay } from '@/components/features/keyDisplay';
 import { animations } from '@/constants/animations';
-import { useAuthStore } from '@/stores/authStore';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import Key from 'lucide-react/dist/esm/icons/key';
-import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 
 export const SocialLoginButton = React.memo<{
   provider: 'github' | 'google';
