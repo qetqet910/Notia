@@ -50,7 +50,7 @@ const platformData = [
       'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
     download: {
       label: 'Download for macOS',
-      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_1.0.0_universal.app.tar.gz',
+      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_universal.app.tar.gz',
     },
   },
   {
