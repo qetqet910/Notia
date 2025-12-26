@@ -40,7 +40,7 @@ const platformData = [
       'Windows 10/11에 최적화된 데스크톱 앱으로 가장 강력한 기능을 모두 사용해 보세요.',
     download: {
       label: 'Download for Windows',
-      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_1.3.1_x64-setup.exe',
+      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_1.0.0_x64-setup.exe',
     },
   },
   {
@@ -50,7 +50,7 @@ const platformData = [
       'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
     download: {
       label: 'Download for macOS',
-      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_universal.app.tar.gz',
+      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_1.0.0_universal.app.tar.gz',
     },
   },
   {
@@ -60,7 +60,7 @@ const platformData = [
       '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. .AppImage 또는 .deb 패키지로 제공됩니다.',
     download: {
       label: 'Download for Linux (.AppImage)',
-      link: 'https://github.com/qetqet910/Notia/releases/download/untagged-c2bfc68552bced55148a/Notia_1.3.1_amd64.AppImage',
+      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_1.0.0_amd64.AppImage',
     },
   },
   {

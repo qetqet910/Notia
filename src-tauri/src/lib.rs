@@ -11,8 +11,8 @@ pub fn run() {
       )?;
 
       #[cfg(desktop)]
-      if let Some(window) = app.get_webview_window("main") {
-        window.open_devtools();
+      if let Some(_window) = app.get_webview_window("main") {
+        // window.open_devtools();
       }
 
       Ok(())
