@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
+import { requestPermission as requestUnifiedPermission, checkPermission } from '@/utils/notification';
 
 // VAPID 공개 키 (환경 변수에서 가져옴)
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
@@ -27,9 +28,7 @@ export const useNotificationPermission = () => {
 
   useEffect(() => {
     // 컴포넌트 마운트 시 현재 권한 상태를 확인
-    if ('Notification' in window) {
-      setPermission(Notification.permission);
-    }
+    checkPermission().then(setPermission);
   }, []);
 
   /**
@@ -91,11 +90,7 @@ export const useNotificationPermission = () => {
   };
 
   const requestPermission = async () => {
-    if (!('Notification' in window)) {
-      return 'denied';
-    }
-
-    const result = await Notification.requestPermission();
+    const result = await requestUnifiedPermission();
     setPermission(result);
 
     if (result === 'granted') {
