@@ -80,11 +80,20 @@ const parseTimeExpression = (
       if (ampm === '오전' && hour === 12) hour = 0;
       if (ampm === '오후' && hour < 12) hour += 12;
     } else if (hourStr && !ampm) {
-      // AMPM 지정 없이 시간만 입력된 경우 (e.g., "3시"),
-      // 일반적으로 오후를 의도하는 경우가 많으므로 12를 더해준다.
-      // 단, 12시 자체는 오후 12시이므로 더하지 않는다.
-      if (hour < 12) {
-        hour += 12;
+      // AMPM 지정 없이 시간만 입력된 경우 (e.g., "3시")
+      // '오늘'이나 '금일'인 경우에만 과거 시간을 피하기 위해 오후로 추론하고,
+      // '내일', '모레' 등 미래 시점이 명확한 경우에는 오전/오후 추론을 보수적으로(오전 우선) 하거나
+      // 사용자가 입력한 그대로(24시간제 가정) 처리하는 것이 자연스럽습니다.
+      
+      // 수정된 로직: 미래 날짜('내일' 등)가 명시된 경우 12를 더하지 않음.
+      // 단, '오늘'인 경우에는 기존처럼 오후 추론을 유지할 수 있으나, 
+      // 여기서는 adjustForPastTime이 뒤에 있으므로 일단 그대로 둡니다.
+      // 하지만 문제의 원인은 "내일 10시"를 "내일 22시"로 만드는 것이므로,
+      // 날짜 키워드가 '오늘/금일'이 아닐 때는 12를 더하지 않도록 변경합니다.
+      if (['오늘', '금일'].includes(dayWord)) {
+         if (hour < 12) {
+           hour += 12;
+         }
       }
     }
 
@@ -197,6 +206,15 @@ export const parseNoteContent = (
   }
 
   return { tags, reminders };
+};
+
+export const parseNoteContentAsync = async (
+  content: string,
+  baseDate: Date = new Date(),
+  existingReminders: EditorReminder[] = [],
+): Promise<{ tags: ParsedTag[]; reminders: ParsedReminder[] }> => {
+  // Always use JS implementation for stability
+  return Promise.resolve(parseNoteContent(content, baseDate, existingReminders));
 };
 
 export const parseReminder = (

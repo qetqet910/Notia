@@ -209,11 +209,8 @@ export const useNotes = () => {
                   const reminderDataToUpsert = finalReminders
                     .filter(r => r.date instanceof Date && !isNaN(r.date.getTime()))
                     .map(r => {
-                      const roundedDate = new Date(r.date.getTime());
-                      if (roundedDate.getSeconds() > 0) {
-                        roundedDate.setMinutes(roundedDate.getMinutes() + 1);
-                        roundedDate.setSeconds(0, 0);
-                      }
+                      // Remove rounding logic to preserve second-level precision
+                      // and usage of specific timezone to respect local system time converted to UTC naturally.
                       
                       // If it's a new reminder (temp ID), generate a valid UUID.
                       const isTempId = r.id && r.id.startsWith('temp-');
@@ -224,7 +221,7 @@ export const useNotes = () => {
                         note_id: noteId,
                         owner_id: user.id,
                         reminder_text: r.text,
-                        reminder_time: fromZonedTime(roundedDate, KOREA_TIMEZONE).toISOString(),
+                        reminder_time: r.date.toISOString(), // Use direct ISO string (UTC)
                         completed: r.completed || false,
                         enabled: r.enabled ?? true,
                         original_text: r.original_text,
@@ -274,7 +271,7 @@ export const useNotes = () => {
                     reminder_id: reminder.id,
                     owner_id: user.id,
                     notification_type: interval.type,
-                    scheduled_time: fromZonedTime(beforeTime, KOREA_TIMEZONE).toISOString(),
+                    scheduled_time: beforeTime.toISOString(),
                   });
                 }
               }
