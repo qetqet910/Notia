@@ -10,7 +10,9 @@ import {
   lazy,
 } from 'react';
 import { useToast } from '@/hooks/useToast';
-import { parseNoteContent } from '@/utils/noteParser';
+import { parseNoteContent, parseNoteContentAsync } from '@/utils/noteParser';
+import { isTauri } from '@/utils/isTauri';
+import { invoke } from '@tauri-apps/api/core';
 
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -190,24 +192,59 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
           });
           return null;
         }
-        if (file.size > 1024 * 1024 * 5) {
+        if (file.size > 1024 * 1024 * 10) { // Increased limit slightly since we optimize
           toast({
             title: '오류',
-            description: '이미지 파일 크기는 5MB를 초과할 수 없습니다.',
+            description: '이미지 파일 크기는 10MB를 초과할 수 없습니다.',
             variant: 'destructive',
           });
           return null;
         }
 
         setIsUploading(true);
-        const fileExt = file.name.split('.').pop();
+        
+        let fileToUpload: File | Blob = file;
+        let fileExt = file.name.split('.').pop();
+
+        // Optimize if in Tauri
+        if (isTauri()) {
+          try {
+            const reader = new FileReader();
+            const base64Promise = new Promise<string>((resolve) => {
+              reader.onload = () => {
+                const result = reader.result as string;
+                resolve(result.split(',')[1]); // Strip prefix
+              };
+              reader.readAsDataURL(file);
+            });
+
+            const base64Data = await base64Promise;
+            const optimizedBase64 = await invoke<string>('optimize_image', {
+              imageDataBase64: base64Data,
+            });
+
+            // Convert back to Blob
+            const byteCharacters = atob(optimizedBase64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            fileToUpload = new Blob([byteArray], { type: 'image/webp' });
+            fileExt = 'webp'; // Change extension to webp
+          } catch (error) {
+            console.error('Rust image optimization failed:', error);
+            // Fallback to original file
+          }
+        }
+
         const fileName = `${uuidv4()}.${fileExt}`;
         const filePath = `note-images/${user.id}/${fileName}`;
 
         try {
           const { error } = await supabase.storage
             .from('note-images')
-            .upload(filePath, file);
+            .upload(filePath, fileToUpload);
 
           if (error) {
             throw error;
@@ -435,9 +472,9 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         return;
       }
 
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         const { tags: currentTags, reminders: currentRemindersRaw } =
-          parseNoteContent(content, new Date(), remindersRef.current);
+          await parseNoteContentAsync(content, new Date(), remindersRef.current);
 
         setTags(currentTags.map((t) => t.text));
         setDebouncedContent(content); // 파싱이 완료될 때 미리보기 콘텐츠 업데이트
