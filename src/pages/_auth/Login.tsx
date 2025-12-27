@@ -230,7 +230,7 @@ export const Login: React.FC = () => {
 
       {/* Footer */}
       <motion.div 
-        className="relative z-10 absolute bottom-6 text-center"
+        className="z-10 absolute bottom-6 text-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 1 }}

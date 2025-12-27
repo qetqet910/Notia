@@ -21,6 +21,7 @@ import {
 import { Toaster } from '@/components/ui/toaster';
 
 import { useToast } from '@/hooks/useToast';
+import { useReminderScheduler } from '@/hooks/useReminderScheduler';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 import { GoalProgress } from '@/components/features/dashboard/goalProgress';
@@ -61,8 +62,6 @@ import { ReminderLoader } from '@/components/loader/dashboard/ReminderLoader';
 import { CalendarLoader } from '@/components/loader/dashboard/CalendarLoader';
 import { TimelineLoader } from '@/components/loader/dashboard/TimelineLoader';
 import { NoteListLoader } from '@/components/loader/dashboard/NoteListLoader';
-
-import { isTauri } from '@/utils/isTauri';
 
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/noteList').then((module) => ({
@@ -120,6 +119,7 @@ const EmptyNoteState = ({
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  useReminderScheduler();
   const { session } = useAuthStore();
   const {
     notes,

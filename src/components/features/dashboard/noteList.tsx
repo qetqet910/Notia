@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,8 @@ import Search from 'lucide-react/dist/esm/icons/search';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Note } from '@/types';
+import { isTauri } from '@/utils/isTauri';
+import { invoke } from '@tauri-apps/api/core';
 
 interface NoteListProps {
   notes: Note[];
@@ -19,19 +21,72 @@ export const NoteList: React.FC<NoteListProps> = ({
   onSelectNote,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>(notes);
 
-  const filteredNotes = notes
-    .filter(
-      (note) =>
-        note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (note.content_preview || '')
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        (note.tags || []).some((tag) =>
-          tag.toLowerCase().includes(searchTerm.toLowerCase()),
-        ),
-    )
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  // Debounce search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const performSearch = async () => {
+      if (!debouncedSearchTerm.trim()) {
+        setFilteredNotes(
+          [...notes].sort(
+            (a, b) =>
+              new Date(b.updated_at).getTime() -
+              new Date(a.updated_at).getTime(),
+          ),
+        );
+        return;
+      }
+
+      if (isTauri()) {
+        try {
+          const filteredIds = await invoke<string[]>('search_notes', {
+            notes,
+            query: debouncedSearchTerm,
+          });
+          
+          const filtered = notes.filter((note) => filteredIds.includes(note.id));
+           // Sort filtered results by update time as well
+           filtered.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+          setFilteredNotes(filtered);
+        } catch (error) {
+          console.error('Rust search failed:', error);
+          // Fallback to JS filtering
+          filterNotesJs();
+        }
+      } else {
+        filterNotesJs();
+      }
+    };
+
+    const filterNotesJs = () => {
+      const lowerQuery = debouncedSearchTerm.toLowerCase();
+      const filtered = notes
+        .filter(
+          (note) =>
+            note.title.toLowerCase().includes(lowerQuery) ||
+            (note.content_preview || '').toLowerCase().includes(lowerQuery) ||
+            (note.tags || []).some((tag) =>
+              tag.toLowerCase().includes(lowerQuery),
+            ),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        );
+      setFilteredNotes(filtered);
+    };
+
+    performSearch();
+  }, [debouncedSearchTerm, notes]);
 
   const getContentPreview = (previewText: string | null) => {
     if (!previewText) return '미리보기 없음';
