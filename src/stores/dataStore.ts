@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { supabase } from '@/services/supabaseClient';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Note, Reminder, ActivityData, EditorReminder } from '@/types';
+import { isTauri } from '@/utils/isTauri';
+import { invoke } from '@tauri-apps/api/core';
+import { localDB } from '@/services/localDB';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CalculationResult {
   stats: {
@@ -34,7 +38,7 @@ interface DataState {
   ) => void;
   addNoteState: (newNote: Note) => void;
   removeNoteState: (noteId: string) => void;
-  calculateActivityData: (notes: Note[]) => void;
+  calculateActivityData: (notes: Note[]) => Promise<void>;
 }
 
 let worker: Worker | null = null;
@@ -46,10 +50,22 @@ export const useDataStore = create<DataState>((set, get) => ({
   activityCache: null,
   isCalculating: false,
 
-  calculateActivityData: (notes: Note[]) => {
+  calculateActivityData: async (notes: Note[]) => {
     if (get().isCalculating) return;
 
     set({ isCalculating: true });
+
+    if (isTauri()) {
+      try {
+        // Rust implementation
+        const result = await invoke<CalculationResult>('calculate_activity', { notes });
+        set({ activityCache: result, isCalculating: false });
+        return;
+      } catch (err) {
+        console.error('Rust calculation failed, falling back to worker:', err);
+        // Fallback to worker if rust fails
+      }
+    }
 
     if (worker) {
       worker.terminate();
@@ -91,12 +107,49 @@ export const useDataStore = create<DataState>((set, get) => ({
     },
   ): Promise<Note | null> => {
     const { addNoteState } = get();
+    // Generate UUID locally for optimistic update and local DB
+    const newNoteId = uuidv4();
+    const now = new Date().toISOString();
+
+    const newNote: Note = {
+      id: newNoteId,
+      owner_id: noteData.owner_id,
+      title: noteData.title,
+      content: noteData.content,
+      tags: noteData.tags || [],
+      created_at: now,
+      updated_at: now,
+      reminders: [],
+    };
+
+    if (noteData.reminders && noteData.reminders.length > 0) {
+        newNote.reminders = noteData.reminders
+            .filter(reminder => reminder.date instanceof Date && !isNaN(reminder.date.getTime()))
+            .map(reminder => ({
+                id: uuidv4(),
+                note_id: newNoteId,
+                owner_id: noteData.owner_id,
+                reminder_text: reminder.text,
+                reminder_time: reminder.date.toISOString(),
+                completed: reminder.completed || false,
+                enabled: reminder.enabled ?? true,
+                original_text: reminder.original_text,
+                created_at: now,
+                updated_at: now
+            }));
+    }
+
+    // 1. Optimistic Update & Local DB Save
+    addNoteState(newNote);
+    await localDB.upsertNote(newNote, false); // false = not synced yet
+
     try {
-      // 1. 노트 생성
+      // 2. Sync to Supabase
       const { data: noteResult, error: noteError } = await supabase
         .from('notes')
         .insert([
           {
+            id: newNoteId, // Use generated ID
             owner_id: noteData.owner_id,
             title: noteData.title,
             content: noteData.content,
@@ -108,52 +161,45 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       if (noteError) throw noteError;
 
-      let finalReminders: Reminder[] = [];
-
-      // 2. 리마인더가 있으면 DB 스키마에 맞게 변환하여 생성
-      if (noteData.reminders && noteData.reminders.length > 0) {
-        const reminderInserts = noteData.reminders
-          .filter(reminder => reminder.date instanceof Date && !isNaN(reminder.date.getTime()))
-          .map(reminder => ({
+      if (newNote.reminders && newNote.reminders.length > 0) {
+          const reminderInserts = newNote.reminders.map(r => ({
+            id: r.id,
             note_id: noteResult.id,
             owner_id: noteData.owner_id,
-            reminder_text: reminder.text,
-            reminder_time: reminder.date.toISOString(),
-            completed: reminder.completed || false,
-            enabled: reminder.enabled ?? true,
-            original_text: reminder.original_text,
+            reminder_text: r.reminder_text,
+            reminder_time: r.reminder_time,
+            completed: r.completed,
+            enabled: r.enabled,
+            original_text: r.original_text,
           }));
 
-        if (reminderInserts.length > 0) {
-            const { data: reminderResult, error: reminderError } = await supabase
-              .from('reminders')
-              .insert(reminderInserts)
-              .select();
-            
-            if (reminderError) {
-              console.error('Failed to create reminders for new note:', reminderError);
-            } else {
-              finalReminders = reminderResult;
-            }
-        }
+          const { error: reminderError } = await supabase
+            .from('reminders')
+            .insert(reminderInserts);
+          
+          if (reminderError) {
+             console.error('Failed to sync reminders to server:', reminderError);
+             // Note: In a robust system, we would queue this failure.
+          }
       }
 
-      const newNote: Note = {
-        ...noteResult,
-        createdAt: new Date(noteResult.created_at),
-        updatedAt: new Date(noteResult.updated_at),
-        reminders: finalReminders,
-      };
-
-      addNoteState(newNote);
+      // Mark as synced in local DB
+      await localDB.upsertNote(newNote, true);
       return newNote;
     } catch (err) {
-      console.error('Failed to create note:', err);
-      return null;
+      console.error('Failed to create note online, saving locally only:', err);
+      // We already saved to localDB, so just return the optimistic note.
+      // Ideally, we should indicate the sync status in UI.
+      return newNote;
     }
   },
 
   updateNoteState: (updatedNote: Note) => {
+    // Also update local DB whenever state updates (e.g. from realtime or optimistic)
+    // Note: We might want to optimize this to avoid too many writes, 
+    // but for now safety first.
+    localDB.upsertNote(updatedNote); 
+
     set((state) => {
       const existingNote = state.notes[updatedNote.id];
       if (existingNote) {
@@ -193,7 +239,11 @@ export const useDataStore = create<DataState>((set, get) => ({
             ...newReminders[reminderIndex],
             ...updates,
           };
-          newNotes[noteId] = { ...note, reminders: newReminders };
+          const updatedNote = { ...note, reminders: newReminders };
+          newNotes[noteId] = updatedNote;
+          
+          // Sync to local DB
+          localDB.upsertNote(updatedNote); 
           break;
         }
       }
@@ -202,6 +252,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   addNoteState: (newNote: Note) => {
+    localDB.upsertNote(newNote);
     set((state) => ({
       notes: {
         ...state.notes,
@@ -212,6 +263,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   removeNoteState: (noteId) => {
+    localDB.deleteNote(noteId);
     set((state) => {
       const newNotes = { ...state.notes };
       delete newNotes[noteId];
@@ -225,6 +277,26 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     await get().unsubscribeAll();
 
+    // 1. Load from Local DB first (Fast!)
+    try {
+        const localNotes = await localDB.getNotes();
+        const formattedLocalNotes = localNotes.reduce(
+            (acc, note) => {
+                acc[note.id] = note;
+                return acc;
+            },
+            {} as Record<string, Note>,
+        );
+        
+        if (Object.keys(formattedLocalNotes).length > 0) {
+             set({ notes: formattedLocalNotes, activityCache: null });
+             console.log('Loaded notes from Local DB');
+        }
+    } catch (err) {
+        console.error('Failed to load from local DB:', err);
+    }
+
+    // 2. Fetch from Supabase and sync
     try {
       const { data, error } = await supabase
         .from('notes')
@@ -237,21 +309,23 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       const formattedNotes = data.reduce(
         (acc, note) => {
-          acc[note.id] = {
+          const formatted = {
             ...note,
             createdAt: new Date(note.created_at),
             updatedAt: new Date(note.updated_at),
             reminders: note.reminders || [],
           };
+          acc[note.id] = formatted;
+          // Sync fetched data to local DB
+          localDB.upsertNote(formatted); 
           return acc;
         },
         {} as Record<string, Note>,
       );
-      set({ notes: formattedNotes, activityCache: null }); // 초기화 시 캐시 비우기
+      set({ notes: formattedNotes, activityCache: null }); 
     } catch (err) {
-      console.error('Initialization failed:', err);
-      set({ isInitialized: false });
-      return;
+      console.error('Online initialization failed, running in offline mode:', err);
+      // Keep using local data if online fetch fails
     }
 
     const handleNoteChange = (payload: RealtimePostgresChangesPayload<Note>) => {
@@ -294,13 +368,15 @@ export const useDataStore = create<DataState>((set, get) => ({
           set((state) => {
             const targetNote = state.notes[noteId];
             if (targetNote) {
+              const updatedNote = {
+                    ...targetNote,
+                    reminders: [...(targetNote.reminders || []), newReminder],
+              };
+              localDB.upsertNote(updatedNote); // Sync local
               return {
                 notes: {
                   ...state.notes,
-                  [noteId]: {
-                    ...targetNote,
-                    reminders: [...(targetNote.reminders || []), newReminder],
-                  },
+                  [noteId]: updatedNote,
                 },
               };
             }
@@ -322,15 +398,17 @@ export const useDataStore = create<DataState>((set, get) => ({
           set((state) => {
             const targetNote = state.notes[noteId];
             if (targetNote) {
-              return {
-                notes: {
-                  ...state.notes,
-                  [noteId]: {
+               const updatedNote = {
                     ...targetNote,
                     reminders: (targetNote.reminders || []).map((r) =>
                       r.id === updatedReminder.id ? updatedReminder : r,
                     ),
-                  },
+                  };
+              localDB.upsertNote(updatedNote); // Sync local
+              return {
+                notes: {
+                  ...state.notes,
+                  [noteId]: updatedNote,
                 },
               };
             }
@@ -352,15 +430,17 @@ export const useDataStore = create<DataState>((set, get) => ({
           set((state) => {
             const targetNote = state.notes[noteId];
             if (targetNote) {
-              return {
-                notes: {
-                  ...state.notes,
-                  [noteId]: {
+              const updatedNote = {
                     ...targetNote,
                     reminders: (targetNote.reminders || []).filter(
                       (r) => r.id !== oldReminder.id,
                     ),
-                  },
+                  };
+              localDB.upsertNote(updatedNote); // Sync local
+              return {
+                notes: {
+                  ...state.notes,
+                  [noteId]: updatedNote,
                 },
               };
             }
