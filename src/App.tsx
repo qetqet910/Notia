@@ -33,6 +33,19 @@ import { ProtectedRoute } from '@/components/features/protectedRoute';
 import { ThemeProvider } from '@/components/features/themeProvider';
 import { usePwaStore } from './stores/pwaStore';
 import { isTauri, isAppMode } from '@/utils/isTauri';
+import { checkForUpdates, installUpdate } from '@/utils/updater';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 
 const ScrollToTop = () => {
   const location = useLocation();
@@ -164,8 +177,30 @@ const router = createRouter([
  
 function App() {
   const { setDeferredPrompt } = usePwaStore();
+  const [updateAvailable, setUpdateAvailable] = React.useState<{ version: string; body: string } | null>(null);
+  const [isUpdating, setIsUpdating] = React.useState(false);
 
   useEffect(() => {
+    // Check for updates on startup (Tauri only)
+    if (isTauri()) {
+      const checkUpdate = async () => {
+        try {
+          const result = await checkForUpdates();
+          if (result.shouldUpdate && result.manifest) {
+            setUpdateAvailable({
+              version: result.manifest.version,
+              body: result.manifest.body,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to check for updates:', error);
+        }
+      };
+      
+      // Delay slightly to not block initial render
+      setTimeout(checkUpdate, 2000);
+    }
+
     // 1. Supabase Auth Callback Handling for HashRouter (Tauri Only)
     // Supabase redirects to /?code=... but HashRouter expects /#/auth/callback?code=...
     // IMPORTANT: This logic MUST only run in Tauri to avoid destroying PKCE state on web.
@@ -207,9 +242,49 @@ function App() {
     };
   }, [setDeferredPrompt]);
 
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    try {
+      await installUpdate();
+    } catch (error) {
+      console.error('Update failed:', error);
+      setIsUpdating(false);
+      alert('업데이트 설치 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <div className="max-w-[1920px] mx-auto min-h-screen bg-background">
       <RouterProvider router={router} />
+      
+      <AlertDialog open={!!updateAvailable}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>새로운 버전이 있습니다! (v{updateAvailable?.version})</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>최신 기능과 버그 수정이 포함된 새 버전으로 업데이트하시겠습니까?</p>
+              {updateAvailable?.body && (
+                 <div className="bg-muted p-3 rounded-md text-sm max-h-40 overflow-y-auto whitespace-pre-wrap">
+                   {updateAvailable.body}
+                 </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUpdateAvailable(null)}>나중에</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleUpdate(); }} disabled={isUpdating}>
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  설치 및 재시작 중...
+                </>
+              ) : (
+                '지금 업데이트'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

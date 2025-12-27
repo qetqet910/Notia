@@ -24,6 +24,14 @@
       "csp": "default-src * 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' data: blob: filesystem: about: ws: wss:;"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM1NzhEMUE2NDdCOEFERDUKUldUVnJiaEhwdEY0eGZ3cTVzWkFaMjYrVm9LOHJhN3AyMERuZUUvdkFvTEEzeWxlSThqNmh6SFgK",
+      "endpoints": [
+        "https://github.com/qetqet910/notia/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

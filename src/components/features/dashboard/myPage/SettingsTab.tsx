@@ -39,6 +39,9 @@ import { Slider } from '@/components/ui/slider';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useNotes } from '@/hooks/useNotes';
+import Info from 'lucide-react/dist/esm/icons/info';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
+import { checkForUpdates, installUpdate } from '@/utils/updater';
 import { isTauri } from '@/utils/isTauri';
 
 export const SettingsTab: React.FC = React.memo(() => {
@@ -49,6 +52,55 @@ export const SettingsTab: React.FC = React.memo(() => {
   const { theme, setTheme } = useThemeStore();
   const { goalStats, updateUserGoals } = useNotes();
   const { permission, requestPermission } = useNotificationPermission();
+
+  const [updateStatus, setUpdateStatus] = useState<{
+    checking: boolean;
+    available: boolean;
+    manifest?: { version: string; body: string; date: string };
+  }>({ checking: false, available: false });
+
+  const handleCheckUpdate = useCallback(async () => {
+    setUpdateStatus(prev => ({ ...prev, checking: true }));
+    try {
+      const result = await checkForUpdates();
+      if (result.shouldUpdate) {
+        setUpdateStatus({
+          checking: false,
+          available: true,
+          manifest: result.manifest,
+        });
+        toast({
+          title: '업데이트 가능',
+          description: `새 버전(${result.manifest?.version})이 있습니다.`,
+        });
+      } else {
+        setUpdateStatus(prev => ({ ...prev, checking: false, available: false }));
+        toast({
+          title: '최신 버전',
+          description: '현재 최신 버전을 사용 중입니다.',
+        });
+      }
+    } catch (error) {
+      setUpdateStatus(prev => ({ ...prev, checking: false }));
+      toast({
+        title: '확인 실패',
+        description: '업데이트 정보를 가져오는데 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+  const handleInstallUpdate = useCallback(async () => {
+    try {
+      await installUpdate();
+    } catch (error) {
+      toast({
+        title: '설치 실패',
+        description: '업데이트 설치 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -213,38 +265,30 @@ export const SettingsTab: React.FC = React.memo(() => {
   };
 
   const handleTestNotification = async () => {
-    if (permission !== 'granted') {
-      toast({
-        title: '알림 권한 필요',
-        description: '알림을 테스트하려면 먼저 권한을 허용해주세요.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification('Notia', {
-          body: '테스트 알림입니다! 🎉',
-          icon: '/favicon/android-chrome-192x192.png',
-        });
-        toast({
-          title: '알림 전송됨',
-          description: '테스트 알림을 성공적으로 보냈습니다.',
-        });
-      } catch (error) {
-        console.error('Error showing notification:', error);
-        toast({
-          title: '알림 오류',
-          description: '알림을 표시하는 중 오류가 발생했습니다.',
-          variant: 'destructive',
-        });
+    try {
+      if (permission !== 'granted') {
+        const result = await requestPermission();
+        if (result !== 'granted') {
+          toast({
+            title: '알림 권한 필요',
+            description: '알림을 테스트하려면 먼저 권한을 허용해주세요.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
-    } else {
+
+      await sendNotification('Notia', '테스트 알림입니다! 🎉');
+
       toast({
-        title: '서비스 워커 오류',
-        description: '서비스 워커가 준비되지 않았습니다.',
+        title: '알림 전송됨',
+        description: '테스트 알림을 성공적으로 보냈습니다.',
+      });
+    } catch (error) {
+      console.error('Error showing notification:', error);
+      toast({
+        title: '알림 오류',
+        description: '알림을 표시하는 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     }
@@ -266,16 +310,14 @@ export const SettingsTab: React.FC = React.memo(() => {
             onCheckedChange={requestPermission}
             icon={<Bell />}
           />
-          {permission === 'granted' && (
-            <SettingActionItem
-              id="test-notification"
-              label="알림 테스트"
-              description="푸시 알림이 제대로 동작하는지 테스트합니다."
-              buttonText="보내기"
-              onAction={handleTestNotification}
-              icon={<Send />}
-            />
-          )}
+          <SettingActionItem
+            id="test-notification"
+            label="알림 테스트"
+            description="푸시 알림이 제대로 동작하는지 테스트합니다."
+            buttonText="보내기"
+            onAction={handleTestNotification}
+            icon={<Send />}
+          />
         </CardContent>
       </Card>
 
@@ -378,6 +420,44 @@ export const SettingsTab: React.FC = React.memo(() => {
           </Button>
         </CardContent>
       </Card>
+
+      {isTauri() && (
+        <Card>
+          <CardHeader>
+            <CardTitle>정보</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center space-x-4">
+                <Info className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">현재 버전</p>
+                  <p className="text-sm text-muted-foreground">v{import.meta.env.PACKAGE_VERSION || '1.0.0'}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {updateStatus.available ? (
+                   <Button onClick={handleInstallUpdate} size="sm">
+                     <Download className="h-4 w-4 mr-2" />
+                     업데이트 설치
+                   </Button>
+                ) : (
+                   <Button variant="outline" size="sm" onClick={handleCheckUpdate} disabled={updateStatus.checking}>
+                     <RefreshCw className={`h-4 w-4 mr-2 ${updateStatus.checking ? 'animate-spin' : ''}`} />
+                     업데이트 확인
+                   </Button>
+                )}
+              </div>
+            </div>
+            {updateStatus.available && updateStatus.manifest && (
+              <div className="p-4 bg-muted/50 rounded-lg text-sm">
+                <p className="font-bold mb-1">v{updateStatus.manifest.version} 변경사항:</p>
+                <p className="whitespace-pre-wrap text-muted-foreground">{updateStatus.manifest.body}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
