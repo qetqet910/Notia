@@ -8,11 +8,11 @@ const mockDownloadAndInstall = vi.fn();
 const mockRelaunch = vi.fn();
 
 vi.mock('@tauri-apps/plugin-updater', () => ({
-  check: (...args: any[]) => mockCheck(...args),
+  check: (...args: unknown[]) => mockCheck(...args),
 }));
 
 vi.mock('@tauri-apps/plugin-process', () => ({
-  relaunch: (...args: any[]) => mockRelaunch(...args),
+  relaunch: (...args: unknown[]) => mockRelaunch(...args),
 }));
 
 describe('Updater Utility', () => {

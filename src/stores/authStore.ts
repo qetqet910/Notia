@@ -309,9 +309,9 @@ export const useAuthStore = create<AuthStore>()(
         let result: { success: boolean; error?: Error | null } = { success: true };
         try {
           await supabase.auth.signOut();
-        } catch (error) {
-          console.warn('로그아웃 API 호출 중 오류 (로컬 상태는 초기화됩니다):', error);
-          result = { success: false, error: error as Error };
+        } catch {
+          console.warn('로그아웃 API 호출 중 오류 (로컬 상태는 초기화됩니다)');
+          result = { success: false, error: new Error('Logout failed') };
         } finally {
           set({
             user: null,
@@ -347,6 +347,8 @@ export const useAuthStore = create<AuthStore>()(
               body: { key: key.replace(/-/g, '').toUpperCase(), clientIP },
             },
           );
+
+          if (error) throw error;
 
           if (data.user) {
             set({

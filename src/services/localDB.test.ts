@@ -12,7 +12,7 @@ const mockLoad = vi.fn().mockResolvedValue({
 
 vi.mock('@tauri-apps/plugin-sql', () => ({
   default: {
-    load: (...args: any[]) => mockLoad(...args),
+    load: (...args: unknown[]) => mockLoad(...args),
   },
 }));
 
@@ -45,7 +45,7 @@ describe('LocalDB Service', () => {
         reminders: [],
       };
 
-      await localDB.upsertNote(mockNote as any);
+      await localDB.upsertNote(mockNote as unknown as Note);
       expect(mockExecute).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO notes'),
         expect.arrayContaining(['1', 'user1', 'Test Note'])

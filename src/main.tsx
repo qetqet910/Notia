@@ -107,10 +107,6 @@ const platformModules = {
  */
 function initializePlatform(platformName: string): boolean { // async 제거
   try {
-    type PlatformModule = {
-      default: () => void;
-    };
-
     console.log(`Attempting to initialize platform module: ${platformName}`);
 
     const module = platformModules[platformName as keyof typeof platformModules];

@@ -3,17 +3,7 @@ import { Note, EditorReminder, Reminder } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
-import { fromZonedTime } from 'date-fns-tz';
 import { v4 as uuidv4 } from 'uuid';
-
-// 한국 시간대 상수
-const KOREA_TIMEZONE = 'Asia/Seoul';
-
-// 한국 시간대 기준으로 현재 시간을 UTC로 변환하는 헬퍼 함수
-// const getKoreaTimeAsUTC = (): string => {
-//   const now = new Date();
-//   return fromZonedTime(now, KOREA_TIMEZONE).toISOString();
-// };
 
 const getStartOfWeek = () => {
   const now = new Date();

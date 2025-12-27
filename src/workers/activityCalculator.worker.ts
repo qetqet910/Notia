@@ -1,6 +1,17 @@
 // 워커 내의 외부 별칭(@/) 참조는 빌드 시 문제를 일으킬 수 있으므로
 // 필요한 타입을 직접 정의하거나 최소화합니다.
 
+interface WorkerReminder {
+  completed: boolean;
+  updated_at?: string;
+  reminder_time?: string;
+}
+
+interface WorkerNote {
+  tags?: string[];
+  reminders?: WorkerReminder[];
+}
+
 interface Stats {
   totalNotes: number;
   totalReminders: number;
@@ -16,7 +27,7 @@ interface ActivityData {
 }
 
 // self는 웹 워커의 전역 스코프를 참조합니다.
-self.onmessage = (event: MessageEvent<any[]>) => {
+self.onmessage = (event: MessageEvent<WorkerNote[]>) => {
   const notes = event.data;
 
   const data = new Map<string, number>();
@@ -33,14 +44,14 @@ self.onmessage = (event: MessageEvent<any[]>) => {
     return;
   }
 
-  notes.forEach((note: any) => {
+  notes.forEach((note) => {
     totalNotes++;
     if (note.tags && Array.isArray(note.tags)) {
-      note.tags.forEach((tag: string) => tags.add(tag));
+      note.tags.forEach((tag) => tags.add(tag));
     }
     
     if (note.reminders && Array.isArray(note.reminders)) {
-      note.reminders.forEach((r: any) => {
+      note.reminders.forEach((r) => {
         totalReminders++;
         if (r.completed) {
           completedReminders++;

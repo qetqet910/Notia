@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as notificationUtils from '../utils/notification';
 import * as isTauriModule from '../utils/isTauri';
 
@@ -8,9 +8,9 @@ const mockIsPermissionGranted = vi.fn();
 const mockSendNotification = vi.fn();
 
 vi.mock('@tauri-apps/plugin-notification', () => ({
-  requestPermission: (...args: any[]) => mockRequestPermission(...args),
-  isPermissionGranted: (...args: any[]) => mockIsPermissionGranted(...args),
-  sendNotification: (...args: any[]) => mockSendNotification(...args),
+  requestPermission: (...args: unknown[]) => mockRequestPermission(...args),
+  isPermissionGranted: (...args: unknown[]) => mockIsPermissionGranted(...args),
+  sendNotification: (...args: unknown[]) => mockSendNotification(...args),
 }));
 
 describe('Notification Utils', () => {
@@ -51,12 +51,14 @@ describe('Notification Utils', () => {
 
     it('checkPermission should use Notification API', async () => {
       // Mocked in setup.ts
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (global.Notification as any).permission = 'granted';
       const permission = await notificationUtils.checkPermission();
       expect(permission).toBe('granted');
     });
 
     it('sendNotification should use Notification API', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (global.Notification as any).permission = 'granted';
       const notificationSpy = vi.spyOn(global, 'Notification');
       await notificationUtils.sendNotification('Web Test', 'Web Body');

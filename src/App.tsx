@@ -44,7 +44,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
 const ScrollToTop = () => {
@@ -205,6 +204,7 @@ function App() {
     // Supabase redirects to /?code=... but HashRouter expects /#/auth/callback?code=...
     // IMPORTANT: This logic MUST only run in Tauri to avoid destroying PKCE state on web.
     const isTauriEnv = isTauri();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hasTauriInternals = typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
     
     if (isTauriEnv && hasTauriInternals) {

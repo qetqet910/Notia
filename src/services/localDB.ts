@@ -1,6 +1,6 @@
 import Database from '@tauri-apps/plugin-sql';
 import { isTauri } from '@/utils/isTauri';
-import { Note, Reminder } from '@/types';
+import { Note } from '@/types';
 
 // DB 이름 설정
 const DB_NAME = 'notia.db';
@@ -29,7 +29,8 @@ class WebDB {
     });
   }
 
-  async execute(query: string, values?: any[]) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async execute(_query: string, _values?: unknown[]) {
     // 웹 환경에서는 SQL 쿼리 파싱이 복잡하므로, 
     // 실제 로직은 LocalDBService의 메서드 내에서 분기 처리하는 것이 좋습니다.
     // 여기서는 인터페이스 호환성을 위해 에러를 던지거나 더미를 반환합니다.
@@ -200,10 +201,12 @@ class LocalDBService {
     await this.init();
 
     if (isTauri() && this.db) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const notesResult = await this.db.select<any[]>('SELECT * FROM notes WHERE is_deleted = 0 ORDER BY updated_at DESC');
       const notes: Note[] = [];
 
       for (const row of notesResult) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const remindersResult = await this.db.select<any[]>('SELECT * FROM reminders WHERE note_id = $1', [row.id]);
         
         notes.push({
