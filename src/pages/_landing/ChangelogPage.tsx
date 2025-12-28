@@ -49,10 +49,10 @@ export const ChangelogPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-background">
       <Toaster />
       <Header />
-      <main className="max-w-3xl mx-auto px-6 py-12 mt-16">
+      <main className="max-w-3xl mx-auto px-6 py-12 pt-28">
         <motion.div
           initial="initial"
           animate="animate"

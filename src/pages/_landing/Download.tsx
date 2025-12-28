@@ -163,11 +163,11 @@ export const DownloadPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-['Orbit']">
+    <div className="min-h-screen bg-background font-['Orbit']">
       <Toaster />
       <Header />
 
-      <main className="max-w-4xl mx-auto px-4 pt-24 pb-16 sm:pt-32 sm:pb-24">
+      <main className="max-w-4xl mx-auto px-4 pt-32 pb-16 sm:pt-40 sm:pb-24">
         {/* Installation Guide Section */}
         <section className="mb-16">
           <div className="text-center mb-12">

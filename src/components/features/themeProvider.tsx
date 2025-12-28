@@ -30,29 +30,35 @@ export function ThemeProvider({
   // 경로 기반 테마 적용
   useEffect(() => {
     const root = window.document.documentElement;
-    const isDashboard =
-      location.pathname === '/dashboard' ||
-      location.pathname === '/dashboard/myPage' ||
-      location.pathname === '/dashboard/help';
+    const isThemedPage =
+      location.pathname.startsWith('/dashboard') ||
+      location.pathname === '/changelog' ||
+      location.pathname === '/download' ||
+      location.pathname === '/login' ||
+      location.pathname === '/terms-agreement';
 
     // 클래스 변경 함수
     const applyThemeClasses = () => {
-      if (isDashboard) {
-        // 대시보드 경로일 때만 다크모드 클래스 적용
+      if (isThemedPage) {
+        // 테마 경로일 때만 다크모드 클래스 적용
         if (isDarkMode && !isDeepDarkMode) {
           root.classList.add('dark');
           root.classList.remove('deepdark');
+          root.style.backgroundColor = '#0f172a';
         } else if (isDeepDarkMode) {
           root.classList.add('deepdark');
           root.classList.remove('dark');
+          root.style.backgroundColor = '#050505';
         } else {
           root.classList.remove('dark');
           root.classList.remove('deepdark');
+          root.style.backgroundColor = '#ffffff';
         }
       } else {
-        // 대시보드가 아닌 경로에서는 모든 테마 클래스 제거
+        // 테마 경로가 아닌 경우 (메인 랜딩 등) 강제로 라이트모드
         root.classList.remove('dark');
         root.classList.remove('deepdark');
+        root.style.backgroundColor = '#ffffff';
       }
     };
 

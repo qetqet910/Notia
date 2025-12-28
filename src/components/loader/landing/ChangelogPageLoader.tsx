@@ -2,9 +2,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export const ChangelogPageLoader = () => {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Header Skeleton */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex justify-between items-center">
           <Skeleton className="h-8 w-24" />
           <div className="flex items-center gap-4">
@@ -14,7 +14,7 @@ export const ChangelogPageLoader = () => {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12 mt-16">
+      <main className="max-w-3xl mx-auto px-6 py-12 pt-28">
         {/* Page Title Skeleton */}
         <div className="text-center mb-8">
           <Skeleton className="h-10 w-48 mx-auto" />

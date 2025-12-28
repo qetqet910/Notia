@@ -2,20 +2,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export const DownloadPageLoader = () => {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Header Skeleton */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <Skeleton className="h-8 w-24" />
-          <div className="flex items-center space-x-4">
-            <Skeleton className="h-8 w-20 hidden sm:block" />
-            <Skeleton className="h-8 w-20 hidden sm:block" />
-            <Skeleton className="h-10 w-24" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-10 w-24 rounded-md" />
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
+      <main className="max-w-4xl mx-auto px-4 pt-32 pb-16 sm:pt-40 sm:pb-24">
         {/* Installation Guide Skeleton */}
         <section className="mb-16">
           <div className="text-center mb-12">
