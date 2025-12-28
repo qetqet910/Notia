@@ -97,15 +97,18 @@ class LocalDBService {
         await this.initTables();
         this.isReady = true;
         console.log('Local SQLite DB initialized');
+        return; // Success, return early
       } catch (error) {
-        console.error('Failed to init SQLite:', error);
+        console.error('Failed to init SQLite, falling back to WebDB:', error);
+        // Fallback to WebDB continues below
       }
-    } else {
-      this.webDb = new WebDB();
-      await this.webDb.init();
-      this.isReady = true;
-      console.log('Local IndexedDB initialized');
     }
+
+    // WebDB initialization (Fallback or default)
+    this.webDb = new WebDB();
+    await this.webDb.init();
+    this.isReady = true;
+    console.log('Local IndexedDB initialized');
   }
 
   private async initTables() {

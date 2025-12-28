@@ -69,13 +69,14 @@ export const useNotificationPermission = () => {
    * @param subscription PushSubscription 객체
    */
   const saveSubscription = async (subscription: PushSubscription) => {
-    if (!session?.user.id) return;
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (!currentSession?.user.id) return;
 
     const { error } = await supabase
       .from('push_subscriptions')
       .upsert(
         {
-          user_id: session.user.id,
+          user_id: currentSession.user.id,
           subscription_details: subscription.toJSON(),
           endpoint: subscription.endpoint,
         },

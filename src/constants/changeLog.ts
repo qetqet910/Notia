@@ -2,6 +2,21 @@ import { ChangelogEntry } from '@/types';
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: 'v1.0.1',
+    date: '2025년 12월 28일',
+    userChanges: [
+      { category: '⚡ 성능', description: '앱의 핵심 연산 로직을 최적화하여 데이터 처리 속도를 획기적으로 개선했습니다.' },
+      { category: '🔔 알림', description: '데스크톱과 웹 어디서든 놓치지 않고 정확한 타이밍에 알림을 받을 수 있습니다.' },
+      { category: '📡 오프라인', description: '인터넷이 끊겨도 걱정 마세요. 작업한 내용은 로컬에 안전하게 저장됩니다.' },
+      { category: '🔄 업데이트', description: '이제 새로운 기능이 나오면 앱이 알아서 알려주고 간편하게 설치할 수 있습니다.' },
+    ],
+    devChanges: [
+      { category: '🛡️ 보안', description: 'Type Safety: 프로젝트 전체의 타입 안정성을 강화하여 잠재적인 오류를 제거했습니다.' },
+      { category: '🧪 테스트', description: 'Unit Tests: 핵심 기능에 대한 테스트 코드를 작성하여 신뢰성을 확보했습니다.' },
+      { category: '🔧 리팩토링', description: 'Local-First: SQLite와 IndexedDB를 활용한 이중 저장소 아키텍처를 구현했습니다.' },
+    ],
+  },
+  {
     version: 'v1.0.0',
     date: '2025년 12월 23일',
     userChanges: [

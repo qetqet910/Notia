@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaWindows, FaApple } from 'react-icons/fa';
 import { FcLinux } from 'react-icons/fc';
 import { IoGlobeOutline, IoShareOutline } from 'react-icons/io5';
@@ -14,6 +14,7 @@ import { usePwaStore } from '@/stores/pwaStore';
 import { changelogData } from '@/constants/changeLog';
 import { useAuthStore } from '@/stores/authStore';
 import { Navigate } from 'react-router-dom';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
 // OS 아이콘 컴포넌트
 const OsIcon = ({ name }: { name: string }) => {
@@ -32,81 +33,46 @@ const OsIcon = ({ name }: { name: string }) => {
   }
 };
 
-const platformData = [
-  {
-    id: 'Windows',
-    label: 'Windows',
-    description:
-      'Windows 10/11에 최적화된 데스크톱 앱으로 가장 강력한 기능을 모두 사용해 보세요.',
-    download: {
-      label: 'Download for Windows',
-      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_1.0.0_x64-setup.exe',
-    },
-  },
-  {
-    id: 'macOS',
-    label: 'macOS',
-    description:
-      'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
-    download: {
-      label: 'Download for macOS',
-      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_universal.app.tar.gz',
-    },
-  },
-  {
-    id: 'Linux',
-    label: 'Linux',
-    description:
-      '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. .AppImage 또는 .deb 패키지로 제공됩니다.',
-    download: {
-      label: 'Download for Linux (.AppImage)',
-      link: 'https://github.com/qetqet910/Notia/releases/download/v1.0.0/Notia_1.0.0_amd64.AppImage',
-    },
-  },
-  {
-    id: 'Mobile / Desktop',
-    label: 'Mobile / Desktop',
-    description:
-      '설치 없이 웹에서 바로 사용하거나, 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.',
-    download: {
-      label: '앱 설치',
-      link: '#',
-    },
-  },
-];
-
-const installationSteps = [
-  {
-    step: 1,
-    title: '다운로드',
-    description: '사용 중인 운영체제에 맞는 파일을 다운로드하세요.',
-  },
-  {
-    step: 2,
-    title: '실행 및 설치',
-    description: '다운로드한 파일을 열어 간단한 설치 과정을 진행하세요.',
-  },
-  {
-    step: 3,
-    title: '로그인',
-    description: '계정에 로그인하면 모든 노트가 안전하게 동기화됩니다.',
-  },
-];
-
-interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: Array<string>;
-  readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed';
-    platform: string;
-  }>;
-  prompt(): Promise<void>;
+interface ReleaseAsset {
+  name: string;
+  browser_download_url: string;
 }
 
+interface GithubRelease {
+  tag_name: string;
+  published_at: string;
+  assets: ReleaseAsset[];
+}
+
+const useLatestRelease = () => {
+  const [release, setRelease] = useState<GithubRelease | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('https://api.github.com/repos/qetqet910/Notia/releases/latest')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch release');
+        return res.json();
+      })
+      .then((data) => {
+        setRelease(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch latest release:', err);
+        setLoading(false);
+      });
+  }, []);
+
+  return { release, loading };
+};
+
 export const DownloadPage: React.FC = () => {
-  const [selectedId, setSelectedId] = React.useState(platformData[0].id);
+  const [selectedId, setSelectedId] = React.useState('Windows');
   const { deferredPrompt, setDeferredPrompt } = usePwaStore();
   const [isIOS, setIsIOS] = React.useState(false);
   const { user } = useAuthStore();
+  const { release, loading } = useLatestRelease();
 
   React.useEffect(() => {
     setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
@@ -114,7 +80,7 @@ export const DownloadPage: React.FC = () => {
 
   const handlePwaInstall = async () => {
     if (deferredPrompt) {
-      const promptEvent = deferredPrompt as BeforeInstallPromptEvent;
+      const promptEvent = deferredPrompt as unknown as BeforeInstallPromptEvent;
       await promptEvent.prompt();
       const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
@@ -123,7 +89,75 @@ export const DownloadPage: React.FC = () => {
     }
   };
 
-  // 1. Redirect Logic
+  const getDownloadLink = (os: string) => {
+    const defaultLinks = {
+      Windows: 'https://github.com/qetqet910/Notia/releases/latest/download/Notia_x64-setup.exe',
+      macOS: 'https://github.com/qetqet910/Notia/releases/latest/download/Notia_universal.app.tar.gz',
+      Linux: 'https://github.com/qetqet910/Notia/releases/latest/download/Notia_amd64.AppImage',
+    };
+
+    if (!release) return defaultLinks[os as keyof typeof defaultLinks] || '#';
+
+    // Find specific asset based on OS
+    const assets = release.assets;
+    let asset;
+
+    if (os === 'Windows') {
+      asset = assets.find(a => a.name.endsWith('.exe') && !a.name.includes('sig'));
+    } else if (os === 'macOS') {
+      asset = assets.find(a => (a.name.endsWith('.dmg') || a.name.endsWith('.app.tar.gz')) && !a.name.includes('sig'));
+    } else if (os === 'Linux') {
+      asset = assets.find(a => a.name.endsWith('.AppImage') && !a.name.includes('sig'));
+    }
+
+    return asset ? asset.browser_download_url : defaultLinks[os as keyof typeof defaultLinks];
+  };
+
+  const platformData = [
+    {
+      id: 'Windows',
+      label: 'Windows',
+      description: 'Windows 10/11에 최적화된 데스크톱 앱으로 가장 강력한 기능을 모두 사용해 보세요.',
+      downloadLabel: 'Download for Windows',
+    },
+    {
+      id: 'macOS',
+      label: 'macOS',
+      description: 'Mac 환경에 완벽하게 통합된 데스크톱 앱으로 부드러운 사용성을 경험하세요.',
+      downloadLabel: 'Download for macOS',
+    },
+    {
+      id: 'Linux',
+      label: 'Linux',
+      description: '다양한 배포판을 지원하는 Linux용 데스크톱 앱입니다. .AppImage 패키지로 제공됩니다.',
+      downloadLabel: 'Download for Linux (.AppImage)',
+    },
+    {
+      id: 'Mobile / Desktop',
+      label: 'Mobile / Desktop',
+      description: '설치 없이 웹에서 바로 사용하거나, 홈 화면에 추가하여 앱처럼 사용할 수 있습니다.',
+      downloadLabel: '앱 설치',
+    },
+  ];
+
+  const installationSteps = [
+    {
+      step: 1,
+      title: '다운로드',
+      description: '사용 중인 운영체제에 맞는 파일을 다운로드하세요.',
+    },
+    {
+      step: 2,
+      title: '실행 및 설치',
+      description: '다운로드한 파일을 열어 간단한 설치 과정을 진행하세요.',
+    },
+    {
+      step: 3,
+      title: '로그인',
+      description: '계정에 로그인하면 모든 노트가 안전하게 동기화됩니다.',
+    },
+  ];
+
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -205,10 +239,10 @@ export const DownloadPage: React.FC = () => {
 
                         <div className="flex flex-wrap justify-center gap-3 mb-12">
                           <Badge variant="secondary" className="px-3 py-1">
-                            최신 버전: {changelogData[0].version}
+                            최신 버전: {release ? release.tag_name : (loading ? 'Loading...' : changelogData[0].version)}
                           </Badge>
                           <Badge variant="secondary" className="px-3 py-1">
-                            최근 업데이트: {changelogData[0].date}
+                            최근 업데이트: {release ? new Date(release.published_at).toLocaleDateString() : (loading ? 'Loading...' : changelogData[0].date)}
                           </Badge>
                           <a
                             href="/changelog"
@@ -241,7 +275,7 @@ export const DownloadPage: React.FC = () => {
                                 onClick={handlePwaInstall}
                                 disabled={!deferredPrompt}
                               >
-                                {platform.download.label}
+                                {platform.downloadLabel}
                               </Button>
                               {!deferredPrompt && (
                                 <p className="text-xs text-muted-foreground mt-4 font-medium">
@@ -255,9 +289,14 @@ export const DownloadPage: React.FC = () => {
                             size="lg"
                             className="bg-[#61C9A8] hover:bg-[#52a38a] w-full max-w-xs h-14 text-lg rounded-2xl shadow-lg shadow-[#61C9A8]/30 transition-all hover:-translate-y-1"
                             asChild
+                            disabled={loading}
                           >
-                            <a href={platform.download.link} target="_blank" rel="noopener noreferrer">
-                              {platform.download.label}
+                            <a href={getDownloadLink(platform.id)} target="_blank" rel="noopener noreferrer">
+                              {loading ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                platform.downloadLabel
+                              )}
                             </a>
                           </Button>
                         )}

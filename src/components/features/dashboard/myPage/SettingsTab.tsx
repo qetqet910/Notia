@@ -43,6 +43,7 @@ import Info from 'lucide-react/dist/esm/icons/info';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import { checkForUpdates, installUpdate } from '@/utils/updater';
 import { isTauri } from '@/utils/isTauri';
+import { sendNotification } from '@/utils/notification';
 
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
