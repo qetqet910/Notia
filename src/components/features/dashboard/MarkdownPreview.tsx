@@ -60,7 +60,7 @@ const CodeBlock: React.FC<CodeBlockProps> = React.memo(
 
 CodeBlock.displayName = 'CodeBlock';
 
-const preserveNewlines = (content: string): string => {
+export const preserveNewlines = (content: string): string => {
   if (!content) return '';
   
   // Normalize CRLF to LF
@@ -71,17 +71,15 @@ const preserveNewlines = (content: string): string => {
   return parts.map((part, index) => {
     if (index % 2 === 1) return part; // Code block
     
-    // Robust regex to match 2 or more newlines, ignoring spaces/tabs on empty lines
+    // Notepad Style: Treat every newline sequence >= 2 as explicit empty lines
     return part.replace(/\n([ \t]*\n)+/g, (match) => {
-      // Count effective newlines
       const newlineCount = (match.match(/\n/g) || []).length;
       
-      if (newlineCount < 2) return match;
-      if (newlineCount === 2) return '\n\n';
-      
-      // For 3 or more newlines, inject empty paragraphs with Unicode NBSP
-      // Using Unicode \u00A0 ensures it's treated as a character, preventing collapse
-      return '\n\n' + '\u00A0\n\n'.repeat(newlineCount - 2);
+      // If 2 or more newlines, inject empty paragraphs (NBSP)
+      // Count - 1 because the first newline ends the previous paragraph
+      // e.g., \n\n (2) -> 1 empty line
+      // e.g., \n\n\n (3) -> 2 empty lines
+      return '\n\n' + '\u00A0\n\n'.repeat(Math.max(0, newlineCount - 1));
     });
   }).join('');
 };
@@ -107,30 +105,30 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = React.memo(
               </h2>
             ),
             h3: ({ children, ...props }) => (
-              <h3 className="text-lg font-semibold mb-2" {...props}>
+              <h3 className="text-lg font-semibold mb-2 mt-4" {...props}>
                 {children}
               </h3>
             ),
             p: ({ children, ...props }) => (
-              <p className="mb-2 min-h-[1.5em] leading-relaxed" {...props}>
+              <p className="mb-0 leading-[1.2] min-h-[1.2em]" {...props}>
                 {children}
               </p>
             ),
             ul: ({ children, ...props }) => (
-              <ul className="list-disc list-inside mb-4 space-y-2" {...props}>
+              <ul className="list-disc list-inside mb-0 space-y-0" {...props}>
                 {children}
               </ul>
             ),
             ol: ({ children, ...props }) => (
               <ol
-                className="list-decimal list-inside mb-4 space-y-2"
+                className="list-decimal list-inside mb-0 space-y-0"
                 {...props}
               >
                 {children}
               </ol>
             ),
             li: ({ children, ...props }) => (
-              <li className="leading-relaxed" {...props}>
+              <li className="leading-[1.2]" {...props}>
                 {children}
               </li>
             ),
@@ -170,6 +168,26 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = React.memo(
                 {children}
               </a>
             ),
+            input: ({ ...props }) => {
+              if (props.type === 'checkbox') {
+                const checkIcon = encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
+                return (
+                  <input
+                    type="checkbox"
+                    className="appearance-none h-4 w-4 border-2 border-muted-foreground/30 rounded-[4px] bg-transparent checked:bg-green-600 checked:border-green-600 transition-all mr-2 align-middle relative pointer-events-none"
+                    style={props.checked ? {
+                      backgroundImage: `url("data:image/svg+xml,${checkIcon}")`,
+                      backgroundSize: '100% 100%',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat'
+                    } : {}}
+                    readOnly
+                    {...props}
+                  />
+                );
+              }
+              return <input {...props} />;
+            },
           }}
         >
           {processedContent || '*내용이 없습니다.*'}
