@@ -8,11 +8,10 @@ import {
   useCallback,
   Suspense,
   lazy,
+  useDeferredValue,
 } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { parseNoteContent, parseNoteContentAsync } from '@/utils/noteParser';
-import { isTauri } from '@/utils/isTauri';
-import { invoke } from '@tauri-apps/api/core';
 
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -30,6 +29,7 @@ import {
 import { indentOnInput } from '@codemirror/language';
 import { bracketMatching } from '@codemirror/matchbrackets';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/closebrackets';
+import { autocompletion } from '@codemirror/autocomplete';
 
 import {
   ResizablePanelGroup,
@@ -63,11 +63,12 @@ import {
   CarouselContent,
   CarouselItem,
 } from '@/components/ui/carousel';
-import { supabase } from '@/services/supabaseClient';
-import { useAuth } from '@/hooks/useAuth';
-import { v4 as uuidv4 } from 'uuid';
-import { EditorToolbar } from '@/components/features/dashboard/editorToolbar';
+import { EditorToolbar } from '@/components/features/dashboard/toolbar/EditorToolbar';
 import { codeMirrorTheme } from '@/components/features/dashboard/editorTheme';
+import { checkboxPlugin } from '@/components/features/dashboard/main/checkboxPlugin';
+import { createSlashCommandCompletion } from './slashCommand';
+import { useImageUpload } from '@/hooks/editor/useImageUpload';
+import { useScrollSync } from '@/hooks/editor/useScrollSync';
 
 const MarkdownPreview = lazy(() =>
   import('@/components/features/dashboard/MarkdownPreview').then((module) => ({
@@ -149,18 +150,26 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     ref,
   ) => {
     const [content, setContent] = useState('');
-    // 파싱과 미리보기를 위한 디바운스된 콘텐츠
-    const [debouncedContent, setDebouncedContent] = useState(''); 
+    // React 19 useDeferredValue: 입력은 즉시, 파싱은 여유로울 때 처리
+    const deferredContent = useDeferredValue(content);
     const [tags, setTags] = useState<string[]>([]);
     const [reminders, setReminders] = useState<EditorReminder[]>([]);
-    const [isUploading, setIsUploading] = useState(false);
+    
+    // editorRef를 먼저 선언해야 합니다.
     const editorRef = useRef<ReactCodeMirrorRef>(null);
+    // useImageUpload 훅에서 필요한 기능들을 가져옵니다.
+    const { isUploading, imageUploadExtension, openFileSelector, fileInputRef, handleFileChange } = useImageUpload(editorRef);
+    
     const { toast } = useToast();
     const navigate = useNavigate();
-    const { user } = useAuth();
     const isDesktop = useMediaQuery('(min-width: 1024px)');
 
-    // 에디터 표시용 (즉시 반영)
+    // Slash Command 확장 생성 (이미지 업로드 콜백 연결)
+    const slashCommandExtension = useMemo(() => 
+      autocompletion({ override: [createSlashCommandCompletion(openFileSelector)] }), 
+    [openFileSelector]);
+
+
     const { title, body } = useMemo(() => {
       const lines = content.split('\n');
       const title = lines[0] || '';
@@ -168,208 +177,35 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       return { title, body };
     }, [content]);
 
-    // 미리보기 및 파싱용 (지연 반영)
+    // 미리보기 및 파싱용 (Deferred 반영)
     const { title: debouncedTitle, body: debouncedBody } = useMemo(() => {
-      const lines = debouncedContent.split('\n');
+      const lines = deferredContent.split('\n');
       const title = lines[0] || '';
       const body = lines.slice(1).join('\n');
       return { title, body };
-    }, [debouncedContent]);
+    }, [deferredContent]);
 
     const filteredLanguages = languages.filter((lang) =>
       ['javascript', 'css', 'python', 'json'].includes(lang.name),
     );
 
-    // ... (image upload logic remains the same)
 
-    const handleImageUpload = useCallback(
-      async (file: File): Promise<string | null> => {
-        if (!user) {
-          toast({
-            title: '오류',
-            description: '이미지를 업로드하려면 로그인이 필요합니다.',
-            variant: 'destructive',
-          });
-          return null;
-        }
-        if (file.size > 1024 * 1024 * 10) { // Increased limit slightly since we optimize
-          toast({
-            title: '오류',
-            description: '이미지 파일 크기는 10MB를 초과할 수 없습니다.',
-            variant: 'destructive',
-          });
-          return null;
-        }
 
-        setIsUploading(true);
-        
-        let fileToUpload: File | Blob = file;
-        let fileExt = file.name.split('.').pop();
 
-        // Optimize if in Tauri
-        if (isTauri()) {
-          try {
-            const reader = new FileReader();
-            const base64Promise = new Promise<string>((resolve) => {
-              reader.onload = () => {
-                const result = reader.result as string;
-                resolve(result.split(',')[1]); // Strip prefix
-              };
-              reader.readAsDataURL(file);
-            });
 
-            const base64Data = await base64Promise;
-            const optimizedBase64 = await invoke<string>('optimize_image', {
-              imageDataBase64: base64Data,
-            });
 
-            // Convert back to Blob
-            const byteCharacters = atob(optimizedBase64);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-              byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            fileToUpload = new Blob([byteArray], { type: 'image/webp' });
-            fileExt = 'webp'; // Change extension to webp
-          } catch (error) {
-            console.error('Rust image optimization failed:', error);
-            // Fallback to original file
-          }
-        }
-
-        const fileName = `${uuidv4()}.${fileExt}`;
-        const filePath = `note-images/${user.id}/${fileName}`;
-
-        try {
-          const { error } = await supabase.storage
-            .from('note-images')
-            .upload(filePath, fileToUpload);
-
-          if (error) {
-            throw error;
-          }
-
-          const { data } = supabase.storage
-            .from('note-images')
-            .getPublicUrl(filePath);
-
-          return data.publicUrl;
-        } catch (error) {
-          console.error('Image upload error:', error);
-          toast({
-            title: '업로드 실패',
-            description: '이미지 업로드 중 오류가 발생했습니다.',
-            variant: 'destructive',
-          });
-          return null;
-        } finally {
-          setIsUploading(false);
-        }
-      },
-      [user, toast],
-    );
-
-    const imageUploadExtension = useMemo(() => {
-      return EditorView.domEventHandlers({
-        drop(event, view) {
-          event.preventDefault();
-          const files = event.dataTransfer?.files;
-          if (files && files.length > 0 && files[0].type.startsWith('image/')) {
-            const imageFile = files[0];
-            const uniqueId = uuidv4();
-            const placeholder = `![Uploading ${imageFile.name} ${uniqueId}...]()`;
-            const pos = view.posAtCoords({
-              x: event.clientX,
-              y: event.clientY,
-            });
-            if (pos === null) return;
-
-            view.dispatch({
-              changes: { from: pos, insert: placeholder },
-            });
-
-            handleImageUpload(imageFile).then((url) => {
-              const doc = view.state.doc.toString();
-              const placeholderPos = doc.indexOf(placeholder);
-              if (placeholderPos === -1) return;
-
-              if (url) {
-                const markdownImage = `![${imageFile.name}](${url})`;
-                view.dispatch({
-                  changes: {
-                    from: placeholderPos,
-                    to: placeholderPos + placeholder.length,
-                    insert: markdownImage,
-                  },
-                });
-              } else {
-                // Upload failed, remove placeholder
-                view.dispatch({
-                  changes: {
-                    from: placeholderPos,
-                    to: placeholderPos + placeholder.length,
-                    insert: '',
-                  },
-                });
-              }
-            });
-          }
-        },
-        paste(event, view) {
-          const files = event.clipboardData?.files;
-          if (files && files.length > 0 && files[0].type.startsWith('image/')) {
-            event.preventDefault();
-            const imageFile = files[0];
-            const uniqueId = uuidv4();
-            const placeholder = `![Pasting image ${uniqueId}...]()`;
-            const pos = view.state.selection.main.head;
-
-            view.dispatch({
-              changes: { from: pos, insert: placeholder },
-            });
-
-            handleImageUpload(imageFile).then((url) => {
-              const doc = view.state.doc.toString();
-              const placeholderPos = doc.indexOf(placeholder);
-              if (placeholderPos === -1) return;
-
-              if (url) {
-                const markdownImage = `![${imageFile.name}](${url})`;
-                view.dispatch({
-                  changes: {
-                    from: placeholderPos,
-                    to: placeholderPos + placeholder.length,
-                    insert: markdownImage,
-                  },
-                });
-              } else {
-                // Upload failed, remove placeholder
-                view.dispatch({
-                  changes: {
-                    from: placeholderPos,
-                    to: placeholderPos + placeholder.length,
-                    insert: '',
-                  },
-                });
-              }
-            });
-          }
-        },
-      });
-    }, [handleImageUpload]);
 
     const isResettingRef = useRef(false);
     const previewRef = useRef<HTMLDivElement>(null);
-    // 스크롤 동기화 루프 방지용 Ref ('editor' | 'preview' | null)
-    const isScrollingRef = useRef<string | null>(null);
-    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const { handleEditorScroll, handlePreviewScroll } = useScrollSync(
+      editorRef,
+      previewRef,
+    );
 
     const resetStateFromNote = useCallback((noteToReset: Note) => {
       isResettingRef.current = true;
       const initialContent = `${noteToReset.title}\n${noteToReset.content}`;
       setContent(initialContent);
-      setDebouncedContent(initialContent); // 초기화 시에는 즉시 동기화
 
       const existingEditorReminders: EditorReminder[] = (
         noteToReset.reminders || []
@@ -410,51 +246,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 
     // ... (useEffect hooks for resetStateFromNote and remindersRef remain same)
 
-    // 에디터 스크롤 핸들러 (CodeMirror -> Preview)
-    const handleEditorScroll = useCallback((view: EditorView) => {
-      if (isScrollingRef.current === 'preview') return;
 
-      const scrollDOM = view.scrollDOM;
-      const percentage =
-        scrollDOM.scrollTop / (scrollDOM.scrollHeight - scrollDOM.clientHeight);
-
-      if (previewRef.current) {
-        isScrollingRef.current = 'editor';
-        previewRef.current.scrollTop =
-          percentage *
-          (previewRef.current.scrollHeight - previewRef.current.clientHeight);
-        
-        // 락 해제 시간을 조금 더 짧게 조정
-        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = setTimeout(() => {
-          isScrollingRef.current = null;
-        }, 50);
-      }
-    }, []);
-
-    // 미리보기 스크롤 핸들러 (Preview -> CodeMirror)
-    const handlePreviewScroll = useCallback(() => {
-      if (isScrollingRef.current === 'editor' || !editorRef.current?.view || !previewRef.current) return;
-
-      const previewEl = previewRef.current;
-      const percentage =
-        previewEl.scrollTop / (previewEl.scrollHeight - previewEl.clientHeight);
-
-      const view = editorRef.current.view;
-      const scrollDOM = view.scrollDOM;
-      
-      isScrollingRef.current = 'preview';
-      // requestAnimationFrame으로 부드럽게 처리 시도
-      requestAnimationFrame(() => {
-          scrollDOM.scrollTop =
-            percentage * (scrollDOM.scrollHeight - scrollDOM.clientHeight);
-      });
-
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-      scrollTimeoutRef.current = setTimeout(() => {
-        isScrollingRef.current = null;
-      }, 50);
-    }, []);
 
     useEffect(() => {
       resetStateFromNote(note);
@@ -465,19 +257,19 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       remindersRef.current = reminders;
     }, [reminders]);
 
-    // 무거운 파싱 로직을 디바운싱 처리
+    // 파싱 로직: useDeferredValue 덕분에 딜레이 없이 실행해도 
+    // 리액트가 입력 우선순위를 유지하며 최적의 타이밍에 실행합니다.
     useEffect(() => {
       if (isResettingRef.current) {
         isResettingRef.current = false;
         return;
       }
 
-      const timer = setTimeout(async () => {
+      const performParsing = async () => {
         const { tags: currentTags, reminders: currentRemindersRaw } =
-          await parseNoteContentAsync(content, new Date(), remindersRef.current);
+          await parseNoteContentAsync(deferredContent, new Date(), remindersRef.current);
 
         setTags(currentTags.map((t) => t.text));
-        setDebouncedContent(content); // 파싱이 완료될 때 미리보기 콘텐츠 업데이트
 
         setReminders((prevReminders) => {
           return currentRemindersRaw
@@ -503,10 +295,10 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               };
             });
         });
-      }, 300); // 300ms 딜레이
+      };
 
-      return () => clearTimeout(timer);
-    }, [content]);
+      performParsing();
+    }, [deferredContent]);
 
     const handleSave = useCallback(() => {
       onSave(note.id, {
@@ -647,7 +439,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                 <ResizablePanelGroup direction="horizontal" className="h-full">
                   <ResizablePanel defaultSize={50}>
                     <div className="p-4 pt-0 h-full flex flex-col">
-                      <EditorToolbar editorRef={editorRef} />
+                      <EditorToolbar editorRef={editorRef} onImageClick={openFileSelector} />
                       <div className="flex-1 min-h-0">
                         <CodeMirror
                           ref={editorRef}
@@ -670,10 +462,47 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                               ...closeBracketsKeymap,
                             ]),
                             imageUploadExtension,
+                            checkboxPlugin,
+                            slashCommandExtension,
                             EditorView.lineWrapping,
                             EditorView.theme({
                               '.cm-content': { paddingBottom: '50px' },
                               '.cm-scroller': { paddingBottom: '50px' },
+                              '.cm-line': { lineHeight: '1.2', padding: '0' },
+                              // Autocomplete Tooltip Styles
+                              '.cm-tooltip': {
+                                border: '1px solid hsl(var(--border))',
+                                backgroundColor: 'hsl(var(--popover))',
+                                color: 'hsl(var(--popover-foreground))',
+                                borderRadius: 'calc(var(--radius) - 2px)',
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                              },
+                              '.cm-tooltip-autocomplete': {
+                                '& > ul > li': {
+                                  fontFamily: "'NoonnuBasicGothicRegular', sans-serif",
+                                  padding: '4px 8px',
+                                },
+                                '& > ul > li[aria-selected]': {
+                                  backgroundColor: 'hsl(var(--accent))',
+                                  color: 'hsl(var(--accent-foreground))',
+                                },
+                                '& > ul > li:hover': {
+                                  backgroundColor: 'hsl(var(--accent))',
+                                  color: 'hsl(var(--accent-foreground))',
+                                },
+                              },
+                              '.cm-completionLabel': {
+                                fontWeight: 'bold',
+                              },
+                              '.cm-completionDetail': {
+                                color: 'hsl(var(--muted-foreground))',
+                                fontStyle: 'normal',
+                                marginLeft: '0.5em',
+                                fontSize: '0.85em',
+                              },
+                              '.cm-completionIcon': {
+                                display: 'none',
+                              },
                             }),
                           ]}
                           onUpdate={(viewUpdate) => {
@@ -724,7 +553,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                     className="flex-1 overflow-hidden data-[state=inactive]:hidden"
                   >
                     <div className="p-4 pt-0 h-full flex flex-col">
-                      <EditorToolbar editorRef={editorRef} />
+                      <EditorToolbar editorRef={editorRef} onImageClick={openFileSelector} />
                       <div className="flex-1 min-h-0">
                         <CodeMirror
                           ref={editorRef}
@@ -747,10 +576,47 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                               ...closeBracketsKeymap,
                             ]),
                             imageUploadExtension,
+                            checkboxPlugin,
+                            slashCommandExtension,
                             EditorView.lineWrapping,
                             EditorView.theme({
                               '.cm-content': { paddingBottom: '50px' },
                               '.cm-scroller': { paddingBottom: '50px' },
+                              '.cm-line': { lineHeight: '1.2', padding: '0' },
+                              // Autocomplete Tooltip Styles
+                              '.cm-tooltip': {
+                                border: '1px solid hsl(var(--border))',
+                                backgroundColor: 'hsl(var(--popover))',
+                                color: 'hsl(var(--popover-foreground))',
+                                borderRadius: 'calc(var(--radius) - 2px)',
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                              },
+                              '.cm-tooltip-autocomplete': {
+                                '& > ul > li': {
+                                  fontFamily: "'NoonnuBasicGothicRegular', sans-serif",
+                                  padding: '4px 8px',
+                                },
+                                '& > ul > li[aria-selected]': {
+                                  backgroundColor: 'hsl(var(--accent))',
+                                  color: 'hsl(var(--accent-foreground))',
+                                },
+                                '& > ul > li:hover': {
+                                  backgroundColor: 'hsl(var(--accent))',
+                                  color: 'hsl(var(--accent-foreground))',
+                                },
+                              },
+                              '.cm-completionLabel': {
+                                fontWeight: 'bold',
+                              },
+                              '.cm-completionDetail': {
+                                color: 'hsl(var(--muted-foreground))',
+                                fontStyle: 'normal',
+                                marginLeft: '0.5em',
+                                fontSize: '0.85em',
+                              },
+                              '.cm-completionIcon': {
+                                display: 'none',
+                              },
                             }),
                           ]}
                           onUpdate={(viewUpdate) => {
@@ -795,6 +661,13 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
             />
           )}
         </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept="image/*"
+        />
       </div>
     );
   },

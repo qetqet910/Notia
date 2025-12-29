@@ -18,7 +18,7 @@ export const codeMirrorTheme = createTheme({
     { tag: t.heading, color: 'hsl(var(--foreground))', fontWeight: 'bold' },
     { tag: t.strong, color: 'hsl(var(--foreground))', fontWeight: 'bold' },
     { tag: t.emphasis, color: 'hsl(var(--foreground))', fontStyle: 'italic' },
-    { tag: t.quote, color: '#00a983', fontStyle: 'italic' }, // Velog's quote color
+    { tag: t.quote, color: '#00a983', fontStyle: 'italic' },
     { tag: t.link, color: '#00a983' },
     { tag: t.keyword, color: '#7c7c7c' },
     { tag: t.string, color: '#00a983' },
