@@ -103,7 +103,7 @@ const shortcuts = [
   { key: '. or >', description: '설정 열기' },
   { key: '/ or ?', description: '도움말 열기' },
   { key: 'ESC', description: '메인 화면' },
-  { key: 'Alt + F4', description: '쌈@뽕한 종료' },
+  { key: '/', description: '에디터에서 사용 시 명령문' },
 ];
 
 const markdownShortcuts = [

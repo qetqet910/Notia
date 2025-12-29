@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 import { useThemeStore } from '@/stores/themeStore';
 
-import { UserProfile } from '@/components/features/dashboard/userProfile';
+import { UserProfile } from '@/components/features/dashboard/UserProfile';
 import { Button } from '@/components/ui/button';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import logoImage from '@/assets/images/Logo.png';

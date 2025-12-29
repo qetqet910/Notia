@@ -15,22 +15,22 @@ import {
 } from '@/components/loader/landing/AuthPageLoader';
 import { NotFoundPageLoader } from '@/components/loader/landing/NotFoundPageLoader';
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
-import DesktopLogin from '@/pages/_auth/DesktopLogin';
+import DesktopLogin from '@/pages/auth/DesktopLogin';
 const MyPage = lazy(() => import('@/pages/dashboard/myPage'));
 const HelpPage = lazy(() => import('@/pages/dashboard/help'));
 
-const Home = lazy(() => import('@/pages/_landing/Home'));
-const DownloadPage = lazy(() => import('@/pages/_landing/Download'));
-const ChangelogPage = lazy(() => import('@/pages/_landing/ChangelogPage'));
+const Home = lazy(() => import('@/pages/landing/Home'));
+const DownloadPage = lazy(() => import('@/pages/landing/Download'));
+const ChangelogPage = lazy(() => import('@/pages/landing/ChangelogPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
-const Login = lazy(() => import('@/pages/_auth/Login'));
-const TermsAgreement = lazy(() => import('@/pages/_auth/TermsAgreement'));
+const Login = lazy(() => import('@/pages/auth/Login'));
+const TermsAgreement = lazy(() => import('@/pages/auth/TermsAgreement'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
 const GlobalError = lazy(() => import('@/pages/GlobalError'));
 
-import { AuthCallback } from '@/pages/_auth/authCallback';
-import { ProtectedRoute } from '@/components/features/protectedRoute';
-import { ThemeProvider } from '@/components/features/themeProvider';
+import { AuthCallback } from '@/pages/auth/authCallback';
+import { ProtectedRoute } from '@/components/providers/ProtectedRoute';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { usePwaStore } from './stores/pwaStore';
 import { isTauri, isAppMode } from '@/utils/isTauri';
 import { checkForUpdates, installUpdate } from '@/utils/updater';
@@ -212,10 +212,10 @@ function App() {
       const code = params.get('code');
       if (code) {
         console.log('Tauri Auth Redirect: Converting to Hash...');
-        const newUrl = new URL(window.location.href);
-        newUrl.search = ''; 
-        newUrl.hash = `#/auth/callback?code=${code}`; 
-        window.location.replace(newUrl.toString());
+        // URL의 쿼리 파라미터를 제거하여 깨끗한 상태로 만듭니다. (페이지 리로드 없음)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Router를 사용하여 페이지 리로드 없이 이동하여 IPC 컨텍스트 유실을 방지합니다.
+        router.navigate(`/auth/callback?code=${code}`, { replace: true });
         return;
       }
     }

@@ -192,7 +192,7 @@ export const parseNoteContent = (
       }
     }
 
-    if (timeText && reminderText) {
+    if (timeText) {
       const existingDate = existingRemindersMap.get(originalText);
       const parsedDate = existingDate ?? parseTimeExpression(timeText, baseDate); 
       
@@ -200,7 +200,7 @@ export const parseNoteContent = (
         text: timeText,
         originalText: originalText,
         parsedDate,
-        reminderText,
+        reminderText, // 빈 문자열일 수 있음
       });
     }
   }

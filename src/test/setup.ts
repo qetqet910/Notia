@@ -15,6 +15,27 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// Mock IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  readonly root: Element | null = null;
+  readonly rootMargin: string = '';
+  readonly thresholds: ReadonlyArray<number> = [];
+  
+  constructor(public callback: IntersectionObserverCallback, public options?: IntersectionObserverInit) {}
+  
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() { return []; }
+};
+
 // Mock Notification
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (global as any).Notification = class {

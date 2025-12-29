@@ -4,7 +4,8 @@ import { supabase } from '@/services/supabaseClient';
 import type { User, Session } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types';
 import { formatKey } from '@/utils/keyValidation';
-import { checkCreationLimit } from '@/utils/kegisterValidation';
+import { checkCreationLimit } from '@/utils/registerValidation';
+import { supabase } from '@/services/supabaseClient';
 import { guideNoteContent } from '@/constants/basicNote';
 import { useDataStore } from '@/stores/dataStore';
 import { parseNoteContent } from '@/utils/noteParser'; // 올바른 파서 import

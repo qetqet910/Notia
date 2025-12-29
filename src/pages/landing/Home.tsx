@@ -8,8 +8,8 @@ import FileText from 'lucide-react/dist/esm/icons/file-text';
 
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+import { Header } from '@/components/layout/landing/Header';
+import { Footer } from '@/components/layout/landing/Footer';
 import { LandingEditor } from '@/components/features/landing/LandingEditor';
 import { useAuthStore } from '@/stores/authStore';
 import {

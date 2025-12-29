@@ -24,8 +24,8 @@ import { useToast } from '@/hooks/useToast';
 import { useReminderScheduler } from '@/hooks/useReminderScheduler';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-import { GoalProgress } from '@/components/features/dashboard/goalProgress';
-import { UserProfile } from '@/components/features/dashboard/userProfile';
+import { GoalProgress } from '@/components/features/dashboard/GoalProgress';
+import { UserProfile } from '@/components/features/dashboard/UserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
@@ -64,27 +64,27 @@ import { TimelineLoader } from '@/components/loader/dashboard/TimelineLoader';
 import { NoteListLoader } from '@/components/loader/dashboard/NoteListLoader';
 
 const NoteList = lazy(() =>
-  import('@/components/features/dashboard/noteList').then((module) => ({
+  import('@/components/features/dashboard/NoteList').then((module) => ({
     default: module.NoteList,
   })),
 );
 const Editor = lazy(() =>
-  import('@/components/features/dashboard/main/editor').then((module) => ({
+  import('@/components/features/dashboard/main/Editor').then((module) => ({
     default: module.Editor,
   })),
 );
 const ReminderView = lazy(() =>
-  import('@/components/features/dashboard/main/reminder').then((module) => ({
+  import('@/components/features/dashboard/main/Reminder').then((module) => ({
     default: module.ReminderView,
   })),
 );
 const Calendar = lazy(() =>
-  import('@/components/features/dashboard/main/calendar').then((module) => ({
+  import('@/components/features/dashboard/main/Calendar').then((module) => ({
     default: module.Calendar,
   })),
 );
 const TimelineView = lazy(() =>
-  import('@/components/features/dashboard/main/timelineView').then(
+  import('@/components/features/dashboard/main/TimelineView').then(
     (module) => ({
       default: module.TimelineView,
     }),
