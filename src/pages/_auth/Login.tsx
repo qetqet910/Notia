@@ -236,7 +236,7 @@ export const Login: React.FC = () => {
         transition={{ delay: 0.8, duration: 1 }}
       >
         <p className="text-[10px] text-slate-400 font-semibold tracking-widest uppercase opacity-80 mix-blend-multiply dark:mix-blend-screen">
-          Notia Web v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
+          Notia Web v{import.meta.env.VITE_APP_VERSION}
         </p>
       </motion.div>
     </div>

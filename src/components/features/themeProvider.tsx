@@ -30,12 +30,7 @@ export function ThemeProvider({
   // 경로 기반 테마 적용
   useEffect(() => {
     const root = window.document.documentElement;
-    const isThemedPage =
-      location.pathname.startsWith('/dashboard') ||
-      location.pathname === '/changelog' ||
-      location.pathname === '/download' ||
-      location.pathname === '/login' ||
-      location.pathname === '/terms-agreement';
+    const isThemedPage = location.pathname.startsWith('/dashboard');
 
     // 클래스 변경 함수
     const applyThemeClasses = () => {
