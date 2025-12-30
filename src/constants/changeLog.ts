@@ -2,6 +2,19 @@ import { ChangelogEntry } from '@/types';
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: 'v1.0.2',
+    date: '2025년 12월 30일',
+    userChanges: [
+      { category: '🎨 디자인', description: '테마 설정 UI를 개선하고 다크 모드 스타일 오류를 수정하여 시각적 경험을 다듬었습니다.' },
+      { category: '🐛 버그 수정', description: '로그인 페이지와 다운로드 화면에서 다크 모드가 제대로 적용되지 않던 문제를 해결했습니다.' },
+    ],
+    devChanges: [
+      { category: '🔧 리팩토링', description: 'Structure: 컴포넌트 파일명을 PascalCase로 통일하고 폴더 구조를 재정비하여 리눅스 환경 빌드 안정성을 확보했습니다.' },
+      { category: '🔧 리팩토링', description: 'Import Alias: 상대 경로(../../)를 절대 경로(@/)로 교체하여 코드 베이스를 깔끔하게 정리했습니다.' },
+      { category: '🔧 리팩토링', description: 'Editor Hooks: 복잡한 에디터 로직을 커스텀 훅으로 분리하여 유지보수성을 강화했습니다.' },
+    ],
+  },
+  {
     version: 'v1.0.1',
     date: '2025년 12월 28일',
     userChanges: [
