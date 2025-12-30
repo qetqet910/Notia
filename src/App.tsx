@@ -16,19 +16,19 @@ import {
 import { NotFoundPageLoader } from '@/components/loader/landing/NotFoundPageLoader';
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
 import DesktopLogin from '@/pages/auth/DesktopLogin';
-const MyPage = lazy(() => import('@/pages/dashboard/myPage'));
-const HelpPage = lazy(() => import('@/pages/dashboard/help'));
+const MyPage = lazy(() => import('@/pages/dashboard/MyPage'));
+const HelpPage = lazy(() => import('@/pages/dashboard/HelpPage'));
 
 const Home = lazy(() => import('@/pages/landing/Home'));
 const DownloadPage = lazy(() => import('@/pages/landing/Download'));
 const ChangelogPage = lazy(() => import('@/pages/landing/ChangelogPage'));
-const Dashboard = lazy(() => import('@/pages/dashboard'));
+const Dashboard = lazy(() => import('@/pages/dashboard/Index'));
 const Login = lazy(() => import('@/pages/auth/Login'));
 const TermsAgreement = lazy(() => import('@/pages/auth/TermsAgreement'));
 const NotFound = lazy(() => import('@/pages/NotFoundPage'));
 const GlobalError = lazy(() => import('@/pages/GlobalError'));
 
-import { AuthCallback } from '@/pages/auth/authCallback';
+import { AuthCallback } from '@/pages/auth/AuthCallback';
 import { ProtectedRoute } from '@/components/providers/ProtectedRoute';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { usePwaStore } from './stores/pwaStore';
