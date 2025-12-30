@@ -31,7 +31,7 @@ const GlobalError = lazy(() => import('@/pages/GlobalError'));
 import { AuthCallback } from '@/pages/auth/AuthCallback';
 import { ProtectedRoute } from '@/components/providers/ProtectedRoute';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
-import { usePwaStore } from './stores/pwaStore';
+import { usePwaStore } from '@/stores/pwaStore';
 import { isTauri, isAppMode } from '@/utils/isTauri';
 import { checkForUpdates, installUpdate } from '@/utils/updater';
 import {

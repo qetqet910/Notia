@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Editor } from './editor';
+import { Editor } from '@/components/features/dashboard/main/Editor';
 import { Note } from '@/types';
 import * as noteParser from '@/utils/noteParser';
 

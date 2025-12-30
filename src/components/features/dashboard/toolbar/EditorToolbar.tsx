@@ -27,7 +27,7 @@ import {
   insertLink,
   insertChecklist,
   toggleQuote,
-} from './editorCommands';
+} from '@/components/features/dashboard/toolbar/editorCommands';
 
 interface EditorToolbarProps {
   editorRef: React.RefObject<ReactCodeMirrorRef>;

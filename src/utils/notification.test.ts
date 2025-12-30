@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as notificationUtils from '../utils/notification';
-import * as isTauriModule from '../utils/isTauri';
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
+import * as notificationUtils from '@/utils/notification';
+import * as isTauriModule from '@/utils/isTauri';
 
 // Mock Tauri plugin
 const mockRequestPermission = vi.fn();

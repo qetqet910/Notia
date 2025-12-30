@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as updaterModule from '../utils/updater';
-import * as isTauriModule from '../utils/isTauri';
+import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
+import * as updaterModule from '@/utils/updater';
+import * as isTauriModule from '@/utils/isTauri';
 
 // Mock Updater Plugin
 const mockCheck = vi.fn();

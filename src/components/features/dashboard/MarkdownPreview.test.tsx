@@ -1,4 +1,4 @@
-import { preserveNewlines } from './MarkdownPreview';
+import { preserveNewlines } from '@/components/features/dashboard/MarkdownPreview';
 
 describe('preserveNewlines', () => {
   it('should preserve single newlines', () => {

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { localDB } from '../services/localDB';
-import * as isTauriModule from '../utils/isTauri';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { localDB } from '@/services/localDB';
+import *s isTauriModule from '@/utils/isTauri';
 
 // Mock Tauri SQL Plugin
 const mockExecute = vi.fn();

@@ -1,4 +1,4 @@
-import { parseNoteContent } from './noteParser';
+import { parseNoteContent } from '@/utils/noteParser';
 
 describe('noteParser', () => {
   const baseDate = new Date('2024-03-20T10:00:00'); // 수요일

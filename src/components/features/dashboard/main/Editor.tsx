@@ -66,7 +66,7 @@ import {
 import { EditorToolbar } from '@/components/features/dashboard/toolbar/EditorToolbar';
 import { codeMirrorTheme } from '@/components/features/dashboard/editorTheme';
 import { checkboxPlugin } from '@/components/features/dashboard/main/checkboxPlugin';
-import { createSlashCommandCompletion } from './slashCommand';
+import { createSlashCommandCompletion } from '@/components/features/dashboard/main/slashCommand';
 import { useImageUpload } from '@/hooks/editor/useImageUpload';
 import { useScrollSync } from '@/hooks/editor/useScrollSync';
 

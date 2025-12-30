@@ -1,4 +1,4 @@
-import { isTauri } from './isTauri';
+import { isTauri } from '@/utils/isTauri';
 import { isPermissionGranted, requestPermission as requestTauriPermission, sendNotification as sendTauriNotification } from '@tauri-apps/plugin-notification';
 
 export const requestPermission = async (): Promise<NotificationPermission> => {
