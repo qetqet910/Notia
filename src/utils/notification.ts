@@ -21,7 +21,7 @@ export const checkPermission = async (): Promise<NotificationPermission> => {
   }
 };
 
-export const sendNotification = async (title: string, body?: string) => {
+export const sendNotification = async (title: string, body?: string, url?: string, tag?: string) => {
   if (await checkPermission() !== 'granted') {
     // Try requesting permission
     const permission = await requestPermission();
@@ -31,6 +31,14 @@ export const sendNotification = async (title: string, body?: string) => {
   if (isTauri()) {
     sendTauriNotification({ title, body });
   } else {
-    new Notification(title, { body, icon: '/favicon/favicon.ico' });
+    const notification = new Notification(title, { body, icon: '/favicon/favicon.ico', tag });
+    notification.onclick = (event) => {
+      event.preventDefault(); // prevent the browser from focusing the Notification's tab
+      window.focus();
+      if (url) {
+        window.location.href = url;
+      }
+      notification.close();
+    };
   }
 };

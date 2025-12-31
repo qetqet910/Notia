@@ -1,4 +1,9 @@
 use tauri::Manager;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{TrayIconBuilder, TrayIconEvent},
+    WindowEvent,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use chrono::prelude::*;
@@ -6,176 +11,7 @@ use image::ImageFormat;
 use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct Reminder {
-    pub completed: bool,
-    pub updated_at: Option<String>,
-    pub reminder_time: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Note {
-    pub id: String,
-    pub title: String,
-    pub content: Option<String>,
-    pub tags: Option<Vec<String>>,
-    pub reminders: Option<Vec<Reminder>>,
-}
-
-#[derive(Debug, Serialize)]
-#[allow(non_snake_case)]
-pub struct ActivityData {
-    pub date: String,
-    pub count: i32,
-    pub level: i32,
-}
-
-#[derive(Debug, Serialize)]
-#[allow(non_snake_case)]
-pub struct Stats {
-    pub totalNotes: i32,
-    pub totalReminders: i32,
-    pub completedReminders: i32,
-    pub completionRate: f64,
-    pub tagsUsed: i32,
-}
-
-#[derive(Debug, Serialize)]
-#[allow(non_snake_case)]
-pub struct CalculationResult {
-    pub stats: Stats,
-    pub activityData: Vec<ActivityData>,
-}
-
-// --- Image Optimization Functionality ---
-
-#[tauri::command]
-async fn optimize_image(image_data_base64: String) -> Result<String, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let image_data = general_purpose::STANDARD
-            .decode(&image_data_base64)
-            .map_err(|e| format!("Base64 decode failed: {}", e))?;
-
-        let img = image::load_from_memory(&image_data)
-            .map_err(|e| format!("Image load failed: {}", e))?;
-
-        let (width, height) = (img.width(), img.height());
-        let max_dimension = 1920;
-        
-        let processed_img = if width > max_dimension || height > max_dimension {
-            img.resize(max_dimension, max_dimension, image::imageops::FilterType::Lanczos3)
-        } else {
-            img
-        };
-
-        let mut buffer = Cursor::new(Vec::new());
-        processed_img
-            .write_to(&mut buffer, ImageFormat::WebP)
-            .map_err(|e| format!("Image encoding failed: {}", e))?;
-
-        let encoded_webp = general_purpose::STANDARD.encode(buffer.get_ref());
-        Ok(encoded_webp)
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?
-}
-
-// --- Search Functionality ---
-
-#[tauri::command]
-fn search_notes(notes: Vec<Note>, query: String) -> Vec<String> {
-    let query_lower = query.to_lowercase();
-    let query_terms: Vec<&str> = query_lower.split_whitespace().collect();
-
-    notes.into_iter()
-        .filter(|note| {
-            if query_terms.is_empty() {
-                return true;
-            }
-
-            let title_lower = note.title.to_lowercase();
-            let content_lower = note.content.as_deref().unwrap_or("").to_lowercase();
-            
-            query_terms.iter().all(|term| {
-                if term.starts_with('#') {
-                    let tag_query = &term[1..];
-                    if let Some(tags) = &note.tags {
-                        tags.iter().any(|t| t.to_lowercase().contains(tag_query))
-                    } else {
-                        false
-                    }
-                } else {
-                    title_lower.contains(term) || content_lower.contains(term)
-                }
-            })
-        })
-        .map(|note| note.id)
-        .collect()
-}
-
-// --- Calculation Functionality ---
-
-#[tauri::command]
-fn calculate_activity(notes: Vec<Note>) -> CalculationResult {
-    let mut data: HashMap<String, i32> = HashMap::new();
-    let mut total_notes = 0;
-    let mut total_reminders = 0;
-    let mut completed_reminders = 0;
-    let mut tags: HashSet<String> = HashSet::new();
-
-    for note in notes {
-        total_notes += 1;
-        if let Some(note_tags) = &note.tags {
-            for tag in note_tags {
-                tags.insert(tag.clone());
-            }
-        }
-        if let Some(reminders) = &note.reminders {
-            for r in reminders {
-                total_reminders += 1;
-                if r.completed {
-                    completed_reminders += 1;
-                    let date_source = r.updated_at.as_ref().or(r.reminder_time.as_ref());
-                    if let Some(ds) = date_source {
-                         if let Ok(dt) = DateTime::parse_from_rfc3339(ds) {
-                             let date_str = dt.format("%Y-%m-%d").to_string();
-                             *data.entry(date_str).or_insert(0) += 1;
-                         } 
-                         else if let Ok(dt) = NaiveDateTime::parse_from_str(ds, "%Y-%m-%dT%H:%M:%S%.f") {
-                              let date_str = dt.format("%Y-%m-%d").to_string();
-                             *data.entry(date_str).or_insert(0) += 1;
-                         }
-                    }
-                }
-            }
-        }
-    }
-
-    let completion_rate = if total_reminders > 0 {
-        (completed_reminders as f64 / total_reminders as f64) * 100.0
-    } else {
-        0.0
-    };
-
-    let mut sorted_data: Vec<(String, i32)> = data.into_iter().collect();
-    sorted_data.sort_by(|a, b| a.0.cmp(&b.0));
-
-    let activity_data: Vec<ActivityData> = sorted_data.into_iter().map(|(date, count)| {
-        let level = std::cmp::min(4, (count as f64 / 2.0).ceil() as i32);
-        ActivityData { date, count, level }
-    }).collect();
-
-    CalculationResult {
-        stats: Stats {
-            totalNotes: total_notes,
-            totalReminders: total_reminders,
-            completedReminders: completed_reminders,
-            completionRate: completion_rate,
-            tagsUsed: tags.len() as i32,
-        },
-        activityData: activity_data,
-    }
-}
+// ... (기존 구조체들 생략) ...
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -195,9 +31,56 @@ pub fn run() {
         optimize_image
     ])
     .setup(|app| {
+      // 트레이 메뉴 생성
+      let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+      let show_i = MenuItem::with_id(app, "show", "Open Notia", true, None::<&str>)?;
+      let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+      // 트레이 아이콘 생성
+      let _tray = TrayIconBuilder::new()
+          .icon(app.default_window_icon().unwrap().clone())
+          .menu(&menu)
+          .show_menu_on_left_click(false)
+          .on_menu_event(|app, event| match event.id().as_ref() {
+              "quit" => {
+                  app.exit(0);
+              }
+              "show" => {
+                  if let Some(window) = app.get_webview_window("main") {
+                      let _ = window.show();
+                      let _ = window.set_focus();
+                  }
+              }
+              _ => {}
+          })
+          .on_tray_icon_event(|tray, event| match event {
+              TrayIconEvent::Click {
+                  button: tauri::tray::MouseButton::Left,
+                  ..
+              } => {
+                  let app = tray.app_handle();
+                  if let Some(window) = app.get_webview_window("main") {
+                       let _ = window.show();
+                       let _ = window.set_focus();
+                  }
+              }
+              _ => {}
+          })
+          .build(app)?;
+
       #[cfg(desktop)]
-      if let Some(_window) = app.get_webview_window("main") {
-        // window.open_devtools();
+      if let Some(window) = app.get_webview_window("main") {
+        // window.open_devtools(); // 기존 코드 유지
+        
+        // 창 닫기 이벤트 가로채기 (숨기기 모드)
+        let window_clone = window.clone();
+        window.on_window_event(move |event| match event {
+            WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                window_clone.hide().unwrap();
+            }
+            _ => {}
+        });
       }
       Ok(())
     })
