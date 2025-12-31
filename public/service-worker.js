@@ -1,5 +1,4 @@
 // public/service-worker.js
-// 가장 단순한 형태의 테스트용 서비스 워커
 
 self.addEventListener('push', (event) => {
   if (!event.data) {
@@ -7,34 +6,84 @@ self.addEventListener('push', (event) => {
     return;
   }
 
-  try {
-    const data = event.data.json();
-    const title = data.title || 'Notia';
-    const options = {
-      body: data.body,
-      icon: '/favicon/android-chrome-192x192.png',
-      badge: '/favicon/favicon-16x16.png',
-      data: {
-        url: data.url || '/',
-      },
-    };
+  // 앱이 열려있는지 확인 (중복 알림 방지)
+  const checkAppOpen = async () => {
+    const clientList = await clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    });
+    
+    // 클라이언트 창이 하나라도 있으면 알림을 표시하지 않음 (useReminderScheduler가 처리)
+    if (clientList.length > 0) {
+      console.log('App is open, suppressing push notification to avoid duplicate.');
+      return;
+    }
 
-    event.waitUntil(self.registration.showNotification(title, options));
-  } catch (e) {
-    console.error('Error processing push event:', e);
-    // 데이터 파싱 실패 시 기본 알림 표시
-    const title = '새로운 알림 (테스트 알림)';
-    const options = {
-      body: '새로운 알림이 도착했습니다. (테스트 알림)',
-      icon: '/favicon/android-chrome-192x192.png',
-    };
-    event.waitUntil(self.registration.showNotification(title, options));
-  }
+    try {
+      const data = event.data.json();
+      const title = data.title || 'Notia';
+      const options = {
+        body: data.body,
+        icon: '/favicon/android-chrome-192x192.png',
+        badge: '/favicon/favicon-16x16.png',
+        tag: data.tag || data.id || data.url || 'notia-notification', // 태그를 설정하여 중복 방지
+        data: {
+          url: data.url || '/',
+        },
+      };
+
+      await self.registration.showNotification(title, options);
+    } catch (e) {
+      console.error('Error processing push event:', e);
+      const title = '새로운 알림';
+      const options = {
+        body: '새로운 알림이 도착했습니다.',
+        icon: '/favicon/android-chrome-192x192.png',
+      };
+      await self.registration.showNotification(title, options);
+    }
+  };
+
+  event.waitUntil(checkAppOpen());
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  if (event.notification.data && event.notification.data.url) {
-    event.waitUntil(clients.openWindow(event.notification.data.url));
-  }
+
+  const openUrl = async () => {
+    let urlToOpen = '/';
+    
+    if (event.notification.data && event.notification.data.url) {
+      try {
+        // 들어온 URL이 절대 경로(http...)일 경우, 현재 Origin에 맞게 Path만 추출
+        const incomingUrl = new URL(event.notification.data.url, self.location.origin);
+        urlToOpen = incomingUrl.pathname + incomingUrl.search;
+      } catch (e) {
+        // URL 파싱 실패 시, 들어온 문자열이 상대 경로라면 그대로 사용
+        urlToOpen = event.notification.data.url;
+      }
+    }
+
+    // 이미 열린 창이 있는지 확인
+    const clientList = await clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    });
+
+    // 이미 열린 창이 있으면 그 창으로 포커스 및 이동
+    for (const client of clientList) {
+      if (client.url && 'focus' in client) {
+        await client.focus();
+        await client.navigate(urlToOpen);
+        return;
+      }
+    }
+
+    // 열린 창이 없으면 새 창 열기 (상대 경로로 열리며 현재 Origin을 따름)
+    if (clients.openWindow) {
+      await clients.openWindow(urlToOpen);
+    }
+  };
+
+  event.waitUntil(openUrl());
 });

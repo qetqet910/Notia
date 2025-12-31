@@ -47,17 +47,25 @@ export const useReminderScheduler = () => {
              console.log('[Scheduler] Match found:', reminder.reminder_text, 'ID:', reminder.id, 'Diff:', diffSeconds);
              if (!notifiedIds.current.has(reminder.id)) {
                 console.log('[Scheduler] Sending notification for:', reminder.reminder_text);
+                
+                // 1. Always send system notification (User allowed simultaneous notifications)
+                // This ensures the notification is in the notification center even if the user is looking at the app but misses the toast
+                sendNotification(
+                  `리마인더: ${note.title}`,
+                  reminder.reminder_text,
+                  `/dashboard?noteId=${note.id}`,
+                  reminder.id
+                );
+
+                // 2. If app is focused, also show in-app toast for better visibility
                 if (isFocused) {
-                  // App is focused: Show beautiful in-app toast
                   toast({
                     title: `⏰ 리마인더: ${note.title}`,
                     description: reminder.reminder_text,
                     duration: 5000,
                   });
-                } else {
-                  // App is hidden: Show system notification
-                  sendNotification(`리마인더: ${note.title}`, reminder.reminder_text);
                 }
+                
                 notifiedIds.current.add(reminder.id);
              } else {
                // Log suppressed
