@@ -11,14 +11,14 @@ use image::ImageFormat;
 use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Reminder {
     pub completed: bool,
     pub updated_at: Option<String>,
     pub reminder_time: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Note {
     pub id: String,
     pub title: String,
@@ -27,58 +27,128 @@ pub struct Note {
     pub reminders: Option<Vec<Reminder>>,
 }
 
-#[derive(Serialize)]
-struct Stats {
-    totalNotes: usize,
-    totalReminders: usize,
-    completedReminders: usize,
-    completionRate: f64,
-    tagsUsed: usize,
+#[derive(Debug, Serialize)]
+#[allow(non_snake_case)]
+pub struct ActivityData {
+    pub date: String,
+    pub count: i32,
+    pub level: i32,
 }
 
-#[derive(Serialize)]
-struct ActivityData {
-    date: String,
-    count: usize,
-    level: usize,
+#[derive(Debug, Serialize)]
+#[allow(non_snake_case)]
+pub struct Stats {
+    pub totalNotes: i32,
+    pub totalReminders: i32,
+    pub completedReminders: i32,
+    pub completionRate: f64,
+    pub tagsUsed: i32,
 }
 
-#[derive(Serialize)]
-struct ActivityResult {
-    stats: Stats,
-    activityData: Vec<ActivityData>,
+#[derive(Debug, Serialize)]
+#[allow(non_snake_case)]
+pub struct CalculationResult {
+    pub stats: Stats,
+    pub activityData: Vec<ActivityData>,
 }
+
+// --- Image Optimization Functionality ---
 
 #[tauri::command]
-fn calculate_activity(notes: Vec<Note>) -> ActivityResult {
-    let mut data = HashMap::new();
+async fn optimize_image(image_data_base64: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let image_data = general_purpose::STANDARD
+            .decode(&image_data_base64)
+            .map_err(|e| format!("Base64 decode failed: {}", e))?;
+
+        let img = image::load_from_memory(&image_data)
+            .map_err(|e| format!("Image load failed: {}", e))?;
+
+        let (width, height) = (img.width(), img.height());
+        let max_dimension = 1920;
+        
+        let processed_img = if width > max_dimension || height > max_dimension {
+            img.resize(max_dimension, max_dimension, image::imageops::FilterType::Lanczos3)
+        } else {
+            img
+        };
+
+        let mut buffer = Cursor::new(Vec::new());
+        processed_img
+            .write_to(&mut buffer, ImageFormat::WebP)
+            .map_err(|e| format!("Image encoding failed: {}", e))?;
+
+        let encoded_webp = general_purpose::STANDARD.encode(buffer.get_ref());
+        Ok(encoded_webp)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+// --- Search Functionality ---
+
+#[tauri::command]
+fn search_notes(notes: Vec<Note>, query: String) -> Vec<String> {
+    let query_lower = query.to_lowercase();
+    let query_terms: Vec<&str> = query_lower.split_whitespace().collect();
+
+    notes.into_iter()
+        .filter(|note| {
+            if query_terms.is_empty() {
+                return true;
+            }
+
+            let title_lower = note.title.to_lowercase();
+            let content_lower = note.content.as_deref().unwrap_or("").to_lowercase();
+            
+            query_terms.iter().all(|term| {
+                if term.starts_with('#') {
+                    let tag_query = &term[1..];
+                    if let Some(tags) = &note.tags {
+                        tags.iter().any(|t| t.to_lowercase().contains(tag_query))
+                    } else {
+                        false
+                    }
+                } else {
+                    title_lower.contains(term) || content_lower.contains(term)
+                }
+            })
+        })
+        .map(|note| note.id)
+        .collect()
+}
+
+// --- Calculation Functionality ---
+
+#[tauri::command]
+fn calculate_activity(notes: Vec<Note>) -> CalculationResult {
+    let mut data: HashMap<String, i32> = HashMap::new();
     let mut total_notes = 0;
     let mut total_reminders = 0;
     let mut completed_reminders = 0;
-    let mut tags = HashSet::new();
+    let mut tags: HashSet<String> = HashSet::new();
 
-    for note in &notes {
+    for note in notes {
         total_notes += 1;
         if let Some(note_tags) = &note.tags {
             for tag in note_tags {
-                tags.insert(tag);
+                tags.insert(tag.clone());
             }
         }
-        
         if let Some(reminders) = &note.reminders {
             for r in reminders {
                 total_reminders += 1;
                 if r.completed {
                     completed_reminders += 1;
                     let date_source = r.updated_at.as_ref().or(r.reminder_time.as_ref());
-                    if let Some(date_str) = date_source {
-                         // Try parsing with timezone first, then fallback to naive
-                         if let Ok(dt) = DateTime::parse_from_rfc3339(date_str) {
-                             let date_key = dt.format("%Y-%m-%d").to_string();
-                             *data.entry(date_key).or_insert(0) += 1;
-                         } else if let Ok(dt) = NaiveDateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S") {
-                             let date_key = dt.format("%Y-%m-%d").to_string();
-                             *data.entry(date_key).or_insert(0) += 1;
+                    if let Some(ds) = date_source {
+                         if let Ok(dt) = DateTime::parse_from_rfc3339(ds) {
+                             let date_str = dt.format("%Y-%m-%d").to_string();
+                             *data.entry(date_str).or_insert(0) += 1;
+                         } 
+                         else if let Ok(dt) = NaiveDateTime::parse_from_str(ds, "%Y-%m-%dT%H:%M:%S%.f") {
+                              let date_str = dt.format("%Y-%m-%d").to_string();
+                             *data.entry(date_str).or_insert(0) += 1;
                          }
                     }
                 }
@@ -92,73 +162,23 @@ fn calculate_activity(notes: Vec<Note>) -> ActivityResult {
         0.0
     };
 
-    let mut sorted_data: Vec<(String, usize)> = data.into_iter().collect();
+    let mut sorted_data: Vec<(String, i32)> = data.into_iter().collect();
     sorted_data.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let activity_data = sorted_data.into_iter().map(|(date, count)| {
-        ActivityData {
-            date,
-            count,
-            level: (count as f64 / 2.0).ceil().min(4.0) as usize,
-        }
+    let activity_data: Vec<ActivityData> = sorted_data.into_iter().map(|(date, count)| {
+        let level = std::cmp::min(4, (count as f64 / 2.0).ceil() as i32);
+        ActivityData { date, count, level }
     }).collect();
 
-    ActivityResult {
+    CalculationResult {
         stats: Stats {
             totalNotes: total_notes,
             totalReminders: total_reminders,
             completedReminders: completed_reminders,
             completionRate: completion_rate,
-            tagsUsed: tags.len(),
+            tagsUsed: tags.len() as i32,
         },
         activityData: activity_data,
-    }
-}
-
-#[tauri::command]
-fn search_notes(notes: Vec<Note>, query: String) -> Vec<String> {
-    let query = query.to_lowercase();
-    notes.into_iter()
-        .filter(|note| {
-            note.title.to_lowercase().contains(&query) ||
-            note.content.as_ref().map_or(false, |c| c.to_lowercase().contains(&query))
-        })
-        .map(|note| note.id)
-        .collect()
-}
-
-#[tauri::command]
-fn optimize_image(img_data: String) -> Result<String, String> {
-    let (header, b64_data) = if let Some(idx) = img_data.find(',') {
-        (&img_data[..idx+1], &img_data[idx+1..])
-    } else {
-        ("", img_data.as_str())
-    };
-
-    let decoded = general_purpose::STANDARD.decode(b64_data).map_err(|e| e.to_string())?;
-    
-    let img = image::load_from_memory(&decoded).map_err(|e| e.to_string())?;
-    
-    // Resize if too large (e.g., > 1200px width)
-    let img = if img.width() > 1200 {
-        img.resize(1200, 1200, image::imageops::FilterType::Lanczos3)
-    } else {
-        img
-    };
-
-    let mut buffer = Cursor::new(Vec::new());
-    // Convert to WebP for optimization if possible, or keep PNG/JPEG
-    // Here we enforce PNG for safety and transparency support
-    img.write_to(&mut buffer, ImageFormat::Png).map_err(|e| e.to_string())?;
-    
-    let encoded = general_purpose::STANDARD.encode(buffer.into_inner());
-    
-    // Ensure we return a valid Data URL
-    if !header.is_empty() {
-        // Force PNG header since we converted to PNG
-        Ok(format!("data:image/png;base64,{}", encoded))
-    } else {
-        Ok(encoded)
     }
 }
 
