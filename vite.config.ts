@@ -75,6 +75,9 @@ export default defineConfig(({ mode }) => {
             { src: 'favicon/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
           ],
         },
+        workbox: {
+          importScripts: ['push-sw.js']
+        }
       })
     );
   }
@@ -92,6 +95,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_PLATFORM': JSON.stringify(env.VITE_PLATFORM || ''),
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
+      'import.meta.env.VITE_VAPID_PUBLIC_KEY': JSON.stringify(env.VITE_VAPID_PUBLIC_KEY),
     },
     
     plugins: [
@@ -99,7 +103,7 @@ export default defineConfig(({ mode }) => {
       {
         name: 'html-env-injection',
         transformIndexHtml(html) {
-          const envScript = `<script>window.__ENV__ = { VITE_SUPABASE_URL: ${JSON.stringify(env.VITE_SUPABASE_URL)}, VITE_SUPABASE_ANON_KEY: ${JSON.stringify(env.VITE_SUPABASE_ANON_KEY)} };</script>`;
+          const envScript = `<script>window.__ENV__ = { VITE_SUPABASE_URL: ${JSON.stringify(env.VITE_SUPABASE_URL)}, VITE_SUPABASE_ANON_KEY: ${JSON.stringify(env.VITE_SUPABASE_ANON_KEY)}, VITE_VAPID_PUBLIC_KEY: ${JSON.stringify(env.VITE_VAPID_PUBLIC_KEY)} };</script>`;
           // Tauri 환경에서는 서비스 워커를 강제로 해제하는 스크립트 주입
           const swKiller = isTauri ? `
             <script>

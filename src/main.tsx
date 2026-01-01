@@ -1,4 +1,7 @@
-import '@/styles/global.css';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import './styles/global.css';
 import { isTauri } from '@/utils/isTauri';
 
 // --- Global Error Handlers (Must be first) ---
@@ -64,30 +67,6 @@ window.onunhandledrejection = function (event) {
   `;
 };
 
-/**
- * 서비스 워커를 등록합니다.
- */
-function registerServiceWorker() {
-  // Tauri 환경에서는 서비스 워커를 절대 등록하지 않습니다.
-  if (isTauri()) {
-    console.log('[Security] Tauri environment detected. Blocking ServiceWorker registration.');
-    return;
-  }
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('/service-worker.js')
-        .then((registration) => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        })
-        .catch((err) => {
-          console.log('ServiceWorker registration failed: ', err);
-        });
-    });
-  }
-}
-
 // 모든 플랫폼 모듈을 정적으로 임포트
 import * as webPlatform from '@/platforms/web/index.tsx';
 import * as webappPlatform from '@/platforms/webapp/index.tsx';
@@ -139,9 +118,6 @@ async function initializeApp(): Promise<void> { // async 유지 (service worker 
       platform: import.meta.env.VITE_PLATFORM || 'web',
       mode: import.meta.env.MODE
     });
-
-    // 서비스 워커 등록 코드를 다시 추가합니다.
-    registerServiceWorker();
 
     // 1. 플랫폼 결정
     const platform = import.meta.env.VITE_PLATFORM || 'web';

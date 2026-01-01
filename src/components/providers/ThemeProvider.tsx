@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useLocation } from 'react-router-dom';
 
 type ThemeProviderProps = {
@@ -11,9 +12,16 @@ export function ThemeProvider({
   children,
   defaultTheme = 'system',
 }: ThemeProviderProps) {
-  const { isDarkMode, isDeepDarkMode, setTheme, updateThemeFromSystem } =
-    useThemeStore();
-
+  const { 
+    isDarkMode, 
+    isDeepDarkMode, 
+    setTheme, 
+    updateThemeFromSystem,
+    fontFamily,
+    loadFontSettings
+  } = useThemeStore();
+  
+  const { user } = useAuthStore();
   const location = useLocation();
 
   // 초기화 시 기본 테마 설정
@@ -22,10 +30,39 @@ export function ThemeProvider({
     if (!savedTheme) {
       setTheme(defaultTheme);
     } else {
-      // 앱이 처음 로드될 때 시스템 테마 업데이트 수행
       updateThemeFromSystem();
     }
   }, [defaultTheme, setTheme, updateThemeFromSystem]);
+
+  // 유저 로그인 시 폰트 설정 로드
+  useEffect(() => {
+    if (user) {
+      loadFontSettings(user.id);
+    }
+  }, [user, loadFontSettings]);
+
+  // 폰트 적용 (대시보드 진입 시에만 사용자 설정 폰트 적용)
+  useEffect(() => {
+    const isThemedPage = location.pathname.startsWith('/dashboard');
+    
+    if (isThemedPage) {
+      // 대시보드: 사용자 설정 폰트 적용
+      document.body.style.fontFamily = `"${fontFamily}", sans-serif`;
+      
+      const formElements = document.querySelectorAll('input, button, textarea, select, pre, code');
+      formElements.forEach((el) => {
+        (el as HTMLElement).style.fontFamily = `"${fontFamily}", sans-serif`;
+      });
+    } else {
+      // 랜딩 페이지: 기본 폰트(Orbit)로 복구
+      document.body.style.fontFamily = '"Orbit", sans-serif';
+      
+      const formElements = document.querySelectorAll('input, button, textarea, select, pre, code');
+      formElements.forEach((el) => {
+        (el as HTMLElement).style.fontFamily = '"Orbit", sans-serif';
+      });
+    }
+  }, [fontFamily, location.pathname]);
 
   // 경로 기반 테마 적용
   useEffect(() => {

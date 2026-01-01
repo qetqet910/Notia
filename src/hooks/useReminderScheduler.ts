@@ -18,17 +18,6 @@ export const useReminderScheduler = () => {
     const checkReminders = async () => {
       const notes = useDataStore.getState().notes; // Access latest state directly
       const now = new Date();
-      let isFocused = true;
-
-      if (isTauri()) {
-        try {
-          isFocused = await getCurrentWindow().isFocused();
-        } catch (e) {
-          console.error('Failed to check window focus:', e);
-        }
-      } else {
-        isFocused = document.hasFocus();
-      }
       
       Object.values(notes).forEach((note) => {
         if (!note.reminders) return;
@@ -57,14 +46,7 @@ export const useReminderScheduler = () => {
                   reminder.id
                 );
 
-                // 2. If app is focused, also show in-app toast for better visibility
-                if (isFocused) {
-                  toast({
-                    title: `⏰ 리마인더: ${note.title}`,
-                    description: reminder.reminder_text,
-                    duration: 5000,
-                  });
-                }
+                // Toast notification removed per user request for consistency
                 
                 notifiedIds.current.add(reminder.id);
              } else {

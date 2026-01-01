@@ -79,6 +79,11 @@
     />
     <link rel="manifest" href="/favicon/site.webmanifest" />
 
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Diphylleia&family=Do+Hyeon&family=Gowun+Batang&family=Jua&family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet">
+
     <!-- Preload -->
     <link
       rel="preload"
@@ -111,15 +116,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Notia" />
     <script>
-      // Tauri 환경에서 서비스 워커 강제 해제 (캐시 문제 해결)
-      if (typeof window !== 'undefined' && (window.__TAURI_INTERNALS__ || window.__TAURI__)) {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for (var i = 0; i < registrations.length; i++) {
-              registrations[i].unregister();
-            }
-          });
-        }
+      // [Critical Fix] Force unregister Service Workers to resolve MIME type errors (stale cache serving index.html for assets)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var i = 0; i < registrations.length; i++) {
+            console.warn('Force unregistering stuck Service Worker:', registrations[i]);
+            registrations[i].unregister();
+          }
+        });
       }
       (function() {
         try {

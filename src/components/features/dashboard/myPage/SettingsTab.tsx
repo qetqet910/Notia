@@ -9,6 +9,7 @@ import Goal from 'lucide-react/dist/esm/icons/goal';
 import Save from 'lucide-react/dist/esm/icons/save';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import Send from 'lucide-react/dist/esm/icons/send';
+import Type from 'lucide-react/dist/esm/icons/type';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/useToast';
 import { useAuthStore } from '@/stores/authStore';
@@ -50,9 +51,30 @@ export const SettingsTab: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const { signOut, user, deleteAccount } = useAuthStore();
   const { notes, createNote } = useDataStore();
-  const { theme, setTheme } = useThemeStore();
+  const { theme, setTheme, fontFamily, setFontFamily } = useThemeStore();
   const { goalStats, updateUserGoals } = useNotes();
   const { permission, requestPermission } = useNotificationPermission();
+  
+  const [fontLoading, setFontLoading] = useState(false);
+
+  const handleFontChange = async (value: string) => {
+    setFontLoading(true);
+    try {
+      await setFontFamily(value);
+      toast({
+        title: '폰트 변경됨',
+        description: `폰트가 '${value}'(으)로 변경되었습니다.`,
+      });
+    } catch (error) {
+       toast({
+        title: '변경 실패',
+        description: '폰트 설정을 저장하지 못했습니다.',
+        variant: 'destructive',
+      });
+    } finally {
+      setFontLoading(false);
+    }
+  };
 
   const [updateStatus, setUpdateStatus] = useState<{
     checking: boolean;
@@ -205,9 +227,32 @@ export const SettingsTab: React.FC = React.memo(() => {
   );
 
   const handleSignOut = useCallback(async () => {
-    await signOut();
-    navigate('/');
-  }, [signOut, navigate]);
+    try {
+      const result = await signOut();
+      if (result.success) {
+        toast({
+          title: '로그아웃 성공',
+          description: '성공적으로 로그아웃되었습니다.',
+        });
+        // 테마를 라이트 모드로 초기화 (선택 사항)
+        setTheme('light');
+        navigate(isTauri() ? '/' : '/login');
+      } else {
+        throw result.error || new Error('로그아웃 실패');
+      }
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+      toast({
+        title: '로그아웃 실패',
+        description: error instanceof Error ? error.message : '로그아웃 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+      // 실패하더라도 로그인 페이지로 이동 시도
+      setTimeout(() => {
+        navigate(isTauri() ? '/' : '/login');
+      }, 100);
+    }
+  }, [signOut, navigate, toast, setTheme]);
 
   const handleDeleteAccount = useCallback(async () => {
     setIsDeletingAccount(true); // Set loading true
@@ -326,7 +371,7 @@ export const SettingsTab: React.FC = React.memo(() => {
         <CardHeader>
           <CardTitle>테마</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Palette className="h-5 w-5 text-muted-foreground" />
@@ -343,6 +388,29 @@ export const SettingsTab: React.FC = React.memo(() => {
                 <SelectItem value="dark">다크</SelectItem>
                 <SelectItem value="deepdark">딥다크</SelectItem>
                 <SelectItem value="system">시스템 설정</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Type className="h-5 w-5 text-muted-foreground" />
+              <Label htmlFor="font-select" className="font-medium">
+                글꼴 선택
+              </Label>
+            </div>
+            <Select value={fontFamily} onValueChange={handleFontChange} disabled={fontLoading}>
+              <SelectTrigger className="w-[180px]">
+                {fontLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                <SelectValue placeholder="글꼴 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Noto Sans KR" style={{ fontFamily: 'Noto Sans KR, sans-serif' }}>본고딕 (기본)</SelectItem>
+                <SelectItem value="Jua" style={{ fontFamily: 'Jua, sans-serif' }}>주아</SelectItem>
+                <SelectItem value="Do Hyeon" style={{ fontFamily: 'Do Hyeon, sans-serif' }}>도현</SelectItem>
+                <SelectItem value="Black Han Sans" style={{ fontFamily: 'Black Han Sans, sans-serif' }}>검은한산스</SelectItem>
+                <SelectItem value="Gowun Batang" style={{ fontFamily: 'Gowun Batang, serif' }}>고운바탕</SelectItem>
+                <SelectItem value="Diphylleia" style={{ fontFamily: 'Diphylleia, serif' }}>디필레아</SelectItem>
               </SelectContent>
             </Select>
           </div>

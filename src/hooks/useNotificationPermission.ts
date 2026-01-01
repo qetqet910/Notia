@@ -28,7 +28,15 @@ export const useNotificationPermission = () => {
 
   useEffect(() => {
     // 컴포넌트 마운트 시 현재 권한 상태를 확인
-    checkPermission().then(setPermission);
+    const checkAndSubscribe = async () => {
+      const status = await checkPermission();
+      setPermission(status);
+      if (status === 'granted') {
+        // 이미 권한이 허용되어 있다면, DB와 구독 정보를 동기화합니다.
+        await subscribeUserToPush();
+      }
+    };
+    checkAndSubscribe();
   }, []);
 
   /**

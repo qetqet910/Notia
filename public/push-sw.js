@@ -6,19 +6,8 @@ self.addEventListener('push', (event) => {
     return;
   }
 
-  // 앱이 열려있는지 확인 (중복 알림 방지)
-  const checkAppOpen = async () => {
-    const clientList = await clients.matchAll({
-      type: 'window',
-      includeUncontrolled: true,
-    });
-    
-    // 클라이언트 창이 하나라도 있으면 알림을 표시하지 않음 (useReminderScheduler가 처리)
-    if (clientList.length > 0) {
-      console.log('App is open, suppressing push notification to avoid duplicate.');
-      return;
-    }
-
+  // 앱이 열려있어도 알림을 무조건 표시 (사용자 요청: 일관된 알림 경험)
+  const showPushNotification = async () => {
     try {
       const data = event.data.json();
       const title = data.title || 'Notia';
@@ -44,7 +33,7 @@ self.addEventListener('push', (event) => {
     }
   };
 
-  event.waitUntil(checkAppOpen());
+  event.waitUntil(showPushNotification());
 });
 
 self.addEventListener('notificationclick', (event) => {
