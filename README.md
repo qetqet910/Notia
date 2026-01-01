@@ -1,6 +1,6 @@
 <br/>
 <p align="center">
-  <img src="./src/assets/images/Logo.png" alt="Notia Logo" width="120">
+  <img src="./src/assets/images/Logo.png" alt="Notia Logo" width="240">
 </p>
 
 <p align="center">
@@ -102,13 +102,6 @@ cargo test
 
 <br>
 
-#### 잡담
-
-- 개선사항 매우 환영 [Contributing](./CONTRIBUTING.md) 
-LICENSE [BSD-2-Clause license](./LICENSE)
-
-<br>
-
 ## 🛡️ Security & Signing Policy
 
 Notia는 사용자의 보안과 신뢰를 최우선으로 생각합니다. 본 프로젝트는 [SignPath Foundation](https://signpath.org/)의 지원을 받아 코드 서명을 진행할 예정이며, 다음과 같은 보안 정책을 준수합니다.
@@ -129,4 +122,7 @@ Notia는 사용자의 개인정보를 최소한으로 수집하며, 다음과 �
 - **Third-party**: 수집된 데이터는 제3자에게 판매하거나 제공되지 않습니다.
 - **Local Storage**: 일부 설정값은 최적의 사용자 경험을 위해 브라우저 또는 앱의 로컬 스토리지에 저장될 수 있습니다.
 
-  
+<br>
+
+- 개선사항 매우 환영 [Contributing](./CONTRIBUTING.md)
+  LICENSE [BSD-2-Clause license](./LICENSE)
