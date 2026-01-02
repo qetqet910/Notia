@@ -25,7 +25,27 @@ export const MermaidComponent = ({
       const renderMermaid = async () => {
         const mermaid = await initializeMermaid();
         // 이전 내용 초기화
-        ref.current.innerHTML = '';
+        if(ref.current) ref.current.innerHTML = '';
+
+        const handleError = (error: unknown) => {
+          console.error('Mermaid render error:', error);
+
+          // DOM에서 새로 생긴 오류 SVG 찾아서 이동
+          setTimeout(() => {
+            const errorSvg = document.querySelector('svg[id*="mermaid"]');
+            if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
+              if (ref.current) {
+                ref.current.appendChild(errorSvg.cloneNode(true));
+              }
+              errorSvg.remove();
+            }
+          }, 100);
+
+          toast({
+            title: 'Mermaid 렌더링 오류',
+            description: '다이어그램 문법을 확인해주세요.',
+          });
+        };
 
         try {
           const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
@@ -45,43 +65,9 @@ export const MermaidComponent = ({
                 ref.current.innerHTML = svg;
               }
             })
-            .catch((error) => {
-              console.error('Mermaid render error:', error);
-
-              // DOM에서 새로 생긴 오류 SVG 찾아서 이동
-              setTimeout(() => {
-                const errorSvg = document.querySelector('svg[id*="mermaid"]');
-                if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
-                  if (ref.current) {
-                    ref.current.appendChild(errorSvg.cloneNode(true));
-                  }
-                  errorSvg.remove();
-                }
-              }, 100);
-
-              toast({
-                title: 'Mermaid 렌더링 오류',
-                description: '다이어그램 문법을 확인해주세요.',
-              });
-            });
+            .catch(handleError);
         } catch (error) {
-          console.error('Mermaid render error:', error);
-
-          // DOM에서 오류 SVG 찾아서 이동
-          setTimeout(() => {
-            const errorSvg = document.querySelector('svg[id*="mermaid"]');
-            if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
-              if (ref.current) {
-                ref.current.appendChild(errorSvg.cloneNode(true));
-              }
-              errorSvg.remove();
-            }
-          }, 100);
-
-          toast({
-            title: 'Mermaid 렌더링 오류',
-            description: '다이어그램 문법을 확인해주세요.',
-          });
+          handleError(error);
         }
       };
       renderMermaid();

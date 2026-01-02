@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -30,7 +30,7 @@ import Heart from 'lucide-react/dist/esm/icons/heart';
 import DatabaseBackup from 'lucide-react/dist/esm/icons/database-backup';
 import BellRing from 'lucide-react/dist/esm/icons/bell-ring';
 import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
-import { useThemeStore } from '@/stores/themeStore';
+import { usePageShortcuts } from '@/hooks/usePageShortcuts';
 
 // Content from user's original file
 const features = [
@@ -164,9 +164,7 @@ const HelpContentWrapper: React.FC<{
 
 export default function HelpPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const activeTab = searchParams.get('tab') || 'overview';
 
@@ -177,53 +175,11 @@ export default function HelpPage() {
     [setSearchParams],
   );
 
-  const handleKeyboardShortcuts = useCallback(
-    (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-
-      const key = e.key.toLowerCase();
-
-      const pageShortcuts: { [key: string]: () => void } = {
-        t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
-        m: () => navigate('/dashboard/myPage?tab=profile'),
-        ',': () => navigate('/dashboard/myPage?tab=activity'),
-        '.': () => navigate('/dashboard/myPage?tab=settings'),
-        '/': () => navigate('/dashboard/help?tab=overview'),
-        '?': () => navigate('/dashboard/help?tab=overview'),
-        escape: () => navigate('/dashboard'),
-      };
-
-      if (key === 'tab') {
-        e.preventDefault();
-        const tabs = ['overview', 'guide', 'shortcuts', 'faq'];
-        const currentTabIndex = tabs.indexOf(activeTab);
-        const nextTab = tabs[(currentTabIndex + 1) % tabs.length];
-        setActiveTab(nextTab);
-        return;
-      }
-
-      const handler = pageShortcuts[key];
-      if (handler) {
-        e.preventDefault();
-        handler();
-      }
-    },
-    [navigate, setTheme, isDarkMode, isDeepDarkMode, setActiveTab, activeTab],
-  );
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyboardShortcuts);
-    return () => {
-      document.removeEventListener('keydown', handleKeyboardShortcuts);
-    };
-  }, [handleKeyboardShortcuts]);
+  usePageShortcuts({
+    activeTab,
+    setActiveTab,
+    tabs: ['overview', 'guide', 'shortcuts', 'faq'],
+  });
 
   const filteredShortcuts = useMemo(() => {
     const lowerCaseSearch = searchTerm.toLowerCase();

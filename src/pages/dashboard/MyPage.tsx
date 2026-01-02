@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { Toaster } from '@/components/ui/toaster';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { ProfileTab } from '@/components/features/dashboard/myPage/ProfileTab';
 import { ActivityTab } from '@/components/features/dashboard/myPage/ActivityTab';
 import { SettingsTab } from "@/components/features/dashboard/myPage/SettingsTab";
 import { TabErrorBoundary } from '@/components/providers/TabErrorBoundary';
-import { useThemeStore } from "@/stores/themeStore";
+import { usePageShortcuts } from '@/hooks/usePageShortcuts';
 import User from 'lucide-react/dist/esm/icons/user';
 import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
 import Settings from 'lucide-react/dist/esm/icons/settings';
@@ -19,9 +19,7 @@ const TABS = [
 
 export default function MyPage() {
   const { user } = useAuthStore();
-  const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const activeTab = searchParams.get('tab') || 'profile';
 
@@ -32,60 +30,11 @@ export default function MyPage() {
     [setSearchParams],
   );
 
-  useEffect(() => {
-    const newTab = searchParams.get('tab');
-    if (newTab && TABS.some((t) => t.id === newTab)) {
-      // This effect is to sync state from URL, but we are already using searchParams directly.
-      // It can be useful if you have a separate state `activeTab` and want to sync it.
-    }
-  }, [searchParams]);
-
-  const handleKeyboardShortcuts = useCallback(
-    (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-
-      const key = e.key.toLowerCase();
-
-      const pageShortcuts: { [key: string]: () => void } = {
-        t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
-        m: () => navigate('/dashboard/myPage?tab=profile'),
-        ',': () => navigate('/dashboard/myPage?tab=activity'),
-        '.': () => navigate('/dashboard/myPage?tab=settings'),
-        '/': () => navigate('/dashboard/help?tab=overview'),
-        '?': () => navigate('/dashboard/help?tab=overview'),
-        escape: () => navigate('/dashboard'),
-      };
-
-      if (key === 'tab') {
-        e.preventDefault();
-        const currentTabIndex = TABS.findIndex((t) => t.id === activeTab);
-        const nextTab = TABS[(currentTabIndex + 1) % TABS.length];
-        setActiveTab(nextTab.id);
-        return;
-      }
-
-      const handler = pageShortcuts[key];
-      if (handler) {
-        e.preventDefault();
-        handler();
-      }
-    },
-    [navigate, setTheme, isDarkMode, isDeepDarkMode, setActiveTab, activeTab],
-  );
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyboardShortcuts);
-    return () => {
-      document.removeEventListener('keydown', handleKeyboardShortcuts);
-    };
-  }, [handleKeyboardShortcuts]);
+  usePageShortcuts({
+    activeTab,
+    setActiveTab,
+    tabs: TABS.map((t) => t.id),
+  });
 
   const renderContent = () => {
     let content;
