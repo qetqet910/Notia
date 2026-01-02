@@ -17,5 +17,10 @@ declare global {
     browser?: typeof chrome;
     __TAURI_INTERNALS__?: unknown;
     __TAURI__?: unknown;
+    __ENV__?: {
+      VITE_SUPABASE_URL: string;
+      VITE_SUPABASE_ANON_KEY: string;
+      VITE_VAPID_PUBLIC_KEY: string;
+    };
   }
 }

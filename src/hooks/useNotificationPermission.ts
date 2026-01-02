@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { requestPermission as requestUnifiedPermission, checkPermission } from '@/utils/notification';
 
 // VAPID 공개 키 (환경 변수에서 가져옴)
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+const VAPID_PUBLIC_KEY = window.__ENV__?.VITE_VAPID_PUBLIC_KEY || import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 /**
  * URL-safe base64 문자열을 Uint8Array로 변환합니다.
