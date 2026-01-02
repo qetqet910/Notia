@@ -65,7 +65,7 @@ export const SettingsTab: React.FC = React.memo(() => {
         title: '폰트 변경됨',
         description: `폰트가 '${value}'(으)로 변경되었습니다.`,
       });
-    } catch (error) {
+    } catch {
        toast({
         title: '변경 실패',
         description: '폰트 설정을 저장하지 못했습니다.',
@@ -198,8 +198,7 @@ export const SettingsTab: React.FC = React.memo(() => {
                 } else {
                   errorCount++;
                 }
-              } catch (err) {
-                console.error('노트 가져오기 오류:', err);
+              } catch {
                 errorCount++;
               }
             }
@@ -288,7 +287,6 @@ export const SettingsTab: React.FC = React.memo(() => {
         description: '주간 목표가 성공적으로 업데이트되었습니다.',
       });
     } catch (error) {
-      // const err = error as Error; // Remove this if err is not used or use error directly
       toast({
         title: '목표 저장 실패',
         description: `목표 저장 중 오류가 발생했습니다: ${(error as Error).message}`,

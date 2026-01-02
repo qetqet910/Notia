@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach, afterEach, Mock } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import * as updaterModule from '@/utils/updater';
 import * as isTauriModule from '@/utils/isTauri';
 

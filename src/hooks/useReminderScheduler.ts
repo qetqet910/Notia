@@ -2,9 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useDataStore } from '@/stores/dataStore';
 import { sendNotification } from '@/utils/notification';
 import { parseISO, differenceInSeconds } from 'date-fns';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { isTauri } from '@/utils/isTauri';
-import { toast } from '@/hooks/useToast';
 
 export const useReminderScheduler = () => {
   // We don't subscribe to notes here to avoid resetting the interval on every change

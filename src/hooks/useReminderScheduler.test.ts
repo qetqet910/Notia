@@ -48,6 +48,7 @@ describe('useReminderScheduler', () => {
     };
 
     // Mock Store State
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (useDataStore.getState as any) = vi.fn().mockReturnValue({
       notes: { 'note-1': note },
     });
@@ -76,6 +77,7 @@ describe('useReminderScheduler', () => {
     };
     const note = { id: 'note-2', title: 'Future Note', reminders: [futureReminder] };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (useDataStore.getState as any) = vi.fn().mockReturnValue({
       notes: { 'note-2': note },
     });
@@ -95,6 +97,7 @@ describe('useReminderScheduler', () => {
     };
     const note = { id: 'note-3', title: 'Done Note', reminders: [completedReminder] };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (useDataStore.getState as any) = vi.fn().mockReturnValue({
       notes: { 'note-3': note },
     });
@@ -115,6 +118,7 @@ describe('useReminderScheduler', () => {
     };
     const note = { id: 'note-4', title: 'Toast Note', reminders: [dueReminder] };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (useDataStore.getState as any) = vi.fn().mockReturnValue({
       notes: { 'note-4': note },
     });

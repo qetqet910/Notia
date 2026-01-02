@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
 
 type Theme = 'dark' | 'light' | 'deepdark' | 'system';
-type FontFamily = 'Noto Sans KR' | 'Jua' | 'Black Han Sans' | 'Do Hyeon' | 'Gowun Batang' | 'Diphylleia';
 
 type ThemeState = {
   theme: Theme;
