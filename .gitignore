@@ -48,3 +48,6 @@ GEMINI.md
 target
 # Local Netlify folder
 .netlify
+
+src-tauri/target
+qodana.yaml
