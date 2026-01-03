@@ -122,7 +122,7 @@ const DesktopLogin: React.FC = () => {
         transition={{ delay: 0.8, duration: 1 }}
       >
         <p className="text-[10px] text-slate-400 font-semibold tracking-widest uppercase opacity-80 mix-blend-multiply dark:mix-blend-screen">
-          Notia Desktop v{import.meta.env.APP_VERSION}
+          Notia Desktop v{import.meta.env.APP_VERSION || "1.0.2"}
         </p>
       </motion.div>
     </div>

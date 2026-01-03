@@ -116,15 +116,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Notia" />
     <script>
-      // [Critical Fix] Force unregister Service Workers to resolve MIME type errors (stale cache serving index.html for assets)
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var i = 0; i < registrations.length; i++) {
-            console.warn('Force unregistering stuck Service Worker:', registrations[i]);
-            registrations[i].unregister();
-          }
-        });
-      }
       (function() {
         try {
           var localTheme = localStorage.getItem('theme-storage');

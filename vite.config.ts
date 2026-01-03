@@ -52,6 +52,14 @@ export default defineConfig(({ mode }) => {
 🚀 [Notia Build] Mode: ${mode}, isTauri: ${isTauri}, Script: ${process.env.npm_lifecycle_event}
 `);
 
+  if (!env.VITE_VAPID_PUBLIC_KEY) {
+    console.warn(`
+⚠️ [Notia Build] VITE_VAPID_PUBLIC_KEY is missing! 
+   Push notifications will not work. 
+   Please set this environment variable in your deployment settings (.env or Netlify/Vercel dashboard).
+`);
+  }
+
   const plugins: (Plugin | Plugin[] | false)[] = [react()];
   
   if (isTauri) {

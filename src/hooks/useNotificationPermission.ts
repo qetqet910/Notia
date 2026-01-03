@@ -59,7 +59,8 @@ export const useNotificationPermission = () => {
       }
 
       if (!VAPID_PUBLIC_KEY) {
-        throw new Error('VAPID public key is not defined.');
+        console.warn('VAPID public key is not defined. Push subscription skipped.');
+        return;
       }
       const newSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
