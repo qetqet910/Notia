@@ -6,6 +6,8 @@ use tauri::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::fs;
+use uuid::Uuid;
 use chrono::prelude::*;
 use image::ImageFormat;
 use std::io::Cursor;
@@ -83,6 +85,28 @@ async fn optimize_image(image_data_base64: String) -> Result<String, String> {
     })
     .await
     .map_err(|e| format!("Task join error: {}", e))?
+}
+
+#[tauri::command]
+async fn optimize_and_save_image(app: tauri::AppHandle, image_data_base64: String) -> Result<String, String> {
+    let local_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let images_dir = local_data_dir.join("images");
+    if !images_dir.exists() {
+        fs::create_dir_all(&images_dir).map_err(|e| e.to_string())?;
+    }
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        let image_data = general_purpose::STANDARD.decode(&image_data_base64).map_err(|e| e.to_string())?;
+        let img = image::load_from_memory(&image_data).map_err(|e| e.to_string())?;
+        let processed_img = img.resize(1920, 1920, image::imageops::FilterType::Triangle);
+        let mut buffer = Cursor::new(Vec::new());
+        processed_img.write_to(&mut buffer, ImageFormat::WebP).map_err(|e| e.to_string())?;
+        let file_name = format!("{}.webp", Uuid::new_v4());
+        let file_path = images_dir.join(&file_name);
+        fs::write(&file_path, buffer.get_ref()).map_err(|e| e.to_string())?;
+        Ok(file_path.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 // --- Search Functionality ---
@@ -185,6 +209,9 @@ fn calculate_activity(notes: Vec<Note>) -> CalculationResult {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_fs::init())
+    .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_sql::Builder::default().build())
     .plugin(tauri_plugin_updater::Builder::default().build())
@@ -197,7 +224,8 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
         calculate_activity, 
         search_notes,
-        optimize_image
+        optimize_image,
+        optimize_and_save_image
     ])
     .setup(|app| {
       // 트레이 메뉴 생성
