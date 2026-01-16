@@ -209,3 +209,77 @@ html {
 .cm-editor.cm-focused {
   outline: none !important;
 }
+
+@layer components {
+  /* Fix for Tailwind Typography interfering with GFM Task Lists */
+  .prose ul > li:has(input[type="checkbox"]),
+  .prose ul > li.task-list-item {
+    list-style-type: none;
+    padding-left: 0;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .prose ul > li:has(input[type="checkbox"])::marker,
+  .prose ul > li.task-list-item::marker {
+    content: none;
+  }
+
+  .prose ul > li:has(input[type="checkbox"]) > input[type="checkbox"],
+  .prose ul > li.task-list-item > input[type="checkbox"] {
+    margin-top: 0.35rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+}
+
+/* Notion-like Slash Command Menu (Global Overrides) */
+.cm-tooltip.cm-tooltip-autocomplete {
+  @apply rounded-xl border-none bg-popover/95 backdrop-blur-sm shadow-2xl overflow-hidden;
+  outline: none !important;
+  min-width: 300px;
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+  z-index: 9999 !important;
+}
+
+.cm-tooltip.cm-tooltip-autocomplete > ul {
+  @apply p-2 max-h-[360px] overflow-y-auto;
+  font-family: inherit !important;
+}
+
+.cm-tooltip.cm-tooltip-autocomplete > ul > li {
+  @apply rounded-lg px-3 py-2.5 flex items-center gap-3 cursor-pointer transition-all duration-75 mx-1 my-0.5;
+  @apply text-foreground;
+}
+
+.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected="true"] {
+  @apply bg-accent text-accent-foreground translate-x-1;
+}
+
+.cm-completionIcon {
+  @apply w-5 h-5 mr-0 opacity-70;
+}
+
+.cm-completionIcon-keyword { @apply text-orange-500; }
+.cm-completionIcon-variable { @apply text-emerald-500; }
+.cm-completionIcon-type { @apply text-blue-500; }
+.cm-completionIcon-function { @apply text-indigo-500; }
+.cm-completionIcon-class { @apply text-purple-500; }
+.cm-completionIcon-text { @apply text-slate-500; }
+.cm-completionIcon-interface { @apply text-slate-400; }
+.cm-completionIcon-constant { @apply text-pink-500; }
+
+.cm-completionLabel {
+  @apply font-medium text-sm flex-1;
+}
+
+.cm-completionDetail {
+  @apply text-[11px] text-muted-foreground ml-2 font-normal opacity-60;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

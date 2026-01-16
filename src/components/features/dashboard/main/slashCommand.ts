@@ -5,81 +5,103 @@ import {
 } from '@codemirror/autocomplete';
 import { EditorView } from '@codemirror/view';
 import {
-  toggleHeading,
   insertChecklist,
   insertCodeBlock,
-  toggleQuote,
+  insertTable,
+  insertDivider,
+  insertMermaidFlow,
+  insertMermaidSequence,
+  insertMermaidMindmap,
 } from '@/components/features/dashboard/toolbar/editorCommands';
 
+// Now takes onImageUpload callback to trigger file selector
 const getSlashCommands = (onImageUpload: () => void): Completion[] => [
   {
-    label: '/h1',
-    displayLabel: '제목 1',
-    detail: '가장 큰 제목',
-    type: 'keyword',
-    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
+    label: '/flowchart',
+    displayLabel: '🔀 플로우차트',
+    detail: 'Mermaid Flowchart',
+    type: 'function',
+    boost: 10,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
       view.dispatch({ changes: { from, to, insert: '' } });
-      toggleHeading(view, 1);
+      insertMermaidFlow(view);
     },
   },
   {
-    label: '/h2',
-    displayLabel: '제목 2',
-    detail: '중간 제목',
-    type: 'keyword',
-    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
+    label: '/sequence',
+    displayLabel: '⏱️ 시퀀스',
+    detail: 'Mermaid Sequence',
+    type: 'function',
+    boost: 9,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
       view.dispatch({ changes: { from, to, insert: '' } });
-      toggleHeading(view, 2);
+      insertMermaidSequence(view);
     },
   },
   {
-    label: '/h3',
-    displayLabel: '제목 3',
-    detail: '작은 제목',
-    type: 'keyword',
-    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
+    label: '/mindmap',
+    displayLabel: '🧠 마인드맵',
+    detail: 'Mermaid Mindmap',
+    type: 'function',
+    boost: 8,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
       view.dispatch({ changes: { from, to, insert: '' } });
-      toggleHeading(view, 3);
+      insertMermaidMindmap(view);
+    },
+  },
+  {
+    label: '/table',
+    displayLabel: '📊 표',
+    detail: '표 삽입',
+    type: 'type',
+    boost: 7,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({ changes: { from, to, insert: '' } });
+      insertTable(view);
     },
   },
   {
     label: '/todo',
-    displayLabel: '할 일',
+    displayLabel: '✅ 할 일',
     detail: '체크박스',
     type: 'variable',
-    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
+    boost: 6,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
       view.dispatch({ changes: { from, to, insert: '' } });
       insertChecklist(view);
     },
   },
   {
     label: '/code',
-    displayLabel: '코드',
-    detail: '코드 블록',
+    displayLabel: '💻 코드 블록',
+    detail: '코드 삽입',
     type: 'class',
-    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
+    boost: 5,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
       view.dispatch({ changes: { from, to, insert: '' } });
       insertCodeBlock(view);
     },
   },
   {
-    label: '/quote',
-    displayLabel: '인용',
-    detail: '인용문',
-    type: 'text',
-    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
+    label: '/divider',
+    displayLabel: '➖ 구분선',
+    detail: '수평선 삽입',
+    type: 'interface',
+    boost: 4,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
       view.dispatch({ changes: { from, to, insert: '' } });
-      toggleQuote(view);
+      insertDivider(view);
     },
   },
   {
     label: '/image',
-    displayLabel: '이미지',
+    displayLabel: '🖼️ 이미지',
     detail: '이미지 업로드',
     type: 'constant',
-    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
+    boost: 3,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
       view.dispatch({ changes: { from, to, insert: '' } });
-      onImageUpload();
+      onImageUpload(); 
     },
   },
 ];

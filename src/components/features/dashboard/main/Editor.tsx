@@ -50,6 +50,9 @@ import Eye from 'lucide-react/dist/esm/icons/eye';
 import X from 'lucide-react/dist/esm/icons/x';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
+import Columns2 from 'lucide-react/dist/esm/icons/columns-2';
+import SquarePen from 'lucide-react/dist/esm/icons/square-pen';
+
 import {
   Popover,
   PopoverContent,
@@ -98,6 +101,8 @@ interface EditorProps {
 interface EditorRef {
   save: () => void;
 }
+
+type ViewMode = 'editor' | 'split' | 'preview';
 
 const formatDate = (date: Date): string => {
   if (!date || !(date instanceof Date)) return '날짜 정보 없음';
@@ -163,6 +168,17 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const { toast } = useToast();
     const navigate = useNavigate();
     const isDesktop = useMediaQuery('(min-width: 1024px)');
+    
+    const [viewMode, setViewMode] = useState<ViewMode>(isDesktop ? 'split' : 'editor');
+
+    // 화면 크기 변경 시 viewMode 자동 조정 (사용자가 수동으로 변경하지 않은 경우를 고려하면 좋겠지만, 단순화를 위해 데스크탑 전환 시 split으로)
+    useEffect(() => {
+        if (isDesktop && viewMode === 'editor') {
+            setViewMode('split');
+        } else if (!isDesktop && viewMode === 'split') {
+            setViewMode('editor');
+        }
+    }, [isDesktop]);
 
     // Slash Command 확장 생성 (이미지 업로드 콜백 연결)
     const slashCommandExtension = useMemo(() => 
@@ -188,12 +204,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const filteredLanguages = languages.filter((lang) =>
       ['javascript', 'css', 'python', 'json'].includes(lang.name),
     );
-
-
-
-
-
-
 
     const isResettingRef = useRef(false);
     const previewRef = useRef<HTMLDivElement>(null);
@@ -343,6 +353,68 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       [reminders],
     );
 
+    const renderEditor = () => (
+      <div className="p-4 pt-0 h-full flex flex-col">
+        <EditorToolbar editorRef={editorRef} onImageClick={openFileSelector} />
+        <div className="flex-1 min-h-0">
+          <CodeMirror
+            ref={editorRef}
+            value={content}
+            height="100%"
+            basicSetup={false}
+            extensions={[
+              markdown({
+                base: markdownLanguage,
+                codeLanguages: filteredLanguages,
+              }),
+              history(),
+              indentOnInput(),
+              bracketMatching(),
+              closeBrackets(),
+              keymap.of([
+                ...customKeymap,
+                ...defaultKeymap,
+                ...historyKeymap,
+                ...closeBracketsKeymap,
+              ]),
+              imageUploadExtension,
+              checkboxPlugin,
+              slashCommandExtension,
+              EditorView.lineWrapping,
+              EditorView.theme({
+                '.cm-content': { paddingBottom: '50px' },
+                '.cm-scroller': { paddingBottom: '50px' },
+                '.cm-line': { lineHeight: '1.5', padding: '0 4px' },
+              }),
+            ]}
+            onUpdate={(viewUpdate) => {
+              if (viewUpdate.viewportChanged) {
+                handleEditorScroll(viewUpdate.view);
+              }
+            }}
+            onChange={(value) => {
+              setContent(value);
+              onContentChange();
+            }}
+            className="w-full h-full text-lg"
+            theme={codeMirrorTheme}
+            placeholder="제목을 입력하세요..."
+          />
+        </div>
+      </div>
+    );
+
+    const renderPreview = () => (
+        <PreviewPanel
+            ref={previewRef}
+            content={debouncedBody}
+            title={debouncedTitle}
+            displayTags={displayTags}
+            displayReminders={displayReminders}
+            onScroll={handlePreviewScroll}
+        />
+    );
+
     return (
       <div className="flex flex-col h-full bg-background">
         <div className="flex justify-between items-center p-4 border-b border-border">
@@ -398,7 +470,41 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               </PopoverContent>
             </Popover>
           </div>
+          
           <div className="flex items-center gap-2">
+            {isEditing && (
+                <div className="flex items-center bg-muted/50 p-1 rounded-lg mr-2">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={`h-7 w-7 ${viewMode === 'editor' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+                        onClick={() => setViewMode('editor')}
+                        title="에디터만 보기"
+                    >
+                        <SquarePen className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={`h-7 w-7 ${viewMode === 'split' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+                        onClick={() => setViewMode('split')}
+                        title="분할 보기"
+                        disabled={!isDesktop}
+                    >
+                        <Columns2 className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={`h-7 w-7 ${viewMode === 'preview' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
+                        onClick={() => setViewMode('preview')}
+                        title="미리보기만 보기"
+                    >
+                        <Eye className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+
             {!isEditing ? (
               <>
                 <Button
@@ -434,222 +540,21 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         <div className="flex-1 overflow-hidden">
           {isEditing ? (
             <>
-              {isDesktop ? (
-                // Desktop: Resizable Panel Layout
-                <ResizablePanelGroup direction="horizontal" className="h-full">
-                  <ResizablePanel defaultSize={50}>
-                    <div className="p-4 pt-0 h-full flex flex-col">
-                      <EditorToolbar editorRef={editorRef} onImageClick={openFileSelector} />
-                      <div className="flex-1 min-h-0">
-                        <CodeMirror
-                          ref={editorRef}
-                          value={content}
-                          height="100%"
-                          basicSetup={false}
-                          extensions={[
-                            markdown({
-                              base: markdownLanguage,
-                              codeLanguages: filteredLanguages,
-                            }),
-                            history(),
-                            indentOnInput(),
-                            bracketMatching(),
-                            closeBrackets(),
-                            keymap.of([
-                              ...customKeymap,
-                              ...defaultKeymap,
-                              ...historyKeymap,
-                              ...closeBracketsKeymap,
-                            ]),
-                            imageUploadExtension,
-                            checkboxPlugin,
-                            slashCommandExtension,
-                            EditorView.lineWrapping,
-                            EditorView.theme({
-                              '.cm-content': { paddingBottom: '50px' },
-                              '.cm-scroller': { paddingBottom: '50px' },
-                              '.cm-line': { lineHeight: '1.2', padding: '0' },
-                              // Autocomplete Tooltip Styles
-                              '.cm-tooltip': {
-                                border: '1px solid hsl(var(--border))',
-                                backgroundColor: 'hsl(var(--popover))',
-                                color: 'hsl(var(--popover-foreground))',
-                                borderRadius: 'calc(var(--radius) - 2px)',
-                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                              },
-                              '.cm-tooltip-autocomplete': {
-                                '& > ul > li': {
-                                  fontFamily: "'NoonnuBasicGothicRegular', sans-serif",
-                                  padding: '4px 8px',
-                                },
-                                '& > ul > li[aria-selected]': {
-                                  backgroundColor: 'hsl(var(--accent))',
-                                  color: 'hsl(var(--accent-foreground))',
-                                },
-                                '& > ul > li:hover': {
-                                  backgroundColor: 'hsl(var(--accent))',
-                                  color: 'hsl(var(--accent-foreground))',
-                                },
-                              },
-                              '.cm-completionLabel': {
-                                fontWeight: 'bold',
-                              },
-                              '.cm-completionDetail': {
-                                color: 'hsl(var(--muted-foreground))',
-                                fontStyle: 'normal',
-                                marginLeft: '0.5em',
-                                fontSize: '0.85em',
-                              },
-                              '.cm-completionIcon': {
-                                display: 'none',
-                              },
-                            }),
-                          ]}
-                          onUpdate={(viewUpdate) => {
-                            if (viewUpdate.viewportChanged) {
-                              handleEditorScroll(viewUpdate.view);
-                            }
-                          }}
-                          onChange={(value) => {
-                            setContent(value);
-                            onContentChange();
-                          }}
-                          className="w-full h-full text-lg"
-                          theme={codeMirrorTheme}
-                          placeholder="제목을 입력하세요..."
-                        />
-                      </div>
-                    </div>
-                  </ResizablePanel>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={50}>
-                    <PreviewPanel
-                      ref={previewRef}
-                      content={debouncedBody}
-                      title={debouncedTitle}
-                      displayTags={displayTags}
-                      displayReminders={displayReminders}
-                      onScroll={handlePreviewScroll}
-                    />
-                  </ResizablePanel>
-                </ResizablePanelGroup>
-              ) : (
-                // Mobile & Tablet: Tabs Layout
-                <Tabs defaultValue="edit" className="h-full flex flex-col">
-                  <div className="p-2 border-b">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="edit">
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        편집
-                      </TabsTrigger>
-                      <TabsTrigger value="preview">
-                        <Eye className="w-4 h-4 mr-2" />
-                        미리보기
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
-                  <TabsContent
-                    value="edit"
-                    className="flex-1 overflow-hidden data-[state=inactive]:hidden"
-                  >
-                    <div className="p-4 pt-0 h-full flex flex-col">
-                      <EditorToolbar editorRef={editorRef} onImageClick={openFileSelector} />
-                      <div className="flex-1 min-h-0">
-                        <CodeMirror
-                          ref={editorRef}
-                          value={content}
-                          height="100%"
-                          basicSetup={false}
-                          extensions={[
-                            markdown({
-                              base: markdownLanguage,
-                              codeLanguages: filteredLanguages,
-                            }),
-                            history(),
-                            indentOnInput(),
-                            bracketMatching(),
-                            closeBrackets(),
-                            keymap.of([
-                              ...customKeymap,
-                              ...defaultKeymap,
-                              ...historyKeymap,
-                              ...closeBracketsKeymap,
-                            ]),
-                            imageUploadExtension,
-                            checkboxPlugin,
-                            slashCommandExtension,
-                            EditorView.lineWrapping,
-                            EditorView.theme({
-                              '.cm-content': { paddingBottom: '50px' },
-                              '.cm-scroller': { paddingBottom: '50px' },
-                              '.cm-line': { lineHeight: '1.2', padding: '0' },
-                              // Autocomplete Tooltip Styles
-                              '.cm-tooltip': {
-                                border: '1px solid hsl(var(--border))',
-                                backgroundColor: 'hsl(var(--popover))',
-                                color: 'hsl(var(--popover-foreground))',
-                                borderRadius: 'calc(var(--radius) - 2px)',
-                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                              },
-                              '.cm-tooltip-autocomplete': {
-                                '& > ul > li': {
-                                  fontFamily: "'NoonnuBasicGothicRegular', sans-serif",
-                                  padding: '4px 8px',
-                                },
-                                '& > ul > li[aria-selected]': {
-                                  backgroundColor: 'hsl(var(--accent))',
-                                  color: 'hsl(var(--accent-foreground))',
-                                },
-                                '& > ul > li:hover': {
-                                  backgroundColor: 'hsl(var(--accent))',
-                                  color: 'hsl(var(--accent-foreground))',
-                                },
-                              },
-                              '.cm-completionLabel': {
-                                fontWeight: 'bold',
-                              },
-                              '.cm-completionDetail': {
-                                color: 'hsl(var(--muted-foreground))',
-                                fontStyle: 'normal',
-                                marginLeft: '0.5em',
-                                fontSize: '0.85em',
-                              },
-                              '.cm-completionIcon': {
-                                display: 'none',
-                              },
-                            }),
-                          ]}
-                          onUpdate={(viewUpdate) => {
-                            if (viewUpdate.viewportChanged) {
-                              handleEditorScroll(viewUpdate.view);
-                            }
-                          }}
-                          onChange={(value) => {
-                            setContent(value);
-                            onContentChange();
-                          }}
-                          className="w-full h-full text-lg"
-                          theme={codeMirrorTheme}
-                          placeholder="제목을 입력하세요..."
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent
-                    value="preview"
-                    className="flex-1 overflow-hidden data-[state=inactive]:hidden"
-                  >
-                    <PreviewPanel
-                      ref={previewRef}
-                      content={debouncedBody}
-                      title={debouncedTitle}
-                      displayTags={displayTags}
-                      displayReminders={displayReminders}
-                      onScroll={handlePreviewScroll}
-                    />
-                  </TabsContent>
-                </Tabs>
-              )}
+                {viewMode === 'split' && isDesktop ? (
+                    <ResizablePanelGroup direction="horizontal" className="h-full">
+                        <ResizablePanel defaultSize={50}>
+                            {renderEditor()}
+                        </ResizablePanel>
+                        <ResizableHandle withHandle />
+                        <ResizablePanel defaultSize={50}>
+                            {renderPreview()}
+                        </ResizablePanel>
+                    </ResizablePanelGroup>
+                ) : viewMode === 'editor' ? (
+                    renderEditor()
+                ) : (
+                    renderPreview()
+                )}
             </>
           ) : (
             <PreviewPanel

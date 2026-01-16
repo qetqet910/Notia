@@ -12,6 +12,7 @@ import Heading3 from 'lucide-react/dist/esm/icons/heading-3';
 import Heading4 from 'lucide-react/dist/esm/icons/heading-4';
 import Image from 'lucide-react/dist/esm/icons/image';
 import CheckSquare from 'lucide-react/dist/esm/icons/check-square';
+import Minus from 'lucide-react/dist/esm/icons/minus';
 import { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -27,6 +28,7 @@ import {
   insertLink,
   insertChecklist,
   toggleQuote,
+  insertDivider,
 } from '@/components/features/dashboard/toolbar/editorCommands';
 
 interface EditorToolbarProps {
@@ -83,6 +85,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editorRef, onImage
       action: () =>
         executeCommand(editorRef, (v) => toggleInlineFormat(v, '~~')),
       title: '취소선',
+    },
+    {
+      id: 'divider',
+      icon: <Minus />,
+      action: () => executeCommand(editorRef, insertDivider),
+      title: '구분선',
     },
   ];
 

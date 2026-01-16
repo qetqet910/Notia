@@ -174,3 +174,115 @@ export const toggleQuote = (view: EditorView) => {
     );
   }
 };
+
+// Inserts a horizontal divider or removes it if already present
+export const insertDivider = (view: EditorView) => {
+  const { state, dispatch } = view;
+  const { from } = state.selection.main;
+  const line = state.doc.lineAt(from);
+  
+  // Check if the line is effectively a divider (ignoring whitespace)
+  if (line.text.trim() === '---') {
+    dispatch(
+      state.update({
+        changes: { from: line.from, to: line.to, insert: '' },
+      })
+    );
+  } else {
+    // If line is not empty, insert newlines to be safe, otherwise just the divider
+    const insertText = line.text.trim() === '' ? '---' : '\n---\n';
+    dispatch(
+      state.update({
+        changes: { from, insert: insertText },
+        selection: { anchor: from + insertText.length },
+      }),
+    );
+  }
+};
+
+// Inserts a basic table
+export const insertTable = (view: EditorView) => {
+  const { state, dispatch } = view;
+  const tableTemplate = `
+| Header 1 | Header 2 | Header 3 |
+| :--------  |  :-------- |  :-------- |
+|  Row 1      |  Data       |  Data       |
+|  Row 2      |  Data       |  Data       |
+`;
+  dispatch(
+    state.update({
+      changes: { from: state.selection.main.from, insert: tableTemplate },
+      selection: { anchor: state.selection.main.from + tableTemplate.length },
+    }),
+  );
+};
+
+// Inserts a mermaid flowchart
+export const insertMermaidFlow = (view: EditorView) => {
+  const { state, dispatch } = view;
+  const mermaidTemplate = `
+\`\`\`mermaid
+graph TD
+  A[Start] --> B{Is it working?}
+  B -- Yes --> C[Great!]
+  B -- No --> D[Debug]
+  D --> B
+\`\`\`
+`;
+  dispatch(
+    state.update({
+      changes: { from: state.selection.main.from, insert: mermaidTemplate },
+      selection: { anchor: state.selection.main.from + mermaidTemplate.length },
+    }),
+  );
+};
+
+// Inserts a mermaid sequence diagram
+export const insertMermaidSequence = (view: EditorView) => {
+  const { state, dispatch } = view;
+  const mermaidTemplate = `
+\`\`\`mermaid
+sequenceDiagram
+  participant U as User
+  participant S as System
+  participant D as Database
+
+  U->>S: Request Data
+  S->>D: Query
+  D-->>S: Return Results
+  S-->>U: Show Response
+\`\`\`
+`;
+  dispatch(
+    state.update({
+      changes: { from: state.selection.main.from, insert: mermaidTemplate },
+      selection: { anchor: state.selection.main.from + mermaidTemplate.length },
+    }),
+  );
+};
+
+// Inserts a mermaid mindmap
+export const insertMermaidMindmap = (view: EditorView) => {
+  const { state, dispatch } = view;
+  const mermaidTemplate = `
+\`\`\`mermaid
+mindmap
+  root((New Project))
+    Planning
+      Research
+      Strategy
+    Design
+      UI / UX
+      Assets
+    Development
+      Frontend
+      Backend
+\`\`\`
+`;
+  dispatch(
+    state.update({
+      changes: { from: state.selection.main.from, insert: mermaidTemplate },
+      selection: { anchor: state.selection.main.from + mermaidTemplate.length },
+    }),
+  );
+};
