@@ -832,7 +832,7 @@ const MobileNavigation = ({
             <div className="p-4 border-b">
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={avatarUrl} alt={displayName} />
+                  {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName} />}
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">

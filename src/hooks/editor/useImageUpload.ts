@@ -122,6 +122,14 @@ export const useImageUpload = (editorRef?: React.RefObject<any>) => {
           if (pos !== null) processUpload(files[0], view, pos);
         }
       },
+      paste(event, view) {
+        const files = event.clipboardData?.files;
+        if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+          event.preventDefault();
+          const pos = view.state.selection.main.head;
+          processUpload(files[0], view, pos);
+        }
+      },
     })
   ], [processUpload]);
 

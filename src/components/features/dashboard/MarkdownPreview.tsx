@@ -168,6 +168,16 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = React.memo(
                 {children}
               </a>
             ),
+            img: ({ src, alt, ...props }) => {
+              if (!src || typeof src !== 'string' || src.trim() === '') return null;
+              return (
+                <img
+                  src={src}
+                  alt={alt || ''}
+                  className="rounded-lg border border-border shadow-sm max-w-full h-auto my-4"
+                />
+              );
+            },
             input: ({ ...props }) => {
               if (props.type === 'checkbox') {
                 const checkIcon = encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
