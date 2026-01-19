@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useDataStore } from './dataStore';
-import { supabase } from '@/services/supabaseClient';
-import { localDB } from '@/services/localDB';
 import { Note } from '@/types';
 
 // Mock Supabase

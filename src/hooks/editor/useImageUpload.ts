@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useTransition } from 'react';
 import { EditorView, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { StateField, StateEffect } from '@codemirror/state';
+import { ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadImageToSupabase } from '@/utils/imageUpload';
 import { useAuthStore } from '@/stores/authStore';
@@ -64,7 +65,7 @@ export const uploadState = StateField.define<DecorationSet>({
 
 // --- Hook Logic ---
 
-export const useImageUpload = (editorRef?: React.RefObject<any>) => {
+export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | null>) => {
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuthStore();

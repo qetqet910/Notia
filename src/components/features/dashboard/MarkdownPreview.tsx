@@ -175,28 +175,30 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = React.memo(
                   src={src}
                   alt={alt || ''}
                   className="rounded-lg border border-border shadow-sm max-w-full h-auto my-4"
+                  {...props}
                 />
               );
             },
-            input: ({ ...props }) => {
-              if (props.type === 'checkbox') {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            input: (_props) => {
+              if (_props.type === 'checkbox') {
                 const checkIcon = encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
                 return (
                   <input
                     type="checkbox"
                     className="appearance-none h-4 w-4 border-2 border-muted-foreground/30 rounded-[4px] bg-transparent checked:bg-green-600 checked:border-green-600 transition-all mr-2 align-middle relative pointer-events-none"
-                    style={props.checked ? {
+                    style={_props.checked ? {
                       backgroundImage: `url("data:image/svg+xml,${checkIcon}")`,
                       backgroundSize: '100% 100%',
                       backgroundPosition: 'center',
                       backgroundRepeat: 'no-repeat'
                     } : {}}
                     readOnly
-                    {...props}
+                    {..._props}
                   />
                 );
               }
-              return <input {...props} />;
+              return <input {..._props} />;
             },
           }}
         >

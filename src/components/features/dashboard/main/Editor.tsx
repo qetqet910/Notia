@@ -71,7 +71,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Note, EditorReminder, Reminder } from '@/types';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
@@ -193,7 +192,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         } else if (!isDesktop && viewMode === 'split') {
             setViewMode('editor');
         }
-    }, [isDesktop]);
+    }, [isDesktop, viewMode]);
 
     // Slash Command 확장 생성 (이미지 업로드 콜백 연결)
     const slashCommandExtension = useMemo(() => 

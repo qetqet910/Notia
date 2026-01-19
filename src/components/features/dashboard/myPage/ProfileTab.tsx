@@ -161,14 +161,6 @@ export const ProfileTab: React.FC = React.memo(() => {
         : user.email;
     }, [user]);
 
-    const isProvider = useMemo(() => {
-      return (
-        user?.app_metadata?.provider &&
-        user.app_metadata.provider !== 'email' &&
-        !user?.email?.startsWith('anon_')
-      );
-    }, [user]);
-
     const getInitials = useCallback(
       (name: string) =>
         name

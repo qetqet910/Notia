@@ -20,7 +20,6 @@ export const useNotes = () => {
   const { 
     initialize, 
     unsubscribeAll, 
-    removeNoteState, 
     togglePinNote, 
     softDeleteNote, 
     restoreNote, 

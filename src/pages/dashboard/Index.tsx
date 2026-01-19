@@ -138,7 +138,6 @@ export const Dashboard: React.FC = () => {
     updateNote,
     deleteNote, // soft delete default (exposed as deleteNote in useNotes but we need to check if we updated it)
     // Wait, useNotes exposes softDeleteNote separately.
-    softDeleteNote,
     restoreNote,
     permanentlyDeleteNote,
     deleteReminder,
