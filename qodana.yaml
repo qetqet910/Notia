@@ -4,7 +4,8 @@ profile:
   name: qodana.recommended
 
 # Install dependencies (improves analysis accuracy)
-bootstrap: npm ci
+# Use legacy-peer-deps to handle React 19 conflicts (e.g. react-joyride)
+bootstrap: npm install --legacy-peer-deps
 
 # Exclude paths (Rust backend, build artifacts, etc.)
 exclude:
