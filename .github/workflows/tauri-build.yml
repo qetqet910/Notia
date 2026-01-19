@@ -52,9 +52,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev pkg-config
 
-      # npm install 대신 npm ci 사용 (더 빠르고 안정적)
+      # npm install 대신 npm ci 사용 (더 빠르고 안정적) -> React 19 이슈로 변경
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Create .env file
         shell: bash
