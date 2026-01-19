@@ -175,6 +175,46 @@ export const toggleQuote = (view: EditorView) => {
   }
 };
 
+// Toggles bullet list
+export const toggleBulletList = (view: EditorView) => {
+  const { state, dispatch } = view;
+  const { from } = state.selection.main;
+  const line = state.doc.lineAt(from);
+  const regex = /^(\s*)-\s/;
+  const match = line.text.match(regex);
+
+  if (match) {
+    dispatch(state.update({
+        changes: { from: line.from + match[1].length, to: line.from + match[0].length, insert: '' }
+    }));
+  } else {
+    dispatch(state.update({
+        changes: { from: line.from, insert: '- ' },
+        selection: { anchor: line.from + 2 }
+    }));
+  }
+};
+
+// Toggles ordered list
+export const toggleOrderedList = (view: EditorView) => {
+  const { state, dispatch } = view;
+  const { from } = state.selection.main;
+  const line = state.doc.lineAt(from);
+  const regex = /^(\s*)\d+\.\s/;
+  const match = line.text.match(regex);
+
+  if (match) {
+    dispatch(state.update({
+        changes: { from: line.from + match[1].length, to: line.from + match[0].length, insert: '' }
+    }));
+  } else {
+    dispatch(state.update({
+        changes: { from: line.from, insert: '1. ' },
+        selection: { anchor: line.from + 3 }
+    }));
+  }
+};
+
 // Inserts a horizontal divider or removes it if already present
 export const insertDivider = (view: EditorView) => {
   const { state, dispatch } = view;

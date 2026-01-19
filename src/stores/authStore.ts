@@ -78,6 +78,10 @@ interface AuthStore extends AuthState {
     success: boolean;
     error?: Error | null;
   }>;
+  completeOnboarding: () => Promise<{
+    success: boolean;
+    error?: Error | null;
+  }>;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -501,6 +505,26 @@ export const useAuthStore = create<AuthStore>()(
           return { success: false, error: error as Error };
         } finally {
           set({ isTermsLoading: false });
+        }
+      },
+
+      completeOnboarding: async () => {
+        try {
+          const { user } = get();
+          if (!user) return { success: false, error: new Error('No user') };
+
+          const { data, error } = await supabase.auth.updateUser({
+            data: { onboarding_completed: true },
+          });
+
+          if (error) throw error;
+
+          // 로컬 상태 업데이트
+          set({ user: data.user });
+          return { success: true };
+        } catch (error) {
+          console.error('Failed to complete onboarding:', error);
+          return { success: false, error: error as Error };
         }
       },
     }),

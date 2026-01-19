@@ -2,6 +2,24 @@ import { ChangelogEntry } from '@/types';
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: 'v1.1.2',
+    date: '2026년 1월 19일',
+    userChanges: [
+      { category: '✨ 기능', description: '휴지통(Trash) & 고정(Pin): 실수로 지운 노트를 복구하고, 중요한 노트는 상단에 고정하여 관리하세요.' },
+      { category: '✨ 기능', description: '내보내기(Export): 작성한 노트를 Markdown 파일로 저장하거나 PDF로 깔끔하게 인쇄할 수 있습니다.' },
+      { category: '✨ 기능', description: '사용자 맞춤 테마: Jua, Do Hyeon 등 다양한 폰트를 선택하고 설정을 동기화하여 어디서든 나만의 환경을 경험하세요.' },
+      { category: '✨ 기능', description: '에디터 UX 강화: 슬래시(/) 커맨드로 서식을 빠르게 입력하고, 이미지 업로드 진행 상태를 배지로 확인합니다.' },
+      { category: '💅 디자인', description: '기본 폰트를 \'Noto Sans KR\'로 통일하고 스크롤바와 버튼 배치를 개선하여 시각적 완성도를 높였습니다.' },
+      { category: '🐛 버그 수정', description: '앱 실행 시 발생하던 VAPID KEY 오류와 Tauri 플러그인 충돌 문제를 해결했습니다.' },
+    ],
+    devChanges: [
+      { category: '💾 데이터베이스', description: 'Schema: `deleted_at`, `is_pinned` (노트), `font_family`, `theme` (프로필) 컬럼을 추가했습니다.' },
+      { category: '🔧 리팩토링', description: 'Components: 로그인 배경(`BackgroundOrbs`)과 단축키 로직(`usePageShortcuts`)을 분리하여 재사용성을 확보했습니다.' },
+      { category: '🛡️ 보안', description: 'Security: Qodana 분석 대상을 최적화하고 Mermaid 및 Vite의 보안 취약점 버전을 패치했습니다.' },
+      { category: '⚙️ 기타', description: 'Clean Code: 프로젝트 전반의 미사용 변수와 린트 에러를 모두 정리하여 코드 품질을 강화했습니다.' },
+    ],
+  },
+  {
     version: 'v1.0.2',
     date: '2025년 12월 30일',
     userChanges: [

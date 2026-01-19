@@ -17,19 +17,49 @@ const getStartOfWeek = () => {
 export const useNotes = () => {
   const { user } = useAuthStore();
   const allNotes = useDataStore((state) => state.notes);
-  const { initialize, unsubscribeAll, removeNoteState } =
-    useDataStore.getState();
+  const { 
+    initialize, 
+    unsubscribeAll, 
+    removeNoteState, 
+    togglePinNote, 
+    softDeleteNote, 
+    restoreNote, 
+    permanentlyDeleteNote 
+  } = useDataStore.getState();
 
   const notes = useMemo(
     () =>
       Object.values(allNotes || {})
         .filter(
           (note) =>
-            note && typeof note === 'object' && note.owner_id === user?.id,
+            note && 
+            typeof note === 'object' && 
+            note.owner_id === user?.id && 
+            !note.deleted_at
+        )
+        .sort(
+          (a, b) => {
+             const pinDiff = Number(b.is_pinned || false) - Number(a.is_pinned || false);
+             if (pinDiff !== 0) return pinDiff;
+             return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+          }
+        ),
+    [allNotes, user],
+  );
+
+  const trashNotes = useMemo(
+    () =>
+      Object.values(allNotes || {})
+        .filter(
+          (note) =>
+            note && 
+            typeof note === 'object' && 
+            note.owner_id === user?.id && 
+            note.deleted_at
         )
         .sort(
           (a, b) =>
-            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+            new Date(b.deleted_at!).getTime() - new Date(a.deleted_at!).getTime(),
         ),
     [allNotes, user],
   );
@@ -384,25 +414,16 @@ export const useNotes = () => {
     [user, saveReminders],
   );
 
-  // 노트 삭제 (리마인더도 함께 삭제)
+  // 노트 삭제 (Soft Delete)
   const deleteNote = useCallback(
     async (noteId: string) => {
       if (!user) return false;
-
-      removeNoteState(noteId);
-
-      try {
-        await supabase.from('reminders').delete().eq('note_id', noteId);
-        await supabase.from('notes').delete().eq('id', noteId);
-
-        return true;
-      } catch (err) {
-        console.error('노트 삭제 중 오류 발생:', err);
-        // 에러 발생 시, 데이터 저장소의 상태를 원래대로 되돌리는 로직 추가 가능
-        return false;
-      }
+      
+      // Use soft delete by default
+      await softDeleteNote(noteId);
+      return true;
     },
-    [user, removeNoteState],
+    [user, softDeleteNote],
   );
 
   const deleteReminder = useCallback(
@@ -677,6 +698,7 @@ export const useNotes = () => {
 
   return {
     notes,
+    trashNotes,
     loading,
     error,
     fetchNoteContent,
@@ -684,7 +706,13 @@ export const useNotes = () => {
     updateUserGoals,
     addNote,
     updateNote,
-    deleteNote,
+    deleteNote, // This calls removeNoteState + DB delete directly in existing code.
+    // We should probably update deleteNote to use softDeleteNote if we want default behavior to be trash.
+    // But for now, let's expose the specific functions.
+    togglePinNote,
+    softDeleteNote,
+    restoreNote,
+    permanentlyDeleteNote,
     deleteReminder,
     updateReminderCompletion,
     updateReminderEnabled,

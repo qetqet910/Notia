@@ -38,6 +38,10 @@ interface DataState {
   ) => void;
   addNoteState: (newNote: Note) => void;
   removeNoteState: (noteId: string) => void;
+  togglePinNote: (noteId: string) => Promise<void>;
+  softDeleteNote: (noteId: string) => Promise<void>;
+  restoreNote: (noteId: string) => Promise<void>;
+  permanentlyDeleteNote: (noteId: string) => Promise<void>;
   calculateActivityData: (notes: Note[]) => Promise<void>;
 }
 
@@ -49,6 +53,95 @@ export const useDataStore = create<DataState>((set, get) => ({
   channels: [],
   activityCache: null,
   isCalculating: false,
+
+  togglePinNote: async (noteId: string) => {
+    const { notes, updateNoteState } = get();
+    const note = notes[noteId];
+    if (!note) return;
+
+    const newPinnedStatus = !note.is_pinned;
+    const updatedNote = { ...note, is_pinned: newPinnedStatus, updated_at: new Date().toISOString() };
+    
+    // Optimistic Update
+    updateNoteState(updatedNote);
+
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ is_pinned: newPinnedStatus, updated_at: updatedNote.updated_at })
+        .eq('id', noteId);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to toggle pin:', error);
+      updateNoteState(note); // Rollback
+    }
+  },
+
+  softDeleteNote: async (noteId: string) => {
+    const { notes, updateNoteState } = get();
+    const note = notes[noteId];
+    if (!note) return;
+
+    const deletedAt = new Date().toISOString();
+    const updatedNote = { ...note, deleted_at: deletedAt, updated_at: deletedAt };
+
+    updateNoteState(updatedNote);
+
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ deleted_at: deletedAt, updated_at: deletedAt })
+        .eq('id', noteId);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to soft delete note:', error);
+      updateNoteState(note);
+    }
+  },
+
+  restoreNote: async (noteId: string) => {
+    const { notes, updateNoteState } = get();
+    const note = notes[noteId];
+    if (!note) return;
+
+    const updatedNote = { ...note, deleted_at: null, updated_at: new Date().toISOString() };
+
+    updateNoteState(updatedNote);
+
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ deleted_at: null, updated_at: updatedNote.updated_at })
+        .eq('id', noteId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to restore note:', error);
+      updateNoteState(note);
+    }
+  },
+
+  permanentlyDeleteNote: async (noteId: string) => {
+    const { removeNoteState } = get();
+    
+    // Optimistic
+    removeNoteState(noteId);
+
+    try {
+      const { error } = await supabase.from('notes').delete().eq('id', noteId);
+      if (error) throw error;
+      // Reminders are cascaded on DB level usually, but we also delete them manually in other funcs.
+      // Assuming ON DELETE CASCADE in Postgres or manual cleanup.
+      // Supabase doesn't always default to CASCADE.
+      await supabase.from('reminders').delete().eq('note_id', noteId);
+    } catch (error) {
+      console.error('Failed to permanently delete note:', error);
+      // Restore state? Complex because we removed it.
+      // Ideally re-fetch or keep a backup.
+    }
+  },
 
   calculateActivityData: async (notes: Note[]) => {
     if (get().isCalculating) return;
@@ -301,7 +394,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       const { data, error } = await supabase
         .from('notes')
         .select(
-          'id, title, owner_id, is_public, note_type, tags, created_at, updated_at, content_preview, reminders(*)',
+          'id, title, owner_id, is_public, note_type, tags, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
         )
         .eq('owner_id', userId);
 
@@ -314,6 +407,8 @@ export const useDataStore = create<DataState>((set, get) => ({
             createdAt: new Date(note.created_at),
             updatedAt: new Date(note.updated_at),
             reminders: note.reminders || [],
+            is_pinned: note.is_pinned || false,
+            deleted_at: note.deleted_at || null,
           };
           acc[note.id] = formatted;
           // Sync fetched data to local DB

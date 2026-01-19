@@ -10,6 +10,9 @@ import { usePageShortcuts } from '@/hooks/usePageShortcuts';
 import User from 'lucide-react/dist/esm/icons/user';
 import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
 import Settings from 'lucide-react/dist/esm/icons/settings';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const TABS = [
   { id: 'profile', label: '프로필', icon: <User /> },
@@ -20,6 +23,7 @@ const TABS = [
 export default function MyPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const activeTab = searchParams.get('tab') || 'profile';
 
@@ -68,11 +72,21 @@ export default function MyPage() {
     >
       <Toaster />
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">마이 페이지</h1>
-          <p className="text-muted-foreground mt-2">
-            프로필, 활동 및 설정을 관리하세요.
-          </p>
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/dashboard')}
+            className="rounded-full"
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">마이 페이지</h1>
+            <p className="text-muted-foreground mt-1">
+              프로필, 활동 및 설정을 관리하세요.
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div className="md:col-span-1">

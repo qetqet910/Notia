@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -30,6 +30,7 @@ import Heart from 'lucide-react/dist/esm/icons/heart';
 import DatabaseBackup from 'lucide-react/dist/esm/icons/database-backup';
 import BellRing from 'lucide-react/dist/esm/icons/bell-ring';
 import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import { usePageShortcuts } from '@/hooks/usePageShortcuts';
 
 // Content from user's original file
@@ -165,6 +166,7 @@ const HelpContentWrapper: React.FC<{
 export default function HelpPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const activeTab = searchParams.get('tab') || 'overview';
 
@@ -207,11 +209,21 @@ export default function HelpPage() {
     >
       <Toaster />
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">도움말 센터</h1>
-          <p className="text-muted-foreground mt-2">
-            순간을 기록하는 것에 필요한 모든 것을 찾아보세요.
-          </p>
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/dashboard')}
+            className="rounded-full"
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">도움말 센터</h1>
+            <p className="text-muted-foreground mt-1">
+              순간을 기록하는 것에 필요한 모든 것을 찾아보세요.
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           <div className="md:col-span-1">

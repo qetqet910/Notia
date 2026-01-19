@@ -123,8 +123,8 @@ html {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -282,4 +282,27 @@ html {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-content, .print-content * {
+    visibility: visible;
+  }
+  .print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 2rem;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  /* Hide UI elements specifically if visibility trick misses something overlaying */
+  nav, header, aside, button {
+    display: none !important;
+  }
 }

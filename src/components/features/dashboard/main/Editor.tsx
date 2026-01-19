@@ -52,12 +52,25 @@ import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
 import Columns2 from 'lucide-react/dist/esm/icons/columns-2';
 import SquarePen from 'lucide-react/dist/esm/icons/square-pen';
+import Download from 'lucide-react/dist/esm/icons/download';
+import Pin from 'lucide-react/dist/esm/icons/pin';
+import FileText from 'lucide-react/dist/esm/icons/file-text';
+import Printer from 'lucide-react/dist/esm/icons/printer';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { isTauri } from '@/utils/isTauri';
 
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Note, EditorReminder, Reminder } from '@/types';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -90,6 +103,7 @@ interface EditorProps {
     >,
   ) => void;
   onDeleteRequest: () => void;
+  onTogglePin?: () => void;
   isEditing: boolean;
   onEnterEditMode: () => void;
   onCancelEdit: () => void;
@@ -145,6 +159,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       note,
       onSave,
       onDeleteRequest,
+      onTogglePin,
       isEditing,
       onEnterEditMode,
       onCancelEdit,
@@ -331,6 +346,38 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       onCancelEdit();
     }, [note, onCancelEdit, resetStateFromNote]);
 
+    const handleExport = async () => {
+        if (!isTauri()) {
+            // Web Fallback
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${title || 'note'}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+            return;
+        }
+
+        try {
+            const filePath = await save({
+                filters: [{
+                    name: 'Markdown',
+                    extensions: ['md']
+                }],
+                defaultPath: `${title || 'Untitled'}.md`
+            });
+
+            if (filePath) {
+                await writeTextFile(filePath, content);
+                toast({ title: "내보내기 성공", description: "파일이 저장되었습니다." });
+            }
+        } catch (error) {
+            console.error("Export failed:", error);
+            toast({ title: "내보내기 실패", variant: "destructive" });
+        }
+    };
+
     useEffect(() => {
       if (!isEditing) return;
       const handleKeyDown = (event: KeyboardEvent) => {
@@ -412,6 +459,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
             displayTags={displayTags}
             displayReminders={displayReminders}
             onScroll={handlePreviewScroll}
+            onExport={handleExport}
         />
     );
 
@@ -507,6 +555,11 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 
             {!isEditing ? (
               <>
+                {onTogglePin && (
+                  <Button variant="ghost" size="sm" onClick={onTogglePin} title={note.is_pinned ? "고정 해제" : "고정"}>
+                    <Pin className={`h-4 w-4 ${note.is_pinned ? "fill-orange-500 text-orange-500" : ""}`} />
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
                   size="sm"
@@ -563,6 +616,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               title={title}
               displayTags={displayTags}
               displayReminders={displayReminders}
+              onExport={handleExport}
             />
           )}
         </div>
@@ -586,6 +640,7 @@ interface PreviewPanelProps {
   displayTags?: { text: string }[];
   displayReminders?: { reminderText: string; parsedDate?: Date }[];
   onScroll?: () => void;
+  onExport?: () => void;
 }
 
 const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
@@ -594,15 +649,37 @@ const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
   displayTags,
   displayReminders,
   onScroll,
+  onExport,
 }, ref) => (
   <div
     ref={ref}
-    className="h-full overflow-y-auto custom-scrollbar"
+    className="h-full overflow-y-auto custom-scrollbar relative print-content"
     onScroll={onScroll}
   >
-    <h1 className="text-4xl pl-4 pt-4 font-bold mb-4">
-      {title || '제목 없음'}
-    </h1>
+    <div className="relative group">
+        <h1 className="text-4xl pl-4 pt-4 font-bold mb-4 pr-12 break-all">
+          {title || '제목 없음'}
+        </h1>
+        {onExport && (
+            <div className="absolute top-4 right-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" title="내보내기">
+                        <Download className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onExport}>
+                      <FileText className="mr-2 h-4 w-4" /> Markdown (.md)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.print()}>
+                      <Printer className="mr-2 h-4 w-4" /> PDF 인쇄
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        )}
+    </div>
     {(displayTags?.length > 0 || displayReminders?.length > 0) && (
       <div className="sticky top-0 z-10 border-b border-t bg-background p-4 rounded-b-lg space-y-4">
         {displayTags && displayTags.length > 0 && (

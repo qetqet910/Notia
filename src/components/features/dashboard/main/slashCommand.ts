@@ -12,10 +12,80 @@ import {
   insertMermaidFlow,
   insertMermaidSequence,
   insertMermaidMindmap,
+  toggleHeading,
+  toggleQuote,
+  toggleBulletList,
+  toggleOrderedList,
 } from '@/components/features/dashboard/toolbar/editorCommands';
 
 // Now takes onImageUpload callback to trigger file selector
 const getSlashCommands = (onImageUpload: () => void): Completion[] => [
+  {
+    label: '/h1',
+    displayLabel: 'H1',
+    detail: 'Heading 1',
+    type: 'text',
+    boost: 20,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({ changes: { from, to, insert: '' } });
+      toggleHeading(view, 1);
+    },
+  },
+  {
+    label: '/h2',
+    displayLabel: 'H2',
+    detail: 'Heading 2',
+    type: 'text',
+    boost: 19,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({ changes: { from, to, insert: '' } });
+      toggleHeading(view, 2);
+    },
+  },
+  {
+    label: '/h3',
+    displayLabel: 'H3',
+    detail: 'Heading 3',
+    type: 'text',
+    boost: 18,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({ changes: { from, to, insert: '' } });
+      toggleHeading(view, 3);
+    },
+  },
+  {
+    label: '/bullet',
+    displayLabel: '• 목록',
+    detail: 'Bullet List',
+    type: 'list',
+    boost: 15,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({ changes: { from, to, insert: '' } });
+      toggleBulletList(view);
+    },
+  },
+  {
+    label: '/number',
+    displayLabel: '1. 목록',
+    detail: 'Ordered List',
+    type: 'list',
+    boost: 14,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({ changes: { from, to, insert: '' } });
+      toggleOrderedList(view);
+    },
+  },
+  {
+    label: '/quote',
+    displayLabel: '“ 인용',
+    detail: 'Blockquote',
+    type: 'text',
+    boost: 13,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({ changes: { from, to, insert: '' } });
+      toggleQuote(view);
+    },
+  },
   {
     label: '/flowchart',
     displayLabel: '🔀 플로우차트',

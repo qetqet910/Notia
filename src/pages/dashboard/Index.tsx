@@ -40,6 +40,7 @@ import Settings from 'lucide-react/dist/esm/icons/settings';
 import Monitor from 'lucide-react/dist/esm/icons/monitor';
 import LogOut from 'lucide-react/dist/esm/icons/log-out';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Trash from 'lucide-react/dist/esm/icons/trash-2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
@@ -62,6 +63,8 @@ import { ReminderLoader } from '@/components/loader/dashboard/ReminderLoader';
 import { CalendarLoader } from '@/components/loader/dashboard/CalendarLoader';
 import { TimelineLoader } from '@/components/loader/dashboard/TimelineLoader';
 import { NoteListLoader } from '@/components/loader/dashboard/NoteListLoader';
+import { DashboardTour } from '@/components/features/dashboard/DashboardTour';
+import { FeedbackDialog } from '@/components/features/dashboard/FeedbackDialog';
 
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/NoteList').then((module) => ({
@@ -90,6 +93,11 @@ const TimelineView = lazy(() =>
     }),
   ),
 );
+const TrashView = lazy(() =>
+  import('@/components/features/dashboard/main/TrashView').then((module) => ({
+    default: module.TrashView,
+  })),
+);
 
 import {
   ResizablePanelGroup,
@@ -102,6 +110,7 @@ const NAV_ITEMS = [
   { id: 'reminder', label: '리마인더', icon: Clock },
   { id: 'calendar', label: '캘린더', icon: CalendarIcon },
   { id: 'timeline', label: '타임라인', icon: List },
+  { id: 'trash', label: '휴지통', icon: Trash },
 ];
 
 const EmptyNoteState = ({
@@ -123,14 +132,20 @@ export const Dashboard: React.FC = () => {
   const { session } = useAuthStore();
   const {
     notes,
+    trashNotes,
     loading: isNotesLoading,
     addNote,
     updateNote,
-    deleteNote,
+    deleteNote, // soft delete default (exposed as deleteNote in useNotes but we need to check if we updated it)
+    // Wait, useNotes exposes softDeleteNote separately.
+    softDeleteNote,
+    restoreNote,
+    permanentlyDeleteNote,
     deleteReminder,
     updateReminderCompletion,
     updateReminderEnabled,
     fetchNoteContent,
+    togglePinNote,
   } = useNotes();
   const { permission, requestPermission } = useNotificationPermission();
   const { isDarkMode, isDeepDarkMode, setTheme } = useThemeStore();
@@ -398,6 +413,7 @@ export const Dashboard: React.FC = () => {
                 note={selectedNote}
                 onSave={handleSaveNote}
                 onDeleteRequest={() => setIsDeleteDialogOpen(true)}
+                onTogglePin={() => togglePinNote(selectedNote.id)}
                 isEditing={isEditing}
                 onEnterEditMode={handleEnterEditMode}
                 onCancelEdit={handleCancelEdit}
@@ -435,6 +451,7 @@ export const Dashboard: React.FC = () => {
                 notes={filteredNotes}
                 onSelectNote={handleSelectNote}
                 selectedNote={selectedNote}
+                onTogglePin={togglePinNote}
               />
             </Suspense>
           </div>
@@ -449,7 +466,7 @@ export const Dashboard: React.FC = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  이 작업은 되돌릴 수 없습니다.
+                  삭제한 노트는 휴지통에서 되돌릴 수 있습니다.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -611,6 +628,16 @@ export const Dashboard: React.FC = () => {
             />
           </Suspense>
         );
+      case 'trash':
+        return (
+          <Suspense fallback={<DashboardPageLoader />}>
+             <TrashView 
+                trashNotes={trashNotes || []}
+                onRestore={restoreNote}
+                onDeleteForever={permanentlyDeleteNote}
+             />
+          </Suspense>
+        );
       default:
         return null;
     }
@@ -622,6 +649,8 @@ export const Dashboard: React.FC = () => {
         isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
       }`}
     >
+      <DashboardTour />
+      <FeedbackDialog />
       <div className="flex flex-col h-full bg-background text-foreground">
         <Toaster />
         <header className="flex justify-between items-center px-4 py-3 border-b border-border flex-shrink-0">
@@ -693,7 +722,7 @@ const Sidebar = ({
         isEditing ? 'w-0 opacity-0' : 'w-56'
       }`}
     >
-      <nav className="flex flex-col gap-2">
+      <nav id="tour-sidebar-nav" className="flex flex-col gap-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           return (
@@ -736,7 +765,9 @@ const Sidebar = ({
             </div>
           </div>
         )}
-        <GoalProgress />
+        <div id="tour-goal-progress">
+          <GoalProgress />
+        </div>
       </div>
     </aside>
   );
@@ -972,10 +1003,17 @@ const DesktopActions = ({
   handleCreateNote: () => void;
 }) => (
   <div className="flex items-center gap-2">
-    <Button variant="outline" size="sm" onClick={handleCreateNote}>
+    <Button
+      id="tour-create-note"
+      variant="outline"
+      size="sm"
+      onClick={handleCreateNote}
+    >
       <PlusCircle className="mr-2 h-4 w-4" />새 노트
     </Button>
-    <UserProfile />
+    <div id="tour-user-profile">
+      <UserProfile />
+    </div>
   </div>
 );
 

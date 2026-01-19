@@ -125,9 +125,19 @@ class LocalDBService {
         created_at TEXT,
         updated_at TEXT,
         is_synced INTEGER DEFAULT 1, -- 0: unsynced, 1: synced
-        is_deleted INTEGER DEFAULT 0
+        is_deleted INTEGER DEFAULT 0,
+        deleted_at TEXT,
+        is_pinned INTEGER DEFAULT 0
       )
     `);
+
+    // Migration for existing tables
+    try {
+      await this.db.execute('ALTER TABLE notes ADD COLUMN deleted_at TEXT');
+    } catch { /* ignore if exists */ }
+    try {
+      await this.db.execute('ALTER TABLE notes ADD COLUMN is_pinned INTEGER DEFAULT 0');
+    } catch { /* ignore if exists */ }
 
     // 리마인더 테이블
     await this.db.execute(`
@@ -169,15 +179,21 @@ class LocalDBService {
       const syncedVal = isSynced ? 1 : 0;
       
       await this.db.execute(`
-        INSERT INTO notes (id, owner_id, title, content, tags, created_at, updated_at, is_synced)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO notes (id, owner_id, title, content, tags, created_at, updated_at, is_synced, deleted_at, is_pinned)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           content = excluded.content,
           tags = excluded.tags,
           updated_at = excluded.updated_at,
-          is_synced = excluded.is_synced
-      `, [note.id, note.owner_id, note.title, note.content || '', tagsJson, note.created_at, note.updated_at, syncedVal]);
+          is_synced = excluded.is_synced,
+          deleted_at = excluded.deleted_at,
+          is_pinned = excluded.is_pinned
+      `, [
+          note.id, note.owner_id, note.title, note.content || '', tagsJson, 
+          note.created_at, note.updated_at, syncedVal, 
+          note.deleted_at || null, note.is_pinned ? 1 : 0
+      ]);
 
       // Handle Reminders (Delete all and re-insert for simplicity in local DB)
       await this.db.execute('DELETE FROM reminders WHERE note_id = $1', [note.id]);
@@ -205,7 +221,7 @@ class LocalDBService {
 
     if (isTauri() && this.db) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const notesResult = await this.db.select<any[]>('SELECT * FROM notes WHERE is_deleted = 0 ORDER BY updated_at DESC');
+      const notesResult = await this.db.select<any[]>('SELECT * FROM notes WHERE is_deleted = 0 ORDER BY is_pinned DESC, updated_at DESC');
       const notes: Note[] = [];
 
       for (const row of notesResult) {
@@ -220,6 +236,8 @@ class LocalDBService {
           tags: JSON.parse(row.tags),
           created_at: row.created_at,
           updated_at: row.updated_at,
+          deleted_at: row.deleted_at,
+          is_pinned: row.is_pinned === 1,
           reminders: remindersResult.map(r => ({
             id: r.id,
             note_id: r.note_id,

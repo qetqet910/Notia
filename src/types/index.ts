@@ -8,6 +8,8 @@ export interface Note {
   tags: string[];
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  is_pinned?: boolean;
   createdAt: Date;
   updatedAt: Date;
   reminders: Reminder[];

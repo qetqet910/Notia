@@ -6,11 +6,11 @@ import * as tauriApi from '@tauri-apps/api/core';
 
 // --- Mocks ---
 
-// 1. Mock useAuth
+// 1. Mock useAuthStore
 const mockUser = { id: 'test-user-id' };
-const mockUseAuth = vi.fn(() => ({ user: mockUser }));
-vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => mockUseAuth(),
+const mockUseAuthStore = vi.fn(() => ({ user: mockUser }));
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: () => mockUseAuthStore(),
 }));
 
 // 2. Mock useToast
@@ -45,12 +45,12 @@ vi.mock('@tauri-apps/api/core', () => ({
 describe('useImageUpload Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuth.mockReturnValue({ user: mockUser }); // Default: logged in
+    mockUseAuthStore.mockReturnValue({ user: mockUser }); // Default: logged in
     mockIsTauri.mockReturnValue(false); // Default: Web environment
   });
 
   it('should return null and show toast if user is not logged in', async () => {
-    mockUseAuth.mockReturnValue({ user: null });
+    mockUseAuthStore.mockReturnValue({ user: null });
     const { result } = renderHook(() => useImageUpload());
 
     const file = new File(['dummy'], 'test.png', { type: 'image/png' });

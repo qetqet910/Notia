@@ -229,8 +229,8 @@ pub fn run() {
     ])
     .setup(|app| {
       // 트레이 메뉴 생성
-      let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-      let show_i = MenuItem::with_id(app, "show", "Open Notia", true, None::<&str>)?;
+      let quit_i = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
+      let show_i = MenuItem::with_id(app, "show", "다시 띄우기", true, None::<&str>)?;
       let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
       // 트레이 아이콘 생성
@@ -250,35 +250,18 @@ pub fn run() {
               }
               _ => {}
           })
-          .on_tray_icon_event(|tray, event| match event {
+          .on_tray_icon_event(|_tray, event| match event {
+              // 좌클릭 시 아무 동작도 하지 않음 (사용자 요청)
               TrayIconEvent::Click {
                   button: tauri::tray::MouseButton::Left,
                   ..
               } => {
-                  let app = tray.app_handle();
-                  if let Some(window) = app.get_webview_window("main") {
-                       let _ = window.show();
-                       let _ = window.set_focus();
-                  }
+                  // Do nothing
               }
               _ => {}
           })
           .build(app)?;
 
-      #[cfg(desktop)]
-      if let Some(window) = app.get_webview_window("main") {
-        // window.open_devtools(); // 기존 코드 유지
-        
-        // 창 닫기 이벤트 가로채기 (숨기기 모드)
-        let window_clone = window.clone();
-        window.on_window_event(move |event| match event {
-            WindowEvent::CloseRequested { api, .. } => {
-                api.prevent_close();
-                window_clone.hide().unwrap();
-            }
-            _ => {}
-        });
-      }
       Ok(())
     })
     .run(tauri::generate_context!())

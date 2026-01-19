@@ -45,6 +45,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Loader2 } from 'lucide-react';
+import { CloseHandler } from '@/components/common/CloseHandler';
 
 const ScrollToTop = () => {
   const location = useLocation();
@@ -256,6 +257,7 @@ function App() {
   return (
     <div className="max-w-[1920px] mx-auto min-h-screen bg-background">
       <RouterProvider router={router} />
+      <CloseHandler />
       
       <AlertDialog open={!!updateAvailable}>
         <AlertDialogContent>

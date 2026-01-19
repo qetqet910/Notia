@@ -7,6 +7,9 @@
   ],
   "permissions": [
     "core:default",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "process:allow-exit",
     "log:default",
     "notification:default",
     "sql:default",

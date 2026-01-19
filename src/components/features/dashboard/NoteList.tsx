@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import Search from 'lucide-react/dist/esm/icons/search';
+import Pin from 'lucide-react/dist/esm/icons/pin';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Note } from '@/types';
@@ -13,12 +15,14 @@ interface NoteListProps {
   notes: Note[];
   selectedNote: Note | null;
   onSelectNote: (note: Note) => void;
+  onTogglePin: (noteId: string) => void;
 }
 
 export const NoteList: React.FC<NoteListProps> = ({
   notes,
   selectedNote,
   onSelectNote,
+  onTogglePin,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredNotes, setFilteredNotes] = useState<Note[]>(notes);
@@ -37,11 +41,11 @@ export const NoteList: React.FC<NoteListProps> = ({
     const performSearch = async () => {
       if (!debouncedSearchTerm.trim()) {
         setFilteredNotes(
-          [...notes].sort(
-            (a, b) =>
-              new Date(b.updated_at).getTime() -
-              new Date(a.updated_at).getTime(),
-          ),
+          [...notes].sort((a, b) => {
+            const pinDiff = Number(b.is_pinned || false) - Number(a.is_pinned || false);
+            if (pinDiff !== 0) return pinDiff;
+            return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+          }),
         );
         return;
       }
@@ -54,8 +58,12 @@ export const NoteList: React.FC<NoteListProps> = ({
           });
           
           const filtered = notes.filter((note) => filteredIds.includes(note.id));
-           // Sort filtered results by update time as well
-           filtered.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+           // Sort filtered results by pin then update time
+           filtered.sort((a, b) => {
+             const pinDiff = Number(b.is_pinned || false) - Number(a.is_pinned || false);
+             if (pinDiff !== 0) return pinDiff;
+             return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+           });
           setFilteredNotes(filtered);
         } catch (error) {
           console.error('Rust search failed:', error);
@@ -78,10 +86,11 @@ export const NoteList: React.FC<NoteListProps> = ({
               tag.toLowerCase().includes(lowerQuery),
             ),
         )
-        .sort(
-          (a, b) =>
-            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
-        );
+        .sort((a, b) => {
+          const pinDiff = Number(b.is_pinned || false) - Number(a.is_pinned || false);
+          if (pinDiff !== 0) return pinDiff;
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
       setFilteredNotes(filtered);
     };
 
@@ -114,13 +123,29 @@ export const NoteList: React.FC<NoteListProps> = ({
             {filteredNotes.map((note) => (
               <div
                 key={note.id}
-                className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+                className={`p-4 cursor-pointer transition-colors hover:bg-muted/50 group relative ${ // group 클래스 추가
                   selectedNote?.id === note.id ? 'bg-muted' : ''
                 }`}
                 onClick={() => onSelectNote(note)}
               >
-                <div className="grid grid-cols-[minmax(0,1fr)]">
-                  <h3 className="font-medium truncate">{note.title}</h3>
+                <div className="absolute right-2 top-2 z-10">
+                   <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-6 w-6 transition-opacity ${note.is_pinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onTogglePin(note.id);
+                      }}
+                   >
+                      <Pin className={`h-3.5 w-3.5 ${note.is_pinned ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
+                   </Button>
+                </div>
+
+                <div className="grid grid-cols-[minmax(0,1fr)] pr-6">
+                  <div className="flex items-center gap-1">
+                    <h3 className="font-medium truncate">{note.title || '제목 없음'}</h3>
+                  </div>
                   <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                     {getContentPreview(note.content_preview)}
                   </p>

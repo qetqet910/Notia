@@ -304,11 +304,7 @@ export const ProfileTab: React.FC = React.memo(() => {
               프로필 정보
             </CardTitle>
             <div className="flex justify-end space-x-2">
-              {isProvider ? (
-                <p className="text-sm text-muted-foreground italic">
-                  소셜 로그인 계정은 프로필을 편집할 수 없습니다.
-                </p>
-              ) : isEditing ? (
+              {isEditing ? (
                 <>
                   <Button
                     variant="outline"
@@ -337,13 +333,21 @@ export const ProfileTab: React.FC = React.memo(() => {
           <CardContent className="space-y-6">
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <Avatar className="h-20 w-20">
+                <Avatar className="h-20 w-20 border-2 border-border/50 shadow-sm">
                   {tempAvatarUrl && <AvatarImage src={tempAvatarUrl} />}
-                  <AvatarFallback className="text-lg">
+                  <AvatarFallback className="text-lg bg-muted">
                     {getInitials(displayName)}
                   </AvatarFallback>
                 </Avatar>
-                {isEditing && !isProvider && (
+                
+                {/* Image Upload Loader (Liquid Glass Style) */}
+                {isSaving && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-background/20 backdrop-blur-sm border border-white/20 z-10 animate-in fade-in duration-200">
+                     <Loader2 className="h-6 w-6 animate-spin text-foreground drop-shadow-md" />
+                  </div>
+                )}
+
+                {isEditing && (
                   <Button
                     variant="outline"
                     size="icon"
@@ -372,7 +376,7 @@ export const ProfileTab: React.FC = React.memo(() => {
                     {stats.completedReminders} 포인트
                   </Badge>
                 </div>
-                {isEditing && !isProvider && (
+                {isEditing && (
                   <p className="text-sm text-muted-foreground">
                     사진 파일. 10MB 이하.
                   </p>
@@ -383,7 +387,7 @@ export const ProfileTab: React.FC = React.memo(() => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="displayName">표시 이름</Label>
-                {isEditing && !isProvider ? (
+                {isEditing ? (
                   <Input
                     id="displayName"
                     value={displayName}
