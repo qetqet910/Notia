@@ -3,6 +3,9 @@ command = "npm run build"
 publish = "dist"
 functions = "netlify/functions"
 
+[build.environment]
+  NPM_FLAGS = "--legacy-peer-deps"
+
 # robots.txt와 sitemap.xml은 직접 제공
 [[redirects]]
 from = "/robots.txt"
