@@ -8,30 +8,53 @@ window.onerror = function (message, source, lineno, colno, error) {
   console.error('Global Error Caught:', message, error);
   // Tauri 환경에서 즉시 확인 가능한 alert 추가
   window.alert(`CRITICAL ERROR:\n${message}\n${source}:${lineno}`);
-  document.body.innerHTML = `
-    <div style="
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background-color: #7f1d1d; color: #fee2e2;
-      padding: 2rem; box-sizing: border-box; font-family: monospace;
-      overflow: auto; z-index: 9999;
-    ">
-      <h1 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">
-        ⚠️ Critical Error
-      </h1>
-      <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">${message}</p>
-      <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;">
-        <p>Source: ${source}:${lineno}:${colno}</p>
-        <pre style="white-space: pre-wrap; margin-top: 0.5rem; font-size: 0.9rem;">${error?.stack || 'No stack trace available'}</pre>
-      </div>
-      <button onclick="window.location.reload()" style="
-        margin-top: 2rem; padding: 0.5rem 1rem;
-        background: #fff; color: #7f1d1d; border: none; border-radius: 0.25rem;
-        cursor: pointer; font-weight: bold;
-      ">
-        Reload Application
-      </button>
-    </div>
-  `;
+  
+  // Clear body safely
+  document.body.innerHTML = '';
+  
+  const container = document.createElement('div');
+  Object.assign(container.style, {
+      position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+      backgroundColor: '#7f1d1d', color: '#fee2e2',
+      padding: '2rem', boxSizing: 'border-box', fontFamily: 'monospace',
+      overflow: 'auto', zIndex: '9999'
+  });
+
+  const title = document.createElement('h1');
+  title.textContent = '⚠️ Critical Error';
+  Object.assign(title.style, { fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' });
+  container.appendChild(title);
+
+  const msgP = document.createElement('p');
+  msgP.textContent = String(message);
+  Object.assign(msgP.style, { fontSize: '1.1rem', marginBottom: '0.5rem' });
+  container.appendChild(msgP);
+
+  const detailsDiv = document.createElement('div');
+  Object.assign(detailsDiv.style, { background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '0.5rem', marginTop: '1rem' });
+  
+  const sourceP = document.createElement('p');
+  sourceP.textContent = `Source: ${source}:${lineno}:${colno}`;
+  detailsDiv.appendChild(sourceP);
+
+  const stackPre = document.createElement('pre');
+  stackPre.textContent = error?.stack || 'No stack trace available';
+  Object.assign(stackPre.style, { whiteSpace: 'pre-wrap', marginTop: '0.5rem', fontSize: '0.9rem' });
+  detailsDiv.appendChild(stackPre);
+
+  container.appendChild(detailsDiv);
+
+  const reloadBtn = document.createElement('button');
+  reloadBtn.textContent = 'Reload Application';
+  reloadBtn.onclick = () => window.location.reload();
+  Object.assign(reloadBtn.style, {
+        marginTop: '2rem', padding: '0.5rem 1rem',
+        background: '#fff', color: '#7f1d1d', border: 'none', borderRadius: '0.25rem',
+        cursor: 'pointer', fontWeight: 'bold'
+  });
+  container.appendChild(reloadBtn);
+
+  document.body.appendChild(container);
   return true; // 에러 전파 방지
 };
 

@@ -6,6 +6,7 @@ const initializeMermaid = async () => {
   mermaid.initialize({
     startOnLoad: true,
     theme: 'default',
+    securityLevel: 'strict',
   });
   return mermaid;
 };
@@ -62,6 +63,12 @@ export const MermaidComponent = ({
             .render(id, chart)
             .then(({ svg }) => {
               if (ref.current) {
+                 // Basic security check on the output SVG string
+                 if (svg.toLowerCase().includes('<script') || svg.toLowerCase().includes('javascript:')) {
+                    console.error('Blocked potentially malicious Mermaid output');
+                    ref.current.textContent = 'Blocked potentially malicious content.';
+                    return;
+                 }
                 ref.current.innerHTML = svg;
               }
             })
