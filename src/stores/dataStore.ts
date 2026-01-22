@@ -411,12 +411,14 @@ export const useDataStore = create<DataState>((set, get) => ({
             deleted_at: note.deleted_at || null,
           };
           acc[note.id] = formatted;
-          // Sync fetched data to local DB
-          localDB.upsertNote(formatted); 
           return acc;
         },
         {} as Record<string, Note>,
       );
+      
+      // Bulk sync fetched data to local DB
+      await localDB.upsertNotes(Object.values(formattedNotes));
+
       set({ notes: formattedNotes, activityCache: null }); 
     } catch (err) {
       console.error('Online initialization failed, running in offline mode:', err);

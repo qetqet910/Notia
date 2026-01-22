@@ -9,13 +9,19 @@ const DB_NAME = 'notia.db';
 class WebDB {
   private dbName = 'NotiaWebDB';
   private version = 1;
+  private db: IDBDatabase | null = null;
 
   async init() {
+    if (this.db) return;
+
     return new Promise<void>((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
       
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
+      request.onsuccess = () => {
+        this.db = request.result;
+        resolve();
+      };
       
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
@@ -31,54 +37,44 @@ class WebDB {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async execute(_query: string, _values?: unknown[]) {
-    // 웹 환경에서는 SQL 쿼리 파싱이 복잡하므로, 
-    // 실제 로직은 LocalDBService의 메서드 내에서 분기 처리하는 것이 좋습니다.
-    // 여기서는 인터페이스 호환성을 위해 에러를 던지거나 더미를 반환합니다.
     console.warn('WebDB execute is not fully implemented for raw SQL. Use dedicated methods.');
     return [];
   }
   
   // IndexedDB 헬퍼 메서드들...
   async getAllNotes(): Promise<Note[]> {
+      await this.init();
       return new Promise((resolve, reject) => {
-          const request = indexedDB.open(this.dbName, this.version);
-          request.onsuccess = () => {
-              const db = request.result;
-              const tx = db.transaction('notes', 'readonly');
-              const store = tx.objectStore('notes');
-              const getAll = store.getAll();
-              getAll.onsuccess = () => resolve(getAll.result);
-              getAll.onerror = () => reject(getAll.error);
-          };
+          if (!this.db) return reject(new Error("DB not initialized"));
+          const tx = this.db.transaction('notes', 'readonly');
+          const store = tx.objectStore('notes');
+          const getAll = store.getAll();
+          getAll.onsuccess = () => resolve(getAll.result);
+          getAll.onerror = () => reject(getAll.error);
       });
   }
 
   async saveNote(note: Note): Promise<void> {
+      await this.init();
       return new Promise((resolve, reject) => {
-          const request = indexedDB.open(this.dbName, this.version);
-          request.onsuccess = () => {
-              const db = request.result;
-              const tx = db.transaction('notes', 'readwrite');
-              const store = tx.objectStore('notes');
-              // Note: reminders 등 복잡한 객체는 그대로 저장 가능 (IndexedDB 장점)
-              const put = store.put(note);
-              put.onsuccess = () => resolve();
-              put.onerror = () => reject(put.error);
-          };
+          if (!this.db) return reject(new Error("DB not initialized"));
+          const tx = this.db.transaction('notes', 'readwrite');
+          const store = tx.objectStore('notes');
+          const put = store.put(note);
+          put.onsuccess = () => resolve();
+          put.onerror = () => reject(put.error);
       });
   }
   
   async deleteNote(id: string): Promise<void> {
+      await this.init();
       return new Promise((resolve, reject) => {
-          const request = indexedDB.open(this.dbName, this.version);
-          request.onsuccess = () => {
-              const db = request.result;
-              const tx = db.transaction('notes', 'readwrite');
-              const store = tx.objectStore('notes');
-              const del = store.delete(id);
-              del.onsuccess = () => resolve();
-              del.onerror = () => reject(del.error);
-          };
+          if (!this.db) return reject(new Error("DB not initialized"));
+          const tx = this.db.transaction('notes', 'readwrite');
+          const store = tx.objectStore('notes');
+          const del = store.delete(id);
+          del.onsuccess = () => resolve();
+          del.onerror = () => reject(del.error);
       });
   }
 }
@@ -171,6 +167,27 @@ class LocalDBService {
 
   // --- Note Operations ---
 
+  async upsertNotes(notes: Note[], isSynced: boolean = true) {
+      await this.init();
+      if (isTauri() && this.db) {
+          try {
+              await this.db.execute('BEGIN TRANSACTION');
+              for (const note of notes) {
+                  await this.upsertNote(note, isSynced); 
+              }
+              await this.db.execute('COMMIT');
+          } catch (error) {
+              await this.db.execute('ROLLBACK');
+              console.error('Failed to batch upsert notes:', error);
+              throw error;
+          }
+      } else if (this.webDb) {
+          for (const note of notes) {
+              await this.webDb.saveNote(note);
+          }
+      }
+  }
+
   async upsertNote(note: Note, isSynced: boolean = true) {
     await this.init();
     
@@ -222,11 +239,25 @@ class LocalDBService {
     if (isTauri() && this.db) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const notesResult = await this.db.select<any[]>('SELECT * FROM notes WHERE is_deleted = 0 ORDER BY is_pinned DESC, updated_at DESC');
+      
+      if (notesResult.length === 0) return [];
+
+      // Fetch all reminders in one go to avoid N+1
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const allReminders = await this.db.select<any[]>('SELECT * FROM reminders');
+      const remindersMap = new Map<string, any[]>();
+      
+      for (const r of allReminders) {
+          if (!remindersMap.has(r.note_id)) {
+              remindersMap.set(r.note_id, []);
+          }
+          remindersMap.get(r.note_id)?.push(r);
+      }
+
       const notes: Note[] = [];
 
       for (const row of notesResult) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const remindersResult = await this.db.select<any[]>('SELECT * FROM reminders WHERE note_id = $1', [row.id]);
+        const noteReminders = remindersMap.get(row.id) || [];
         
         notes.push({
           id: row.id,
@@ -238,7 +269,7 @@ class LocalDBService {
           updated_at: row.updated_at,
           deleted_at: row.deleted_at,
           is_pinned: row.is_pinned === 1,
-          reminders: remindersResult.map(r => ({
+          reminders: noteReminders.map(r => ({
             id: r.id,
             note_id: r.note_id,
             owner_id: r.owner_id,
@@ -262,10 +293,6 @@ class LocalDBService {
   async deleteNote(id: string) {
     await this.init();
     if (isTauri() && this.db) {
-      // Soft delete locally, or hard delete if sync handling is sophisticated
-      // For now, let's just delete to keep it simple, 
-      // but in a real offline-first app, we might need soft delete to sync the deletion later.
-      // We'll trust the Sync Queue to handle the upstream deletion.
       await this.db.execute('DELETE FROM notes WHERE id = $1', [id]);
     } else if (this.webDb) {
       await this.webDb.deleteNote(id);
