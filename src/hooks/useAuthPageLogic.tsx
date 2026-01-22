@@ -23,7 +23,7 @@ export const useAuthPageLogic = () => {
 
   useEffect(() => {
     const { isAuthenticated, isSessionCheckLoading } = useAuthStore.getState();
-    if (!isAuthenticated && !isSessionCheckLoading) {
+    if (!isSessionCheckLoading) {
       useAuthStore.getState().checkSession();
     }
   }, []);
