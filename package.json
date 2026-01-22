@@ -19,8 +19,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "npm run build:tauri && tauri build",
-    "test": "vitest",
-    "test:e2e": "playwright test"
+    "test": "vitest"
   },
   "dependencies": {
     "@codemirror/closebrackets": "^0.19.2",
@@ -71,7 +70,6 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "dompurify": "^3.3.1",
     "embla-carousel-react": "^8.6.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "framer-motion": "^12.27.0",
@@ -102,13 +100,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
-    "@playwright/test": "^1.49.1",
     "@tauri-apps/cli": "^2.7.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@types/chrome": "^0.0.309",
-    "@types/dompurify": "^3.0.5",
     "@types/node": "^20.10.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

@@ -1,17 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import mermaid from 'mermaid';
-import DOMPurify from 'dompurify';
+import React, { useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/useToast';
 
-// 1. Singleton Initialization (Performance & Correctness)
-// Initialize once at module level to avoid repeated initialization costs.
-// 'startOnLoad: false' prevents Mermaid from scanning the entire document unnecessarily.
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'default',
-  securityLevel: 'strict',
-  // suppressErrorRendering: true, // Optional: handle errors manually without Mermaid injecting error SVGs
-});
+const initializeMermaid = async () => {
+  const mermaid = (await import('mermaid')).default;
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    securityLevel: 'strict',
+  });
+  return mermaid;
+};
 
 export const MermaidComponent = ({
   chart,
@@ -22,53 +20,68 @@ export const MermaidComponent = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  // Correctness: Use a stable unique ID for this instance to prevent ID collisions
-  const [uniqueId] = useState(`mermaid-${Math.random().toString(36).substring(2, 9)}`);
 
   useEffect(() => {
-    // Skip rendering if editing or missing chart/ref
-    if (!ref.current || !chart || isEditing) return;
+    if (ref.current && chart && !isEditing) {
+      const renderMermaid = async () => {
+        const mermaid = await initializeMermaid();
+        // 이전 내용 초기화
+        if(ref.current) ref.current.innerHTML = '';
 
-    const renderMermaid = async () => {
-      try {
-        // Correctness: Reset container content before rendering
-        // This ensures we don't have stale content or duplicate charts
-        if (ref.current) {
-           ref.current.innerHTML = ''; 
+        const handleError = (error: unknown) => {
+          console.error('Mermaid render error:', error);
+
+          // DOM에서 새로 생긴 오류 SVG 찾아서 이동
+          setTimeout(() => {
+            const errorSvg = document.querySelector('svg[id*="mermaid"]');
+            if (errorSvg && errorSvg.textContent?.includes('Syntax error')) {
+              if (ref.current) {
+                ref.current.appendChild(errorSvg.cloneNode(true));
+              }
+              errorSvg.remove();
+            }
+          }, 100);
+
+          toast({
+            title: 'Mermaid 렌더링 오류',
+            description: '다이어그램 문법을 확인해주세요.',
+          });
+        };
+
+        try {
+          const id = `mermaid-svg-${Math.random().toString(36).substring(2, 9)}`;
+
+          // DOM에서 기존 mermaid 오류 SVG 제거
+          const existingErrors = document.querySelectorAll('svg[id*="mermaid"]');
+          existingErrors.forEach((svg) => {
+            if (svg.textContent?.includes('Syntax error')) {
+              svg.remove();
+            }
+          });
+
+          mermaid
+            .render(id, chart)
+            .then(({ svg }) => {
+              if (ref.current) {
+                 // Basic security check on the output SVG string
+                 if (svg.toLowerCase().includes('<script') || svg.toLowerCase().includes('javascript:')) {
+                    console.error('Blocked potentially malicious Mermaid output');
+                    ref.current.textContent = 'Blocked potentially malicious content.';
+                    return;
+                 }
+                ref.current.innerHTML = svg;
+              }
+            })
+            .catch(handleError);
+        } catch (error) {
+          handleError(error);
         }
+      };
+      renderMermaid();
+    }
+  }, [chart, isEditing, toast]);
 
-        // Render the diagram
-        // mermaid.render returns an object { svg: string, bindFunctions?: (element: Element) => void }
-        const { svg } = await mermaid.render(uniqueId, chart);
-
-        // DOMPurify가 SVG 구조를 깨뜨릴 수 있어 잠시 제거하고 Mermaid의 기본 보안에 의존합니다.
-        // 추후 검증된 Sanitize 옵션으로 다시 적용할 수 있습니다.
-        if (ref.current) {
-          ref.current.innerHTML = svg;
-        }
-      } catch (error) {
-        console.error('Mermaid render error:', error);
-        
-        // Correctness: Handle errors locally within the component container
-        // Avoids global DOM queries (document.querySelector) which might affect other components.
-        if (ref.current) {
-           ref.current.innerHTML = `
-             <div class="text-destructive text-sm p-2 border border-destructive/20 rounded bg-destructive/10">
-               <p class="font-semibold">Mermaid Syntax Error</p>
-               <p class="opacity-80 text-xs mt-1">Please check your diagram syntax.</p>
-             </div>
-           `;
-        }
-        
-        // Optional: Toast notification (debouncing recommended if enabled)
-        // toast({ title: 'Rendering Failed', description: 'Invalid Mermaid syntax.', variant: 'destructive' });
-      }
-    };
-
-    renderMermaid();
-  }, [chart, isEditing, uniqueId, toast]);
-
-  return <div ref={ref} className="mermaid-container w-full flex justify-center my-4 overflow-x-auto" />;
+  return <div ref={ref} className="mermaid-container" />;
 };
 
 export default MermaidComponent;
