@@ -127,7 +127,25 @@ export default defineConfig(({ mode }) => {
     ],
     
     resolve: {
-      alias: { '@': path.resolve(__dirname, './src') },
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        '@components': path.resolve(__dirname, './src/components'),
+        '@hooks': path.resolve(__dirname, './src/hooks'),
+        '@pages': path.resolve(__dirname, './src/pages'),
+        '@utils': path.resolve(__dirname, './src/utils'),
+        '@services': path.resolve(__dirname, './src/services'),
+        '@types': path.resolve(__dirname, './src/types'),
+        '@styles': path.resolve(__dirname, './src/styles'),
+        '@stores': path.resolve(__dirname, './src/stores'),
+        '@platforms': path.resolve(__dirname, './src/platforms'),
+        '@assets': path.resolve(__dirname, './src/assets'),
+      },
+    },
+    
+    server: {
+      host: true,
+      strictPort: true,
+      port: 5173,
     },
     
     build: {
