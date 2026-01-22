@@ -22,7 +22,10 @@ export const useAuthPageLogic = () => {
   const [showKey, setShowKey] = useState(false);
 
   useEffect(() => {
-    useAuthStore.getState().checkSession();
+    const { isAuthenticated, isSessionCheckLoading } = useAuthStore.getState();
+    if (!isAuthenticated && !isSessionCheckLoading) {
+      useAuthStore.getState().checkSession();
+    }
   }, []);
 
   const copyToClipboard = useCallback(
