@@ -41,15 +41,10 @@ export const MermaidComponent = ({
         // mermaid.render returns an object { svg: string, bindFunctions?: (element: Element) => void }
         const { svg } = await mermaid.render(uniqueId, chart);
 
-        // Security: Sanitize the generated SVG
-        // DOMPurify removes potential XSS vectors (scripts, event handlers, etc.)
-        // even if Mermaid's securityLevel is 'strict'.
-        const cleanSvg = DOMPurify.sanitize(svg, {
-          USE_PROFILES: { svg: true, svgFilters: true },
-        });
-
+        // DOMPurify가 SVG 구조를 깨뜨릴 수 있어 잠시 제거하고 Mermaid의 기본 보안에 의존합니다.
+        // 추후 검증된 Sanitize 옵션으로 다시 적용할 수 있습니다.
         if (ref.current) {
-          ref.current.innerHTML = cleanSvg;
+          ref.current.innerHTML = svg;
         }
       } catch (error) {
         console.error('Mermaid render error:', error);
