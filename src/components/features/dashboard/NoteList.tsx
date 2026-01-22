@@ -56,8 +56,9 @@ export const NoteList: React.FC<NoteListProps> = ({
             notes,
             query: debouncedSearchTerm,
           });
+          const filteredIdSet = new Set(filteredIds);
           
-          const filtered = notes.filter((note) => filteredIds.includes(note.id));
+          const filtered = notes.filter((note) => filteredIdSet.has(note.id));
            // Sort filtered results by pin then update time
            filtered.sort((a, b) => {
              const pinDiff = Number(b.is_pinned || false) - Number(a.is_pinned || false);

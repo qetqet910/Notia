@@ -36,7 +36,17 @@ export const sendNotification = async (title: string, body?: string, url?: strin
       event.preventDefault(); // prevent the browser from focusing the Notification's tab
       window.focus();
       if (url) {
-        window.location.href = url;
+        try {
+            const parsedUrl = new URL(url, window.location.href);
+            // Only allow http and https protocols
+            if (['http:', 'https:'].includes(parsedUrl.protocol)) {
+                window.location.href = url;
+            } else {
+                console.warn('Blocked navigation to unsafe URL from notification:', url);
+            }
+        } catch (e) {
+            console.error('Invalid URL in notification:', url, e);
+        }
       }
       notification.close();
     };

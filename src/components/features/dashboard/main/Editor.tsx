@@ -53,7 +53,6 @@ import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
 import Columns2 from 'lucide-react/dist/esm/icons/columns-2';
 import SquarePen from 'lucide-react/dist/esm/icons/square-pen';
 import Download from 'lucide-react/dist/esm/icons/download';
-import Pin from 'lucide-react/dist/esm/icons/pin';
 import FileText from 'lucide-react/dist/esm/icons/file-text';
 import Printer from 'lucide-react/dist/esm/icons/printer';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -158,7 +157,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       note,
       onSave,
       onDeleteRequest,
-      onTogglePin,
       isEditing,
       onEnterEditMode,
       onCancelEdit,
@@ -554,11 +552,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 
             {!isEditing ? (
               <>
-                {onTogglePin && (
-                  <Button variant="ghost" size="sm" onClick={onTogglePin} title={note.is_pinned ? "고정 해제" : "고정"}>
-                    <Pin className={`h-4 w-4 ${note.is_pinned ? "fill-orange-500 text-orange-500" : ""}`} />
-                  </Button>
-                )}
                 <Button
                   variant="destructive"
                   size="sm"
