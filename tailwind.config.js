@@ -59,7 +59,7 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['"Noto Sans KR"', 'sans-serif'],
+        sans: ['"GmarketSans"', 'sans-serif'],
       },
       keyframes: {
         "accordion-down": {

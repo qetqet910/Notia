@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('/fonts/GmarketSansLight.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -86,7 +94,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'GmarketSans', sans-serif;
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
 
@@ -94,6 +102,10 @@
   input, textarea, button, select {
     font-family: inherit;
   }
+}
+
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 /* Webkit 브라우저(Chrome, Safari)를 위한 전역 스크롤바 스타일 */
