@@ -38,6 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useNavigate } from 'react-router-dom';
+import { loadFont } from '@/utils/fontLoader';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useNotes } from '@/hooks/useNotes';
 import Info from 'lucide-react/dist/esm/icons/info';
@@ -45,6 +46,15 @@ import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import { checkForUpdates, installUpdate } from '@/utils/updater';
 import { isTauri } from '@/utils/isTauri';
 import { sendNotification } from '@/utils/notification';
+
+const FONT_OPTIONS = [
+  { value: 'Noto Sans KR', label: 'Noto Sans KR (기본)', family: 'Noto Sans KR, sans-serif' },
+  { value: 'S-CoreDream', label: '눈누(에스코어드)', family: 'S-CoreDream, sans-serif' },
+  { value: 'ChosunGulim', label: '눈누(조선굴림체)', family: 'ChosunGulim, sans-serif' },
+  { value: 'Nanum Gothic', label: '눈누(나눔고딕)', family: 'Nanum Gothic, sans-serif' },
+  { value: 'ISaManRu', label: '눈누(이사만루)', family: 'ISaManRu, sans-serif' },
+  { value: 'Keris Kedu', label: '눈누(케리스 케듀체)', family: 'Keris Kedu, sans-serif' },
+];
 
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
@@ -56,6 +66,12 @@ export const SettingsTab: React.FC = React.memo(() => {
   const { permission, requestPermission } = useNotificationPermission();
   
   const [fontLoading, setFontLoading] = useState(false);
+
+  useEffect(() => {
+    Promise.all(FONT_OPTIONS.map((option) => loadFont(option.value))).catch((error) => {
+      console.warn(error);
+    });
+  }, []);
 
   const handleFontChange = async (value: string) => {
     setFontLoading(true);
@@ -403,12 +419,15 @@ export const SettingsTab: React.FC = React.memo(() => {
                 <SelectValue placeholder="글꼴 선택" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Noto Sans KR" style={{ fontFamily: 'Noto Sans KR, sans-serif' }}>본고딕 (기본)</SelectItem>
-                <SelectItem value="Jua" style={{ fontFamily: 'Jua, sans-serif' }}>주아</SelectItem>
-                <SelectItem value="Do Hyeon" style={{ fontFamily: 'Do Hyeon, sans-serif' }}>도현</SelectItem>
-                <SelectItem value="Black Han Sans" style={{ fontFamily: 'Black Han Sans, sans-serif' }}>검은한산스</SelectItem>
-                <SelectItem value="Gowun Batang" style={{ fontFamily: 'Gowun Batang, serif' }}>고운바탕</SelectItem>
-                <SelectItem value="Diphylleia" style={{ fontFamily: 'Diphylleia, serif' }}>디필레아</SelectItem>
+                {FONT_OPTIONS.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    style={{ fontFamily: option.family }}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
