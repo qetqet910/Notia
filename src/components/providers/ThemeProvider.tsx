@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useThemeStore } from '@/stores/themeStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useLocation } from 'react-router-dom';
+import { loadFont, normalizeFontFamily } from '@/utils/fontLoader';
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -47,19 +48,22 @@ export function ThemeProvider({
     
     if (isThemedPage) {
       // 대시보드: 사용자 설정 폰트 적용
-      document.body.style.fontFamily = `"${fontFamily}", sans-serif`;
+      const appliedFont = normalizeFontFamily(fontFamily);
+      loadFont(appliedFont).catch((error) => {
+        console.warn(error);
+      });
+      document.body.style.fontFamily = `"${appliedFont}", sans-serif`;
       
-      const formElements = document.querySelectorAll('input, button, textarea, select, pre, code');
+      const formElements = document.querySelectorAll('input, button, textarea, select');
       formElements.forEach((el) => {
-        (el as HTMLElement).style.fontFamily = `"${fontFamily}", sans-serif`;
+        (el as HTMLElement).style.fontFamily = `"${appliedFont}", sans-serif`;
       });
     } else {
-      // 랜딩 페이지: 기본 폰트(Orbit)로 복구
-      document.body.style.fontFamily = '"Orbit", sans-serif';
+      document.body.style.fontFamily = '"GmarketSans", sans-serif';
       
-      const formElements = document.querySelectorAll('input, button, textarea, select, pre, code');
+      const formElements = document.querySelectorAll('input, button, textarea, select');
       formElements.forEach((el) => {
-        (el as HTMLElement).style.fontFamily = '"Orbit", sans-serif';
+        (el as HTMLElement).style.fontFamily = '"GmarketSans", sans-serif';
       });
     }
   }, [fontFamily, location.pathname]);

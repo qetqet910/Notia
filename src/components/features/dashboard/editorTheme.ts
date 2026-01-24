@@ -12,7 +12,7 @@ export const codeMirrorTheme = createTheme({
     lineHighlight: 'transparent',
     gutterBackground: 'hsl(var(--background))',
     gutterForeground: 'hsl(var(--muted-foreground))',
-    fontFamily: "'NoonnuBasicGothicRegular', sans-serif",
+    fontFamily: 'inherit',
   },
   styles: [
     { tag: t.heading, color: 'hsl(var(--foreground))', fontWeight: 'bold' },
