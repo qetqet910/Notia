@@ -440,7 +440,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
               setContent(value);
               onContentChange();
             }}
-            className="w-full h-full text-lg"
+            className="w-full h-full text-base"
             theme={codeMirrorTheme}
             placeholder="제목을 입력하세요..."
           />
