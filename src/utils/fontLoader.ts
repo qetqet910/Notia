@@ -81,7 +81,7 @@ const FONT_SOURCES: Record<string, FontSource> = {
     type: 'faces',
     faces: [
       {
-        href: '/fonts/GmarketSansLight.woff',
+        href: '/fonts/GmarketSansTTFMedium.ttf',
         weight: '300',
       },
     ],
