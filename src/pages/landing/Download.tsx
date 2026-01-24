@@ -163,7 +163,7 @@ export const DownloadPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background font-['Orbit']">
+    <div className="min-h-screen bg-background">
       <Toaster />
       <Header />
 

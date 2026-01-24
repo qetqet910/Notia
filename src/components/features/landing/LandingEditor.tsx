@@ -81,7 +81,7 @@ export const LandingEditor: React.FC = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="여기에 입력해보세요..."
-              className="w-full h-[300px] resize-none border-none focus-visible:ring-0 bg-transparent text-s sm:text-base md:text-lg leading-relaxed p-6 custom-scrollbar font-['Orbit'] placeholder:text-muted-foreground/50"
+              className="w-full h-[300px] resize-none border-none focus-visible:ring-0 bg-transparent text-sm sm:text-base md:text-lg leading-relaxed p-6 custom-scrollbar placeholder:text-muted-foreground/50"
             />
           ) : (
             <div className="w-full h-[300px] overflow-y-auto p-6 bg-white/50 custom-scrollbar ">

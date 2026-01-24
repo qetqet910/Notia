@@ -47,7 +47,7 @@ const DesktopLogin: React.FC = () => {
   const logoSrc = isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage;
 
   return (
-    <div className="relative flex flex-col min-h-screen items-center justify-center overflow-hidden font-['Orbit'] selection:bg-primary/20">
+    <div className="relative flex flex-col min-h-screen items-center justify-center overflow-hidden selection:bg-primary/20">
       <Toaster />
       
       {/* 0. Background Layer */}
