@@ -137,7 +137,6 @@ export default defineConfig(({ mode }) => {
         '@types': path.resolve(__dirname, './src/types'),
         '@styles': path.resolve(__dirname, './src/styles'),
         '@stores': path.resolve(__dirname, './src/stores'),
-        '@platforms': path.resolve(__dirname, './src/platforms'),
         '@assets': path.resolve(__dirname, './src/assets'),
       },
     },

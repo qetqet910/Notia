@@ -21,7 +21,6 @@
       "@types/*": ["src/types/*"],
       "@styles/*": ["src/styles/*"],
       "@stores/*": ["src/stores/*"],
-      "@platforms/*": ["src/platforms/*"],
       "@assets/*": ["src/assets/*"]
     }
   },

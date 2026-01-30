@@ -88,15 +88,13 @@ window.onunhandledrejection = function (event) {
 };
 
 // 모든 플랫폼 모듈을 정적으로 임포트
-import * as webPlatform from '@/platforms/web/index.tsx';
-import * as webappPlatform from '@/platforms/webapp/index.tsx';
-import * as extensionPlatform from '@/platforms/extension/index.tsx';
+import { initExtension, initWeb, initWebapp } from '@/platforms';
 
 // 플랫폼 모듈 맵
 const platformModules = {
-  web: webPlatform,
-  webapp: webappPlatform,
-  extension: extensionPlatform,
+  web: initWeb,
+  webapp: initWebapp,
+  extension: initExtension,
 };
 
 /**
@@ -108,13 +106,12 @@ function initializePlatform(platformName: string): boolean { // async 제거
   try {
     console.log(`Attempting to initialize platform module: ${platformName}`);
 
-    const module = platformModules[platformName as keyof typeof platformModules];
-    
-    if (!module || !module.default) {
-      throw new Error(`Platform module '${platformName}' is missing or 'default' export is missing.`);
+    const initPlatform = platformModules[platformName as keyof typeof platformModules];
+
+    if (!initPlatform) {
+      throw new Error(`Platform module '${platformName}' is missing.`);
     }
 
-    const initPlatform = module.default;
     initPlatform(); // This function now handles rendering
 
     console.log(`2️⃣ Platform : ¦¦¦${platformName}¦¦¦ Initialized Successfully`);
