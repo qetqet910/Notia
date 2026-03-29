@@ -8,7 +8,6 @@ import ZoomIn from 'lucide-react/dist/esm/icons/zoom-in';
 import ZoomOut from 'lucide-react/dist/esm/icons/zoom-out';
 import LocateFixed from 'lucide-react/dist/esm/icons/locate-fixed';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/utils/shadcnUtils';
 
 // D3 Node & Link types
 interface GraphNode extends d3.SimulationNodeDatum {
@@ -194,7 +193,7 @@ export const WikiLinkGraph: React.FC<WikiLinkGraphProps> = ({ notes, onWikiLinkC
       .join('g')
       .attr('class', 'graph-node')
       .attr('cursor', 'pointer')
-      .call(d3.drag<any, GraphNode>()
+      .call(d3.drag<SVGGElement, GraphNode>()
         .on('start', (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
           d.fx = d.x;
@@ -274,11 +273,11 @@ export const WikiLinkGraph: React.FC<WikiLinkGraphProps> = ({ notes, onWikiLinkC
       svg.selectAll('.graph-node circle')
         .transition().duration(250)
         .style('opacity', 0.8)
-        .attr('fill', (d: any) => d.isImportant ? '#68C7C1' : 'hsl(var(--primary))');
+        .attr('fill', (d: unknown) => (d as GraphNode).isImportant ? '#68C7C1' : 'hsl(var(--primary))');
 
       svg.selectAll('.graph-node text')
         .transition().duration(250)
-        .style('opacity', (d: any) => d.isImportant ? 0.7 : 0)
+        .style('opacity', (d: unknown) => (d as GraphNode).isImportant ? 0.7 : 0)
         .style('fill', 'hsl(var(--foreground))');
         
       return;
@@ -288,40 +287,52 @@ export const WikiLinkGraph: React.FC<WikiLinkGraphProps> = ({ notes, onWikiLinkC
     const connectedNodeIds = new Set<string>();
     connectedNodeIds.add(hoveredNode);
 
-    svg.selectAll('line').each((d: any) => {
-      if (d.source.id === hoveredNode || d.target.id === hoveredNode) {
-        connectedNodeIds.add(d.source.id);
-        connectedNodeIds.add(d.target.id);
+    svg.selectAll('line').each((d: unknown) => {
+      const link = d as GraphLink;
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      if (sourceId === hoveredNode || targetId === hoveredNode) {
+        connectedNodeIds.add(sourceId);
+        connectedNodeIds.add(targetId);
       }
     });
 
     svg.selectAll('line')
       .transition().duration(250)
-      .attr('stroke', (d: any) => 
-        (d.source.id === hoveredNode || d.target.id === hoveredNode) ? '#68C7C1' : 'hsl(var(--muted-foreground))'
-      )
-      .attr('stroke-opacity', (d: any) => 
-        (d.source.id === hoveredNode || d.target.id === hoveredNode) ? 0.8 : 0.05
-      )
-      .attr('stroke-width', (d: any) => 
-        (d.source.id === hoveredNode || d.target.id === hoveredNode) ? 2 : 1
-      );
+      .attr('stroke', (d: unknown) => {
+        const link = d as GraphLink;
+        const sId = typeof link.source === 'string' ? link.source : link.source.id;
+        const tId = typeof link.target === 'string' ? link.target : link.target.id;
+        return (sId === hoveredNode || tId === hoveredNode) ? '#68C7C1' : 'hsl(var(--muted-foreground))';
+      })
+      .attr('stroke-opacity', (d: unknown) => {
+        const link = d as GraphLink;
+        const sId = typeof link.source === 'string' ? link.source : link.source.id;
+        const tId = typeof link.target === 'string' ? link.target : link.target.id;
+        return (sId === hoveredNode || tId === hoveredNode) ? 0.8 : 0.05;
+      })
+      .attr('stroke-width', (d: unknown) => {
+        const link = d as GraphLink;
+        const sId = typeof link.source === 'string' ? link.source : link.source.id;
+        const tId = typeof link.target === 'string' ? link.target : link.target.id;
+        return (sId === hoveredNode || tId === hoveredNode) ? 2 : 1;
+      });
 
     svg.selectAll('.graph-node circle')
       .transition().duration(250)
-      .style('opacity', (d: any) => connectedNodeIds.has(d.id) ? 1 : 0.2)
-      .attr('fill', (d: any) => 
-        d.id === hoveredNode ? '#8b5cf6' : 
-        connectedNodeIds.has(d.id) ? '#68C7C1' : 
+      .style('opacity', (d: unknown) => connectedNodeIds.has((d as GraphNode).id) ? 1 : 0.2)
+      .attr('fill', (d: unknown) => 
+        (d as GraphNode).id === hoveredNode ? '#8b5cf6' : 
+        connectedNodeIds.has((d as GraphNode).id) ? '#68C7C1' : 
         'hsl(var(--primary))'
       );
 
     svg.selectAll('.graph-node text')
       .transition().duration(250)
-      .style('opacity', (d: any) => connectedNodeIds.has(d.id) ? 1 : 0)
-      .style('fill', (d: any) => 
-        d.id === hoveredNode ? '#8b5cf6' : 
-        connectedNodeIds.has(d.id) ? 'hsl(var(--foreground))' : 
+      .style('opacity', (d: unknown) => connectedNodeIds.has((d as GraphNode).id) ? 1 : 0)
+      .style('fill', (d: unknown) => 
+        (d as GraphNode).id === hoveredNode ? '#8b5cf6' : 
+        connectedNodeIds.has((d as GraphNode).id) ? 'hsl(var(--foreground))' : 
         'hsl(var(--muted-foreground))'
       );
 

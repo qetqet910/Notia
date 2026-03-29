@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/useToast';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mermaidPromise: Promise<any> | null = null;
 
 const getMermaid = async () => {

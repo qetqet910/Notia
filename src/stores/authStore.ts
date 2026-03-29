@@ -142,9 +142,9 @@ export const useAuthStore = create<AuthStore>()(
       checkSession: async () => {
         // Dev-only E2E bypass
         if (import.meta.env.DEV && import.meta.env.VITE_E2E_BYPASS_AUTH === '1') {
-          const mockUser = { id: '00000000-0000-0000-0000-000000000000', email: 'e2e@example.com' } as any;
-          const mockSession = { user: mockUser } as any;
-          const mockProfile = { id: mockUser.id, email: mockUser.email, terms_agreed: true, display_name: 'E2E User' } as any;
+          const mockUser = { id: '00000000-0000-0000-0000-000000000000', email: 'e2e@example.com' } as unknown as User;
+          const mockSession = { user: mockUser } as unknown as Session;
+          const mockProfile = { id: mockUser.id, email: mockUser.email, terms_agreed: true, display_name: 'E2E User' } as unknown as UserProfile;
           set({ user: mockUser, session: mockSession, isAuthenticated: true, userProfile: mockProfile, isSessionCheckLoading: false, isProfileLoading: false });
           return true;
         }

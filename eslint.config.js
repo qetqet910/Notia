@@ -33,6 +33,11 @@ export default tseslint.config(
         },
       },
     },
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
     rules: {
       ...pluginReact.configs.recommended.rules,
       'react/prop-types': 'off', // TypeScript를 사용하므로 prop-types는 필요 없습니다.

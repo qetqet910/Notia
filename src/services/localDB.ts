@@ -190,7 +190,11 @@ class WebDB {
           const getAll = store.getAll();
           getAll.onsuccess = () => {
             // Drop owner_path from resulting Folder objects to avoid unused var lint error
-            const folders = (getAll.result as Array<Folder & { owner_path?: string }>).map(({ owner_path, ...folder }) => folder);
+            const folders = (getAll.result as Array<Folder & { owner_path?: string }>).map((folder) => {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { owner_path, ...rest } = folder;
+              return rest;
+            });
             resolve(folders);
           };
           getAll.onerror = () => reject(getAll.error);
@@ -208,7 +212,11 @@ class WebDB {
           getAll.onsuccess = () => {
             const folders = (getAll.result as Array<Folder & { owner_path?: string }>)
               .filter((folder) => folder.owner_id === ownerId)
-              .map(({ owner_path, ...folder }) => folder);
+              .map((folder) => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { owner_path, ...rest } = folder;
+                return rest;
+              });
             resolve(folders);
           };
           getAll.onerror = () => reject(getAll.error);

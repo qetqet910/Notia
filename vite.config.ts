@@ -155,6 +155,28 @@ export default defineConfig(({ mode }) => {
       minify: 'esbuild',
       rollupOptions: {
         input: { main: path.resolve(__dirname, 'index.html') },
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('@codemirror') || id.includes('@lezer') || id.includes('@uiw')) {
+                return 'vendor-codemirror';
+              }
+              if (id.includes('lucide-react') || id.includes('react-icons')) {
+                return 'vendor-icons';
+              }
+              if (id.includes('framer-motion') || id.includes('@radix-ui') || id.includes('d3')) {
+                return 'vendor-ui';
+              }
+              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+                return 'vendor-react';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              return 'vendor'; // Fallback for other modules
+            }
+          }
+        }
       },
     },
     assetsInclude: ['**/*.lottie'],

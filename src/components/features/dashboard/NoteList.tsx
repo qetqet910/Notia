@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/useToast";
 import { useDataStore } from "@/stores/dataStore";
 import type { Note } from "@/types";
@@ -161,20 +161,6 @@ export const NoteList: FC<NoteListProps> = ({
 		}
 	}, [isFolderDialogOpen]);
 
-	const treeNotes = useMemo(() => {
-		const normalizedSelectedFolderPath = normalizeFolderPath(selectedFolderPath);
-		if (normalizedSelectedFolderPath === "/") {
-			return filteredNotes;
-		}
-
-		return filteredNotes.filter((note) => {
-			const noteFolderPath = normalizeFolderPath(note.folder_path ?? "/");
-			return (
-				noteFolderPath === normalizedSelectedFolderPath ||
-				noteFolderPath.startsWith(`${normalizedSelectedFolderPath}/`)
-			);
-		});
-	}, [filteredNotes, selectedFolderPath]);
 
 	const folderPaths = useMemo(() => Object.keys(folders), [folders]);
 

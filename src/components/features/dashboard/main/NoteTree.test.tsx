@@ -50,7 +50,7 @@ describe('NoteTree Note Drag/Click behavior', () => {
 
   test('click on note triggers onSelectNote', () => {
     const onSelectNote = vi.fn();
-    const { getByText, getByTestId } = render(
+    const { getByTestId } = render(
       <NoteTree
         notes={[note]}
         selectedNote={null}

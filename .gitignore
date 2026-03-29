@@ -55,8 +55,11 @@ AGENTS.md
 .sisyphus/
 .opencode/
 .gemini/
+.github/
 qodana.yaml
 debug.dev.md
+e2e/
+/netlify
 
 # Tauri specific
 src-tauri/gen/

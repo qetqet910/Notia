@@ -71,6 +71,7 @@ const isE2EBypass =
  * E2E 테스트 모드일 때 Supabase의 모든 DB 요청을 가짜로 성공 처리하는 프록시입니다.
  */
 const createMockSupabase = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handler: ProxyHandler<any> = {
     get(target, prop) {
       if (prop === 'from' || prop === 'rpc') {
@@ -83,6 +84,7 @@ const createMockSupabase = () => {
           order: () => mockChain,
           maybeSingle: () => Promise.resolve({ data: {}, error: null }),
           single: () => Promise.resolve({ data: {}, error: null }),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           then: (resolve: any) => resolve({ data: [], error: null }), // Default for any query
         };
         return () => mockChain;

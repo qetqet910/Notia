@@ -18,11 +18,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
 import Folder from "lucide-react/dist/esm/icons/folder";
 import MoreHorizontal from "lucide-react/dist/esm/icons/more-horizontal";
-import GripVertical from "lucide-react/dist/esm/icons/grip-vertical";
+
 import Pin from "lucide-react/dist/esm/icons/pin";
 import { type CSSProperties, type FC, useEffect, useMemo, useState, useRef } from "react";
 
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -66,13 +66,7 @@ export function normalizeFolderPath(path: string): string {
 	return collapsed.replace(/\/+$/g, "") || "/";
 }
 
-function sortNotes(notes: Note[]): Note[] {
-	return [...notes].sort((a, b) => {
-		const pinDiff = Number(b.is_pinned || false) - Number(a.is_pinned || false);
-		if (pinDiff !== 0) return pinDiff;
-		return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-	});
-}
+
 
 function buildFolderTree(notes: Note[], folderPaths: string[]): FolderNode {
 	const root: FolderNode = { path: "/", name: "/", children: [], notes: [] };
@@ -151,7 +145,6 @@ const DraggableNoteRow: FC<{
 		data: { type: "note-drop", path: note.folder_path ?? "/" },
 	});
 
-	// @ts-ignore
 	const setNodeRef = (node: HTMLElement | null) => {
 		setDraggableRef(node);
 		setDroppableRef(node);
