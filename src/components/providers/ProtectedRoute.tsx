@@ -22,6 +22,15 @@ export const ProtectedRoute = ({
   } = useAuthStore();
   const location = useLocation();
 
+  // Dev-only E2E bypass
+  const isE2EBypass = 
+    import.meta.env.DEV && 
+    import.meta.env.VITE_E2E_BYPASS_AUTH === '1';
+
+  if (isE2EBypass) {
+    return <>{children}</>;
+  }
+
   // 1순위: 세션 또는 프로필 로딩 중일 때
   if (isSessionCheckLoading || isProfileLoading) {
     return <DashboardPageLoader />;

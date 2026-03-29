@@ -11,28 +11,24 @@ export const Header: React.FC = () => {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="border-b py-4 px-6 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 fixed top-0 w-full z-50"
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg border-b border-toss-border/50"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <h1 className="text-2xl font-bold">
-            <Link to="/">
-              <img
-                src={logoImage}
-                className="max-w-40 cursor-pointer h-8"
-                alt="로고"
-              />
-            </Link>
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/download')}>
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-6">
+        <Link to="/" className="flex items-center">
+          <img src={logoImage} className="h-7" alt="Notia" />
+        </Link>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/download')}
+            className="text-toss-gray hover:text-toss-dark hover:bg-toss-lightGray rounded-toss"
+          >
             앱 다운로드
           </Button>
           <Button
             onClick={() => navigate('/login')}
-            className="bg-[#61C9A8] hover:bg-[#61C9A8] text-white hover:scale-105 transition-transform"
+            className="bg-notia-primary hover:bg-notia-hover text-white rounded-toss font-medium"
           >
             로그인
           </Button>

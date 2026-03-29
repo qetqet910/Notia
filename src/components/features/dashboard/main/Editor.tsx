@@ -83,6 +83,10 @@ import { checkboxPlugin } from '@/components/features/dashboard/main/checkboxPlu
 import { createSlashCommandCompletion } from '@/components/features/dashboard/main/slashCommand';
 import { useImageUpload } from '@/hooks/editor/useImageUpload';
 import { useScrollSync } from '@/hooks/editor/useScrollSync';
+import { BacklinkItem, useBacklinks } from '@/hooks/useBacklinks';
+import { useObsidianLinkAutocomplete } from '@/hooks/useObsidianLinkAutocomplete';
+import { NoteTOC } from './NoteTOC';
+import { slugify } from '@/utils/slugify';
 
 const MarkdownPreview = lazy(() =>
   import('@/components/features/dashboard/MarkdownPreview').then((module) => ({
@@ -92,6 +96,7 @@ const MarkdownPreview = lazy(() =>
 
 interface EditorProps {
   note: Note;
+  notes?: Note[];
   onSave: (
     noteId: string,
     updates: Partial<
@@ -108,6 +113,7 @@ interface EditorProps {
   onContentChange: () => void;
   hasUnsavedChanges: boolean;
   onBack?: () => void;
+  onWikiLinkClick?: (title: string) => void;
 }
 
 interface EditorRef {
@@ -155,6 +161,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
   (
     {
       note,
+      notes,
       onSave,
       onDeleteRequest,
       isEditing,
@@ -163,18 +170,16 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       onContentChange,
       hasUnsavedChanges,
       onBack,
+      onWikiLinkClick,
     },
     ref,
   ) => {
     const [content, setContent] = useState('');
-    // React 19 useDeferredValue: 입력은 즉시, 파싱은 여유로울 때 처리
     const deferredContent = useDeferredValue(content);
     const [tags, setTags] = useState<string[]>([]);
     const [reminders, setReminders] = useState<EditorReminder[]>([]);
     
-    // editorRef를 먼저 선언해야 합니다.
     const editorRef = useRef<ReactCodeMirrorRef>(null);
-    // useImageUpload 훅에서 필요한 기능들을 가져옵니다.
     const { isUploading, imageUploadExtension, openFileSelector, fileInputRef, handleFileChange } = useImageUpload(editorRef);
     
     const { toast } = useToast();
@@ -182,8 +187,16 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     const isDesktop = useMediaQuery('(min-width: 1024px)');
     
     const [viewMode, setViewMode] = useState<ViewMode>(isDesktop ? 'split' : 'editor');
+    const backlinks = useBacklinks(note, notes || []);
 
-    // 화면 크기 변경 시 viewMode 자동 조정 (사용자가 수동으로 변경하지 않은 경우를 고려하면 좋겠지만, 단순화를 위해 데스크탑 전환 시 split으로)
+    const handleHeaderClick = useCallback((text: string) => {
+      const id = slugify(text);
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, []);
+
     useEffect(() => {
         if (isDesktop && viewMode === 'editor') {
             setViewMode('split');
@@ -192,11 +205,14 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
         }
     }, [isDesktop, viewMode]);
 
-    // Slash Command 확장 생성 (이미지 업로드 콜백 연결)
-    const slashCommandExtension = useMemo(() => 
-      autocompletion({ override: [createSlashCommandCompletion(openFileSelector)] }), 
-    [openFileSelector]);
-
+    const wikiLinkCompletion = useObsidianLinkAutocomplete(notes || [], note);
+    const slashCommandExtension = useMemo(
+      () =>
+        autocompletion({
+          override: [wikiLinkCompletion, createSlashCommandCompletion(openFileSelector)],
+        }),
+      [wikiLinkCompletion, openFileSelector],
+    );
 
     const { title, body } = useMemo(() => {
       const lines = content.split('\n');
@@ -205,7 +221,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       return { title, body };
     }, [content]);
 
-    // 미리보기 및 파싱용 (Deferred 반영)
     const { title: debouncedTitle, body: debouncedBody } = useMemo(() => {
       const lines = deferredContent.split('\n');
       const title = lines[0] || '';
@@ -266,10 +281,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       );
     }, []);
 
-    // ... (useEffect hooks for resetStateFromNote and remindersRef remain same)
-
-
-
     useEffect(() => {
       resetStateFromNote(note);
     }, [note, resetStateFromNote]);
@@ -279,8 +290,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       remindersRef.current = reminders;
     }, [reminders]);
 
-    // 파싱 로직: useDeferredValue 덕분에 딜레이 없이 실행해도 
-    // 리액트가 입력 우선순위를 유지하며 최적의 타이밍에 실행합니다.
     useEffect(() => {
       if (isResettingRef.current) {
         isResettingRef.current = false;
@@ -345,7 +354,6 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
 
     const handleExport = async () => {
         if (!isTauri()) {
-            // Web Fallback
             const blob = new Blob([content], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -448,15 +456,16 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       </div>
     );
 
-    const renderPreview = () => (
+    const renderPreview = (contentToRender: string, titleToRender: string) => (
         <PreviewPanel
             ref={previewRef}
-            content={debouncedBody}
-            title={debouncedTitle}
+            content={contentToRender}
+            title={titleToRender}
             displayTags={displayTags}
             displayReminders={displayReminders}
             onScroll={handlePreviewScroll}
             onExport={handleExport}
+            onWikiLinkClick={onWikiLinkClick}
         />
     );
 
@@ -504,12 +513,13 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
                   </div>
                   <h3 className="font-semibold mt-3">키보드 단축키</h3>
                   <div className="space-y-1 text-xs">
-                    <p
+                    <button
+                      type="button"
                       className="cursor-pointer hover:underline hover:text-blue-500 transition-all .25s"
                       onClick={navigateHandler}
                     >
                       • 단축키 도움말 바로가기
-                    </p>
+                    </button>
                   </div>
                 </div>
               </PopoverContent>
@@ -587,29 +597,65 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
             <>
                 {viewMode === 'split' && isDesktop ? (
                     <ResizablePanelGroup direction="horizontal" className="h-full">
-                        <ResizablePanel defaultSize={50}>
+                        <ResizablePanel defaultSize={40}>
                             {renderEditor()}
                         </ResizablePanel>
                         <ResizableHandle withHandle />
-                        <ResizablePanel defaultSize={50}>
-                            {renderPreview()}
+                        <ResizablePanel defaultSize={40}>
+                            {renderPreview(debouncedBody, debouncedTitle)}
+                        </ResizablePanel>
+                        <ResizableHandle withHandle />
+                        <ResizablePanel defaultSize={12} minSize={10} maxSize={25}>
+                            <div className="h-full border-l border-border bg-muted/10 overflow-y-auto">
+                                <NoteTOC content={body} onHeaderClick={handleHeaderClick} />
+                            </div>
                         </ResizablePanel>
                     </ResizablePanelGroup>
                 ) : viewMode === 'editor' ? (
                     renderEditor()
                 ) : (
-                    renderPreview()
+                    <ResizablePanelGroup direction="horizontal" className="h-full">
+                        <ResizablePanel defaultSize={85}>
+                            {renderPreview(debouncedBody, debouncedTitle)}
+                        </ResizablePanel>
+                        {isDesktop && (
+                            <>
+                                <ResizableHandle withHandle />
+                                <ResizablePanel defaultSize={15} minSize={10} maxSize={25}>
+                                    <div className="h-full border-l border-border bg-muted/10 overflow-y-auto">
+                                        <NoteTOC content={body} onHeaderClick={handleHeaderClick} />
+                                    </div>
+                                </ResizablePanel>
+                            </>
+                        )}
+                    </ResizablePanelGroup>
                 )}
             </>
           ) : (
-            <PreviewPanel
-              ref={previewRef}
-              content={body}
-              title={title}
-              displayTags={displayTags}
-              displayReminders={displayReminders}
-              onExport={handleExport}
-            />
+            <ResizablePanelGroup direction="horizontal" className="h-full">
+                <ResizablePanel defaultSize={85}>
+                    <PreviewPanel
+                        ref={previewRef}
+                        content={body}
+                        title={title}
+                        displayTags={displayTags}
+                        displayReminders={displayReminders}
+                        onExport={handleExport}
+                        onWikiLinkClick={onWikiLinkClick}
+                        backlinks={backlinks}
+                    />
+                </ResizablePanel>
+                {isDesktop && (
+                    <>
+                        <ResizableHandle withHandle />
+                        <ResizablePanel defaultSize={15} minSize={10} maxSize={25}>
+                            <div className="h-full border-l border-border bg-muted/10 overflow-y-auto">
+                                <NoteTOC content={body} onHeaderClick={handleHeaderClick} />
+                            </div>
+                        </ResizablePanel>
+                    </>
+                )}
+            </ResizablePanelGroup>
           )}
         </div>
         <input
@@ -633,6 +679,8 @@ interface PreviewPanelProps {
   displayReminders?: { reminderText: string; parsedDate?: Date }[];
   onScroll?: () => void;
   onExport?: () => void;
+  onWikiLinkClick?: (title: string) => void;
+  backlinks?: BacklinkItem[];
 }
 
 const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
@@ -642,6 +690,8 @@ const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
   displayReminders,
   onScroll,
   onExport,
+  onWikiLinkClick,
+  backlinks,
 }, ref) => (
   <div
     ref={ref}
@@ -682,9 +732,9 @@ const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
               className="w-full"
             >
               <CarouselContent className="-ml-1">
-                {displayTags.map((tag, index) => (
+                {displayTags.map((tag) => (
                   <CarouselItem
-                    key={index}
+                    key={tag.text}
                     className="basis-auto pl-1 pr-1"
                   >
                     <Badge variant="secondary">#{tag.text}</Badge>
@@ -702,9 +752,9 @@ const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
               className="w-full"
             >
               <CarouselContent className="-ml-1">
-                {displayReminders.map((reminder, index) => (
+                {displayReminders.map((reminder) => (
                   <CarouselItem
-                    key={index}
+                    key={`${reminder.reminderText}-${reminder.parsedDate?.toISOString() ?? 'no-date'}`}
                     className="basis-auto pl-1 pr-1"
                   >
                     <div className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-background rounded-lg border border-border min-w-fit">
@@ -734,8 +784,28 @@ const PreviewPanel = forwardRef<HTMLDivElement, PreviewPanelProps>(({
     )}
     <div className="p-4">
       <Suspense fallback={<MarkdownPreviewLoader />}>
-        <MarkdownPreview content={content} />
+        <MarkdownPreview content={content} onWikiLinkClick={onWikiLinkClick} />
       </Suspense>
+      {backlinks && backlinks.length > 0 && (
+        <section className="mt-6 border-t border-border pt-4">
+          <h3 className="text-sm font-semibold mb-2">Backlinks</h3>
+          <div className="space-y-2">
+            {backlinks.map((backlink) => (
+              <button
+                key={backlink.id}
+                type="button"
+                className="w-full text-left rounded-md border border-border p-2 hover:bg-muted transition-colors"
+                onClick={() => onWikiLinkClick?.(backlink.title)}
+              >
+                <div className="text-sm font-medium">{backlink.title}</div>
+                <div className="text-xs text-muted-foreground line-clamp-2">
+                  {backlink.context}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   </div>
 ));

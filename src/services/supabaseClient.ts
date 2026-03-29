@@ -47,7 +47,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error(errorMessage);
 }
 
-export const supabase = createClient<Database>(
+const realSupabase = createClient<Database>(
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
   {
@@ -61,6 +61,46 @@ export const supabase = createClient<Database>(
     global: {},
   },
 );
+
+// --- E2E Mock Logic ---
+const isE2EBypass = 
+  import.meta.env.DEV && 
+  import.meta.env.VITE_E2E_BYPASS_AUTH === '1';
+
+/**
+ * E2E 테스트 모드일 때 Supabase의 모든 DB 요청을 가짜로 성공 처리하는 프록시입니다.
+ */
+const createMockSupabase = () => {
+  const handler: ProxyHandler<any> = {
+    get(target, prop) {
+      if (prop === 'from' || prop === 'rpc') {
+        const mockChain = {
+          select: () => mockChain,
+          insert: () => Promise.resolve({ data: [{ id: crypto.randomUUID() }], error: null }),
+          update: () => mockChain,
+          delete: () => mockChain,
+          eq: () => mockChain,
+          order: () => mockChain,
+          maybeSingle: () => Promise.resolve({ data: {}, error: null }),
+          single: () => Promise.resolve({ data: {}, error: null }),
+          then: (resolve: any) => resolve({ data: [], error: null }), // Default for any query
+        };
+        return () => mockChain;
+      }
+      if (prop === 'auth') {
+        return {
+          getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+          onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+          signOut: () => Promise.resolve({ error: null }),
+        };
+      }
+      return target[prop];
+    }
+  };
+  return new Proxy(realSupabase, handler);
+};
+
+export const supabase = isE2EBypass ? createMockSupabase() : realSupabase;
 
 // supabase.auth.onAuthStateChange((event, session) => {
 //   console.warn(`Auth 상태 변경: ${event}`);

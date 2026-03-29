@@ -18,7 +18,7 @@ import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
 // OS 아이콘 컴포넌트
 const OsIcon = ({ name }: { name: string }) => {
-  const iconProps = { className: 'w-10 h-10 mb-4 text-slate-500' };
+  const iconProps = { className: 'w-10 h-10 mb-4 text-toss-gray' };
   switch (name) {
     case 'Windows':
       return <FaWindows {...iconProps} />;
@@ -98,7 +98,6 @@ export const DownloadPage: React.FC = () => {
 
     if (!release) return defaultLinks[os as keyof typeof defaultLinks] || '#';
 
-    // Find specific asset based on OS
     const assets = release.assets;
     let asset;
 
@@ -163,7 +162,7 @@ export const DownloadPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Toaster />
       <Header />
 
@@ -171,28 +170,28 @@ export const DownloadPage: React.FC = () => {
         {/* Installation Guide Section */}
         <section className="mb-16">
           <div className="text-center mb-12">
-            <h1 className="text-4xl sm:text-5xl font-bold mb-4">
+            <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-toss-dark">
               간단한 설치 과정
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-toss-gray max-w-2xl mx-auto">
               단 3단계만으로 Notia를 바로 시작할 수 있습니다. 다운로드 후 파일을
               실행하고 로그인하면 모든 준비가 끝납니다.
             </p>
           </div>
           <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="absolute top-[56%] left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-700 -translate-y-1/2 hidden md:block" />
+            <div className="absolute top-[56%] left-0 w-full h-0.5 bg-toss-border -translate-y-1/2 hidden md:block" />
             {installationSteps.map((step) => (
               <div
                 key={step.step}
                 className="relative flex flex-col items-center text-center"
               >
-                <div className="w-12 h-12 rounded-full bg-[#61C9A8] text-white flex items-center justify-center text-xl font-bold border-4 border-slate-50 dark:border-slate-900 shadow-sm">
+                <div className="w-12 h-12 rounded-full bg-notia-primary text-white flex items-center justify-center text-xl font-bold border-4 border-white shadow-toss">
                   {step.step}
                 </div>
-                <h3 className="text-xl font-semibold mt-4 mb-2">
+                <h3 className="text-xl font-semibold mt-4 mb-2 text-toss-dark">
                   {step.title}
                 </h3>
-                <p className="text-muted-foreground text-sm">{step.description}</p>
+                <p className="text-toss-gray text-sm">{step.description}</p>
               </div>
             ))}
           </div>
@@ -203,12 +202,12 @@ export const DownloadPage: React.FC = () => {
           onValueChange={setSelectedId}
           className="w-full"
         >
-          <TabsList className="flex flex-wrap justify-around w-full bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl">
+          <TabsList className="flex flex-wrap justify-around w-full bg-toss-lightGray/50 p-1 rounded-toss-lg">
             {platformData.map((platform) => (
               <TabsTrigger
                 key={platform.id}
                 value={platform.id}
-                className="data-[state=active]:bg-[#61C9A8] data-[state=active]:text-white rounded-lg transition-all duration-300"
+                className="data-[state=active]:bg-notia-primary data-[state=active]:text-white rounded-toss transition-all duration-300"
               >
                 {platform.label}
               </TabsTrigger>
@@ -226,27 +225,27 @@ export const DownloadPage: React.FC = () => {
                   transition={{ duration: 0.3 }}
                   className="mt-6"
                 >
-                  <Card className="border-none shadow-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl">
+                  <Card className="border-none shadow-toss-lg bg-white rounded-toss-xl">
                     <CardContent className="p-8 sm:p-12 text-center">
                       <div className="flex flex-col items-center">
                         <OsIcon name={platform.id} />
-                        <h3 className="text-2xl sm:text-3xl font-bold mb-2">
+                        <h3 className="text-2xl sm:text-3xl font-bold mb-2 text-toss-dark">
                           Notia for {platform.label}
                         </h3>
-                        <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+                        <p className="text-toss-gray mb-8 max-w-md mx-auto leading-relaxed">
                           {platform.description}
                         </p>
 
                         <div className="flex flex-wrap justify-center gap-3 mb-12">
-                          <Badge variant="secondary" className="px-3 py-1">
+                          <Badge variant="secondary" className="px-3 py-1 bg-toss-lightGray text-toss-dark border-none">
                             최신 버전: {release ? release.tag_name : (loading ? 'Loading...' : changelogData[0].version)}
                           </Badge>
-                          <Badge variant="secondary" className="px-3 py-1">
+                          <Badge variant="secondary" className="px-3 py-1 bg-toss-lightGray text-toss-dark border-none">
                             최근 업데이트: {release ? new Date(release.published_at).toLocaleDateString() : (loading ? 'Loading...' : changelogData[0].date)}
                           </Badge>
                           <a
                             href="/changelog"
-                            className="text-xs text-[#61C9A8] font-semibold hover:underline self-center"
+                            className="text-xs text-notia-primary font-semibold hover:underline self-center"
                           >
                             변경 사항 보기
                           </a>
@@ -254,11 +253,11 @@ export const DownloadPage: React.FC = () => {
 
                         {platform.id === 'Mobile / Desktop' ? (
                           isIOS ? (
-                            <div className="w-full max-w-xs text-center p-6 bg-[#61C9A8]/10 rounded-2xl border border-[#61C9A8]/20">
-                              <h4 className="font-bold mb-2 text-[#61C9A8]">
+                            <div className="w-full max-w-xs text-center p-6 bg-notia-primary/10 rounded-toss-lg border border-notia-primary/20">
+                              <h4 className="font-bold mb-2 text-notia-primary">
                                 iOS에서 설치하는 방법
                               </h4>
-                              <p className="text-sm text-slate-600 dark:text-slate-300">
+                              <p className="text-sm text-toss-gray">
                                 Safari 브라우저의 하단 공유 버튼
                                 <br />
                                 ( <IoShareOutline className="inline h-4 w-4 mx-1" />)
@@ -271,14 +270,14 @@ export const DownloadPage: React.FC = () => {
                             <>
                               <Button
                                 size="lg"
-                                className="bg-[#61C9A8] hover:bg-[#52a38a] w-full max-w-xs h-14 text-lg rounded-2xl shadow-lg shadow-[#61C9A8]/30 transition-all hover:-translate-y-1"
+                                className="bg-notia-primary hover:bg-notia-hover w-full max-w-xs h-12 text-base rounded-toss-lg shadow-toss hover:shadow-toss-lg transition-all duration-300 hover:-translate-y-0.5"
                                 onClick={handlePwaInstall}
                                 disabled={!deferredPrompt}
                               >
                                 {platform.downloadLabel}
                               </Button>
                               {!deferredPrompt && (
-                                <p className="text-xs text-muted-foreground mt-4 font-medium">
+                                <p className="text-xs text-toss-light mt-4 font-medium">
                                   이미 설치되었거나 메뉴를 통해 설치할 수 있습니다.
                                 </p>
                               )}
@@ -287,7 +286,7 @@ export const DownloadPage: React.FC = () => {
                         ) : (
                           <Button
                             size="lg"
-                            className="bg-[#61C9A8] hover:bg-[#52a38a] w-full max-w-xs h-14 text-lg rounded-2xl shadow-lg shadow-[#61C9A8]/30 transition-all hover:-translate-y-1"
+                            className="bg-notia-primary hover:bg-notia-hover w-full max-w-xs h-12 text-base rounded-toss-lg shadow-toss hover:shadow-toss-lg transition-all duration-300 hover:-translate-y-0.5"
                             asChild
                             disabled={loading}
                           >

@@ -2,9 +2,9 @@ import React from 'react';
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-transparent mt-12 py-8">
-      <div className="max-w-3xl mx-auto px-6">
-        <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
+    <footer className="bg-toss-lightGray py-8 border-t border-toss-border/50">
+      <div className="max-w-7xl mx-auto px-6">
+        <p className="text-center text-toss-light text-sm">
           © {new Date().getFullYear()} HyeonMin Kim. All rights reserved.
         </p>
       </div>

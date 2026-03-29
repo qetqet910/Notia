@@ -1,13 +1,15 @@
-import { create } from 'zustand';
-import { supabase } from '@/services/supabaseClient';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import type { Note, Reminder, ActivityData, EditorReminder } from '@/types';
-import { isTauri } from '@/utils/isTauri';
 import { invoke } from '@tauri-apps/api/core';
-import { localDB } from '@/services/localDB';
 import { v4 as uuidv4 } from 'uuid';
+import { create } from 'zustand';
+
+import { localDB } from '@/services/localDB';
+import { supabase } from '@/services/supabaseClient';
+import type { ActivityData, EditorReminder, Folder, Note, Reminder } from '@/types';
+import { isTauri } from '@/utils/isTauri';
 
 interface CalculationResult {
+  jobId?: number; // 워커에서만 사용, Rust invoke에서는 없음
   stats: {
     totalNotes: number;
     totalReminders: number;
@@ -18,8 +20,17 @@ interface CalculationResult {
   activityData: ActivityData[];
 }
 
+interface FolderTreeNode {
+  path: string;
+  name: string;
+  children: FolderTreeNode[];
+  noteIds: string[];
+}
+
 interface DataState {
   notes: Record<string, Note>;
+  folders: Record<string, Folder>;
+  currentUserId: string | null;
   isInitialized: boolean;
   channels: RealtimeChannel[];
   activityCache: CalculationResult | null;
@@ -36,6 +47,12 @@ interface DataState {
     reminderId: string,
     updates: Partial<Reminder>,
   ) => void;
+  createFolder: (path: string) => string;
+  moveNote: (noteId: string, newPath: string) => Promise<void>;
+  renameFolder: (oldPath: string, newPath: string) => Promise<void>;
+  deleteFolder: (path: string) => Promise<void>;
+  getNotesByFolder: (path: string, opts?: { recursive?: boolean }) => Note[];
+  getFolderTree: () => FolderTreeNode;
   addNoteState: (newNote: Note) => void;
   removeNoteState: (noteId: string) => void;
   togglePinNote: (noteId: string) => Promise<void>;
@@ -46,13 +63,443 @@ interface DataState {
 }
 
 let worker: Worker | null = null;
+let currentJobId = 0;
+
+// --- Folder path utilities ---
+
+function normalizeFolderPath(path: string): string {
+  const trimmed = path.trim();
+  if (!trimmed || trimmed === '/') {
+    return '/';
+  }
+
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  const collapsed = withLeadingSlash.replace(/\/+/g, '/');
+  const withoutTrailingSlash = collapsed.replace(/\/+$/g, '');
+
+  return withoutTrailingSlash || '/';
+}
+
+function doesPathMatch(targetPath: string, basePath: string): boolean {
+  if (basePath === '/') {
+    return true;
+  }
+  return targetPath === basePath || targetPath.startsWith(`${basePath}/`);
+}
+
+function getParentPath(path: string): string | null {
+  const normalizedPath = normalizeFolderPath(path);
+  if (normalizedPath === '/') {
+    return null;
+  }
+
+  const lastSlashIndex = normalizedPath.lastIndexOf('/');
+  if (lastSlashIndex <= 0) {
+    return '/';
+  }
+
+  return normalizeFolderPath(normalizedPath.slice(0, lastSlashIndex));
+}
+
+function getFolderName(path: string): string {
+  const normalizedPath = normalizeFolderPath(path);
+  if (normalizedPath === '/') {
+    return '/';
+  }
+
+  const lastSlashIndex = normalizedPath.lastIndexOf('/');
+  return normalizedPath.slice(lastSlashIndex + 1);
+}
+
+function getAncestorPaths(path: string): string[] {
+  const normalizedPath = normalizeFolderPath(path);
+  if (normalizedPath === '/') {
+    return [];
+  }
+
+  const segments = normalizedPath.slice(1).split('/').filter(Boolean);
+  const result: string[] = [];
+  let current = '';
+
+  for (const segment of segments) {
+    current = `${current}/${segment}`;
+    result.push(normalizeFolderPath(current));
+  }
+
+  return result;
+}
+
+function remapFolderPath(path: string, oldBase: string, newBase: string): string {
+  const normalizedPath = normalizeFolderPath(path);
+  const normalizedOldBase = normalizeFolderPath(oldBase);
+  const normalizedNewBase = normalizeFolderPath(newBase);
+
+  if (!doesPathMatch(normalizedPath, normalizedOldBase)) {
+    return normalizedPath;
+  }
+
+  const suffix =
+    normalizedOldBase === '/' ? normalizedPath : normalizedPath.slice(normalizedOldBase.length);
+  return normalizeFolderPath(`${normalizedNewBase}${suffix}`);
+}
+
+// --- Local DB Write Batching/Debouncing ---
+const pendingNoteWrites: Map<string, Note> = new Map();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+const FLUSH_DELAY_MS = 250; // 250ms debounce
+
+async function flushPendingWrites() {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  
+  if (pendingNoteWrites.size === 0) return;
+  
+  const notesToWrite = Array.from(pendingNoteWrites.values());
+  pendingNoteWrites.clear();
+  
+  try {
+    await localDB.upsertNotes(notesToWrite);
+  } catch (err) {
+    console.error('Failed to flush pending note writes:', err);
+  }
+}
+
+function enqueueLocalUpsert(note: Note) {
+  pendingNoteWrites.set(note.id, note);
+  
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+  }
+  flushTimer = setTimeout(() => {
+    flushPendingWrites();
+  }, FLUSH_DELAY_MS);
+}
+
+// --- Store ---
 
 export const useDataStore = create<DataState>((set, get) => ({
   notes: {},
+  folders: {},
+  currentUserId: null,
   isInitialized: false,
   channels: [],
   activityCache: null,
   isCalculating: false,
+
+  // --- Folder Operations ---
+
+  createFolder: (path: string) => {
+    const normalizedPath = normalizeFolderPath(path);
+    if (normalizedPath === '/') {
+      return '/';
+    }
+
+    const now = new Date().toISOString();
+    const ownerId = get().currentUserId ?? Object.values(get().notes)[0]?.owner_id ?? '';
+    const foldersToEnsure = getAncestorPaths(normalizedPath);
+    const existingFolders = get().folders;
+    const createdFolders: Folder[] = [];
+
+    for (const folderPath of foldersToEnsure) {
+      if (existingFolders[folderPath]) {
+        continue;
+      }
+
+      createdFolders.push({
+        id: uuidv4(),
+        owner_id: ownerId,
+        path: folderPath,
+        name: getFolderName(folderPath),
+        parent_path: getParentPath(folderPath),
+        sort_index: 0,
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
+      });
+    }
+
+    if (createdFolders.length > 0) {
+      set((state) => {
+        const nextFolders = { ...state.folders };
+        for (const folder of createdFolders) {
+          nextFolders[folder.path] = folder;
+        }
+        return { folders: nextFolders };
+      });
+
+      void (async () => {
+        try {
+          await localDB.upsertFolders(createdFolders);
+        } catch (error) {
+          console.error('Failed to persist folders locally:', error);
+        }
+
+        try {
+          const { error } = await supabase.from('folders').insert(createdFolders);
+          if (error) {
+            throw error;
+          }
+        } catch (error) {
+          console.error('Failed to sync folders to Supabase:', error);
+        }
+      })();
+    }
+
+    return normalizedPath;
+  },
+
+  moveNote: async (noteId: string, newPath: string) => {
+    const { notes, folders, createFolder, updateNoteState } = get();
+    const note = notes[noteId];
+    if (!note) return;
+
+    const normalizedPath = normalizeFolderPath(newPath);
+    if (normalizedPath !== '/' && !folders[normalizedPath]) {
+      createFolder(normalizedPath);
+    }
+
+    const updatedAt = new Date().toISOString();
+    const updatedNote: Note = {
+      ...note,
+      folder_path: normalizedPath,
+      updated_at: updatedAt,
+      updatedAt: new Date(updatedAt),
+    };
+
+    updateNoteState(updatedNote);
+
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .update({ folder_path: normalizedPath, updated_at: updatedAt })
+        .eq('id', noteId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to sync move note to Supabase (Local DB is updated):', error);
+      // 의도적 주석 처리: offline 상태이거나 Supabase 스키마에 folder_path가 없을 때
+      // UI를 원복시키지 않고 로컬에서 그대로 진행되도록 롤백(updateNoteState(note))을 무시합니다.
+    }
+  },
+
+  renameFolder: async (oldPath: string, newPath: string) => {
+    const normalizedOldPath = normalizeFolderPath(oldPath);
+    const normalizedNewPath = normalizeFolderPath(newPath);
+    if (normalizedOldPath === normalizedNewPath || normalizedOldPath === '/') return;
+
+    try {
+      const { error } = await supabase.rpc('rename_folder', {
+        old_path: normalizedOldPath,
+        new_path: normalizedNewPath,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to rename folder:', error);
+      throw error;
+    }
+
+    const state = get();
+    const now = new Date().toISOString();
+    const nextNotes = { ...state.notes };
+    const changedNotes: Note[] = [];
+
+    for (const note of Object.values(state.notes)) {
+      const currentPath = normalizeFolderPath(note.folder_path ?? '/');
+      if (!doesPathMatch(currentPath, normalizedOldPath)) {
+        continue;
+      }
+
+      const nextPath = remapFolderPath(currentPath, normalizedOldPath, normalizedNewPath);
+      const nextNote: Note = {
+        ...note,
+        folder_path: nextPath,
+        updated_at: now,
+        updatedAt: new Date(now),
+      };
+      nextNotes[note.id] = nextNote;
+      changedNotes.push(nextNote);
+    }
+
+    const nextFolders: Record<string, Folder> = {};
+    const movedFolders: Folder[] = [];
+    const removedFolderPaths: string[] = [];
+
+    for (const folder of Object.values(state.folders)) {
+      const folderPath = normalizeFolderPath(folder.path);
+      if (!doesPathMatch(folderPath, normalizedOldPath)) {
+        nextFolders[folderPath] = folder;
+        continue;
+      }
+
+      const nextPath = remapFolderPath(folderPath, normalizedOldPath, normalizedNewPath);
+      removedFolderPaths.push(folderPath);
+
+      const movedFolder: Folder = {
+        ...folder,
+        path: nextPath,
+        name: getFolderName(nextPath),
+        parent_path: getParentPath(nextPath),
+        updated_at: now,
+      };
+      nextFolders[nextPath] = movedFolder;
+      movedFolders.push(movedFolder);
+    }
+
+    set({ notes: nextNotes, folders: nextFolders, activityCache: null });
+
+    if (changedNotes.length > 0) {
+      await localDB.upsertNotes(changedNotes);
+    }
+    if (removedFolderPaths.length > 0) {
+      const ownerId =
+        state.currentUserId ??
+        Object.values(state.notes)[0]?.owner_id ??
+        Object.values(state.folders)[0]?.owner_id;
+      await Promise.all(
+        removedFolderPaths.map((folderPath) =>
+          typeof ownerId === 'string' && ownerId.trim().length > 0
+            ? localDB.deleteFolder(ownerId, folderPath)
+            : localDB.deleteFolder(folderPath),
+        ),
+      );
+    }
+    if (movedFolders.length > 0) {
+      await localDB.upsertFolders(movedFolders);
+    }
+  },
+
+  deleteFolder: async (path: string) => {
+    const normalizedPath = normalizeFolderPath(path);
+    if (normalizedPath === '/') return;
+
+    try {
+      const { error } = await supabase.rpc('delete_folder', {
+        path: normalizedPath,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+      throw error;
+    }
+
+    const state = get();
+    const now = new Date().toISOString();
+    const nextNotes = { ...state.notes };
+    const changedNotes: Note[] = [];
+
+    for (const note of Object.values(state.notes)) {
+      const currentPath = normalizeFolderPath(note.folder_path ?? '/');
+      if (!doesPathMatch(currentPath, normalizedPath)) {
+        continue;
+      }
+
+      const nextNote: Note = {
+        ...note,
+        folder_path: '/',
+        updated_at: now,
+        updatedAt: new Date(now),
+      };
+      nextNotes[note.id] = nextNote;
+      changedNotes.push(nextNote);
+    }
+
+    const nextFolders: Record<string, Folder> = {};
+    const removedFolderPaths: string[] = [];
+    for (const folder of Object.values(state.folders)) {
+      const folderPath = normalizeFolderPath(folder.path);
+      if (doesPathMatch(folderPath, normalizedPath)) {
+        removedFolderPaths.push(folderPath);
+        continue;
+      }
+      nextFolders[folderPath] = folder;
+    }
+
+    set({ notes: nextNotes, folders: nextFolders, activityCache: null });
+
+    if (changedNotes.length > 0) {
+      await localDB.upsertNotes(changedNotes);
+    }
+    if (removedFolderPaths.length > 0) {
+      const ownerId =
+        state.currentUserId ??
+        Object.values(state.notes)[0]?.owner_id ??
+        Object.values(state.folders)[0]?.owner_id;
+      await Promise.all(
+        removedFolderPaths.map((folderPath) =>
+          typeof ownerId === 'string' && ownerId.trim().length > 0
+            ? localDB.deleteFolder(ownerId, folderPath)
+            : localDB.deleteFolder(folderPath),
+        ),
+      );
+    }
+  },
+
+  getNotesByFolder: (path: string, opts?: { recursive?: boolean }) => {
+    const normalizedPath = normalizeFolderPath(path);
+    const recursive = opts?.recursive ?? false;
+    const notes = Object.values(get().notes);
+
+    return notes.filter((note) => {
+      const notePath = normalizeFolderPath(note.folder_path ?? '/');
+      if (recursive) {
+        return doesPathMatch(notePath, normalizedPath);
+      }
+      return notePath === normalizedPath;
+    });
+  },
+
+  getFolderTree: () => {
+    const root: FolderTreeNode = { path: '/', name: '/', children: [], noteIds: [] };
+    const nodeByPath = new Map<string, FolderTreeNode>([['/', root]]);
+
+    const ensureNode = (path: string): FolderTreeNode => {
+      const normalizedPath = normalizeFolderPath(path);
+      const existing = nodeByPath.get(normalizedPath);
+      if (existing) return existing;
+
+      const lastSlashIndex = normalizedPath.lastIndexOf('/');
+      const parentPath =
+        lastSlashIndex <= 0 ? '/' : normalizeFolderPath(normalizedPath.slice(0, lastSlashIndex));
+      const name = normalizedPath.slice(lastSlashIndex + 1);
+      const parent = ensureNode(parentPath);
+
+      const node: FolderTreeNode = {
+        path: normalizedPath,
+        name,
+        children: [],
+        noteIds: [],
+      };
+
+      parent.children.push(node);
+      nodeByPath.set(normalizedPath, node);
+      return node;
+    };
+
+    for (const folder of Object.values(get().folders)) {
+      ensureNode(folder.path);
+    }
+
+    for (const note of Object.values(get().notes)) {
+      const folderPath = normalizeFolderPath(note.folder_path ?? '/');
+      const targetNode = ensureNode(folderPath);
+      targetNode.noteIds.push(note.id);
+    }
+
+    const sortTree = (node: FolderTreeNode) => {
+      node.children.sort((a, b) => a.path.localeCompare(b.path));
+      node.noteIds.sort((a, b) => a.localeCompare(b));
+      for (const child of node.children) {
+        sortTree(child);
+      }
+    };
+
+    sortTree(root);
+    return root;
+  },
+
+  // --- Note CRUD ---
 
   togglePinNote: async (noteId: string) => {
     const { notes, updateNoteState } = get();
@@ -124,7 +571,11 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   permanentlyDeleteNote: async (noteId: string) => {
-    const { removeNoteState } = get();
+    const { removeNoteState, addNoteState, notes } = get();
+    
+    // 백업: 롤백을 위해 노트 정보 저장
+    const backupNote = notes[noteId];
+    if (!backupNote) return; // 존재하지 않는 노트면 종료
     
     // Optimistic
     removeNoteState(noteId);
@@ -132,36 +583,38 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const { error } = await supabase.from('notes').delete().eq('id', noteId);
       if (error) throw error;
-      // Reminders are cascaded on DB level usually, but we also delete them manually in other funcs.
-      // Assuming ON DELETE CASCADE in Postgres or manual cleanup.
-      // Supabase doesn't always default to CASCADE.
       await supabase.from('reminders').delete().eq('note_id', noteId);
     } catch (error) {
       console.error('Failed to permanently delete note:', error);
-      // Restore state? Complex because we removed it.
-      // Ideally re-fetch or keep a backup.
+      // 롤백: 백업된 노트를 state에 복원
+      addNoteState(backupNote);
     }
   },
 
   calculateActivityData: async (notes: Note[]) => {
-    if (get().isCalculating) return;
+    // 새 요청이 오면 이전 계산을 취소
+    currentJobId++;
+    const thisJobId = currentJobId;
 
     set({ isCalculating: true });
 
     if (isTauri()) {
       try {
-        // Rust implementation
         const result = await invoke<CalculationResult>('calculate_activity', { notes });
-        set({ activityCache: result, isCalculating: false });
+        // stale 체크
+        if (thisJobId === currentJobId) {
+          set({ activityCache: result, isCalculating: false });
+        }
         return;
       } catch (err) {
         console.error('Rust calculation failed, falling back to worker:', err);
-        // Fallback to worker if rust fails
       }
     }
 
+    // 기존 워커가 있으면 종료하고 새로 생성
     if (worker) {
       worker.terminate();
+      worker = null;
     }
 
     try {
@@ -170,7 +623,11 @@ export const useDataStore = create<DataState>((set, get) => ({
         { type: 'module' },
       );
 
-      worker.onmessage = (event: MessageEvent<CalculationResult>) => {
+      worker.onmessage = (event: MessageEvent<CalculationResult & { jobId: number }>) => {
+        // stale 결과 무시
+        if (event.data.jobId !== currentJobId) {
+          return;
+        }
         set({ activityCache: event.data, isCalculating: false });
         if (worker) {
           worker.terminate();
@@ -180,17 +637,21 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       worker.onerror = (error) => {
         console.error('Web worker error:', error);
-        set({ isCalculating: false });
+        if (thisJobId === currentJobId) {
+          set({ isCalculating: false });
+        }
         if (worker) {
           worker.terminate();
           worker = null;
         }
       };
 
-      worker.postMessage(notes);
+      worker.postMessage({ jobId: thisJobId, notes });
     } catch (err) {
       console.error('Failed to create web worker:', err);
-      set({ isCalculating: false });
+      if (thisJobId === currentJobId) {
+        set({ isCalculating: false });
+      }
     }
   },
 
@@ -200,41 +661,47 @@ export const useDataStore = create<DataState>((set, get) => ({
     },
   ): Promise<Note | null> => {
     const { addNoteState } = get();
-    // Generate UUID locally for optimistic update and local DB
     const newNoteId = uuidv4();
     const now = new Date().toISOString();
+    const nowDate = new Date(now);
 
     const newNote: Note = {
       id: newNoteId,
       owner_id: noteData.owner_id,
       title: noteData.title,
       content: noteData.content,
+      folder_path: '/',
+      parent_id: null,
+      is_public: false,
       tags: noteData.tags || [],
       created_at: now,
       updated_at: now,
+      createdAt: nowDate,
+      updatedAt: nowDate,
       reminders: [],
+      content_preview: '',
     };
 
     if (noteData.reminders && noteData.reminders.length > 0) {
-        newNote.reminders = noteData.reminders
-            .filter(reminder => reminder.date instanceof Date && !isNaN(reminder.date.getTime()))
-            .map(reminder => ({
-                id: uuidv4(),
-                note_id: newNoteId,
-                owner_id: noteData.owner_id,
-                reminder_text: reminder.text,
-                reminder_time: reminder.date.toISOString(),
-                completed: reminder.completed || false,
-                enabled: reminder.enabled ?? true,
-                original_text: reminder.original_text,
-                created_at: now,
-                updated_at: now
-            }));
+      newNote.reminders = noteData.reminders
+        .filter(reminder => reminder.date instanceof Date && !Number.isNaN(reminder.date.getTime()))
+        .map(reminder => ({
+          id: uuidv4(),
+          note_id: newNoteId,
+          owner_id: noteData.owner_id,
+          reminder_text: reminder.text,
+          reminder_time: reminder.date.toISOString(),
+          completed: reminder.completed || false,
+          enabled: reminder.enabled ?? true,
+          original_text: reminder.original_text,
+          created_at: now,
+          updated_at: now,
+        }));
     }
 
     // 1. Optimistic Update & Local DB Save
     addNoteState(newNote);
-    await localDB.upsertNote(newNote, false); // false = not synced yet
+    await localDB.upsertNote(newNote, false);
 
     try {
       // 2. Sync to Supabase
@@ -242,10 +709,12 @@ export const useDataStore = create<DataState>((set, get) => ({
         .from('notes')
         .insert([
           {
-            id: newNoteId, // Use generated ID
+            id: newNoteId,
             owner_id: noteData.owner_id,
             title: noteData.title,
             content: noteData.content,
+            folder_path: '/',
+            parent_id: null,
             tags: noteData.tags,
           },
         ])
@@ -255,25 +724,24 @@ export const useDataStore = create<DataState>((set, get) => ({
       if (noteError) throw noteError;
 
       if (newNote.reminders && newNote.reminders.length > 0) {
-          const reminderInserts = newNote.reminders.map(r => ({
-            id: r.id,
-            note_id: noteResult.id,
-            owner_id: noteData.owner_id,
-            reminder_text: r.reminder_text,
-            reminder_time: r.reminder_time,
-            completed: r.completed,
-            enabled: r.enabled,
-            original_text: r.original_text,
-          }));
+        const reminderInserts = newNote.reminders.map(r => ({
+          id: r.id,
+          note_id: noteResult.id,
+          owner_id: noteData.owner_id,
+          reminder_text: r.reminder_text,
+          reminder_time: r.reminder_time,
+          completed: r.completed,
+          enabled: r.enabled,
+          original_text: r.original_text,
+        }));
 
-          const { error: reminderError } = await supabase
-            .from('reminders')
-            .insert(reminderInserts);
-          
-          if (reminderError) {
-             console.error('Failed to sync reminders to server:', reminderError);
-             // Note: In a robust system, we would queue this failure.
-          }
+        const { error: reminderError } = await supabase
+          .from('reminders')
+          .insert(reminderInserts);
+        
+        if (reminderError) {
+          console.error('Failed to sync reminders to server:', reminderError);
+        }
       }
 
       // Mark as synced in local DB
@@ -281,44 +749,51 @@ export const useDataStore = create<DataState>((set, get) => ({
       return newNote;
     } catch (err) {
       console.error('Failed to create note online, saving locally only:', err);
-      // We already saved to localDB, so just return the optimistic note.
-      // Ideally, we should indicate the sync status in UI.
       return newNote;
     }
   },
 
-  updateNoteState: (updatedNote: Note) => {
-    // Also update local DB whenever state updates (e.g. from realtime or optimistic)
-    // Note: We might want to optimize this to avoid too many writes, 
-    // but for now safety first.
-    localDB.upsertNote(updatedNote); 
+  // --- State mutation helpers ---
 
+  updateNoteState: (updatedNote: Note) => {
     set((state) => {
       const existingNote = state.notes[updatedNote.id];
+      let mergedNote: Note;
+
       if (existingNote) {
         const existingDate = new Date(existingNote.updated_at).getTime();
         const newDate = new Date(updatedNote.updated_at).getTime();
         if (newDate >= existingDate) {
-          return {
-            notes: {
-              ...state.notes,
-              [updatedNote.id]: { ...existingNote, ...updatedNote },
-            },
-            activityCache: null,
-          };
+          // 병합: 기존 note와 updatedNote를 합침
+          mergedNote = { ...existingNote, ...updatedNote };
+
+          // updatedNote에 reminders 프로퍼티가 없으면 기존 reminders 유지
+          if (!('reminders' in updatedNote) && existingNote.reminders) {
+            mergedNote.reminders = existingNote.reminders;
+          }
+        } else {
+          // 기존 데이터가 더 최신이면 변경하지 않음
+          return state;
         }
       } else {
         // Realtime INSERT 이벤트 등으로 노트가 새로 추가될 때
-        return {
-          notes: { ...state.notes, [updatedNote.id]: updatedNote },
-          activityCache: null,
-        };
+        mergedNote = updatedNote;
       }
-      return state;
+
+      // Sync to local DB (배칭)
+      enqueueLocalUpsert(mergedNote);
+
+      return {
+        notes: {
+          ...state.notes,
+          [mergedNote.id]: mergedNote,
+        },
+        activityCache: null,
+      };
     });
   },
 
-  updateReminderState: (reminderId, updates) => {
+  updateReminderState: (reminderId: string, updates: Partial<Reminder>) => {
     set((state) => {
       const newNotes = { ...state.notes };
       for (const noteId in newNotes) {
@@ -334,9 +809,9 @@ export const useDataStore = create<DataState>((set, get) => ({
           };
           const updatedNote = { ...note, reminders: newReminders };
           newNotes[noteId] = updatedNote;
-          
-          // Sync to local DB
-          localDB.upsertNote(updatedNote); 
+
+          // Sync to local DB (배칭)
+          enqueueLocalUpsert(updatedNote);
           break;
         }
       }
@@ -345,7 +820,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   addNoteState: (newNote: Note) => {
-    localDB.upsertNote(newNote);
+    enqueueLocalUpsert(newNote);
     set((state) => ({
       notes: {
         ...state.notes,
@@ -355,7 +830,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     }));
   },
 
-  removeNoteState: (noteId) => {
+  removeNoteState: (noteId: string) => {
     localDB.deleteNote(noteId);
     set((state) => {
       const newNotes = { ...state.notes };
@@ -364,46 +839,91 @@ export const useDataStore = create<DataState>((set, get) => ({
     });
   },
 
+  // --- Initialization & Realtime ---
+
   initialize: async (userId: string) => {
-    if (get().isInitialized) return;
-    set({ isInitialized: true });
+    const { isInitialized, currentUserId } = get();
+    if (isInitialized && currentUserId === userId) return;
 
     await get().unsubscribeAll();
 
+    if (currentUserId !== userId) {
+      set({
+        notes: {},
+        folders: {},
+        activityCache: null,
+        channels: [],
+      });
+    }
+
+    set({ isInitialized: true, currentUserId: userId });
+
+    let formattedLocalNotes: Record<string, Note> = {};
+    let formattedLocalFolders: Record<string, Folder> = {};
+
     // 1. Load from Local DB first (Fast!)
     try {
-        const localNotes = await localDB.getNotes();
-        const formattedLocalNotes = localNotes.reduce(
-            (acc, note) => {
-                acc[note.id] = note;
-                return acc;
-            },
-            {} as Record<string, Note>,
-        );
-        
-        if (Object.keys(formattedLocalNotes).length > 0) {
-             set({ notes: formattedLocalNotes, activityCache: null });
-             console.log('Loaded notes from Local DB');
-        }
+      const [localNotes, localFolders] = await Promise.all([
+        localDB.getNotes(userId),
+        localDB.getFolders(userId),
+      ]);
+
+      formattedLocalNotes = localNotes.reduce(
+        (acc, note) => {
+          acc[note.id] = note;
+          return acc;
+        },
+        {} as Record<string, Note>,
+      );
+
+      formattedLocalFolders = localFolders.reduce(
+        (acc, folder) => {
+          const normalizedPath = normalizeFolderPath(folder.path);
+          acc[normalizedPath] = {
+            ...folder,
+            path: normalizedPath,
+            name: folder.name || getFolderName(normalizedPath),
+            parent_path: folder.parent_path ? normalizeFolderPath(folder.parent_path) : getParentPath(normalizedPath),
+            sort_index: folder.sort_index ?? 0,
+          };
+          return acc;
+        },
+        {} as Record<string, Folder>,
+      );
+
+      if (Object.keys(formattedLocalNotes).length > 0 || Object.keys(formattedLocalFolders).length > 0) {
+        set({ notes: formattedLocalNotes, folders: formattedLocalFolders, activityCache: null });
+        console.log('Loaded notes/folders from Local DB');
+      }
     } catch (err) {
-        console.error('Failed to load from local DB:', err);
+      console.error('Failed to load from local DB:', err);
     }
 
     // 2. Fetch from Supabase and sync
     try {
-      const { data, error } = await supabase
-        .from('notes')
-        .select(
-          'id, title, owner_id, is_public, note_type, tags, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
-        )
-        .eq('owner_id', userId);
+      const [{ data: noteData, error: notesError }, { data: folderData, error: foldersError }] =
+        await Promise.all([
+          supabase
+            .from('notes')
+            .select(
+              'id, title, owner_id, is_public, note_type, tags, folder_path, parent_id, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
+            )
+            .eq('owner_id', userId),
+          supabase
+            .from('folders')
+            .select('id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at')
+            .eq('owner_id', userId),
+        ]);
 
-      if (error) throw error;
+      if (notesError) throw notesError;
+      if (foldersError) throw foldersError;
 
-      const formattedNotes = data.reduce(
+      const formattedNotes = (noteData ?? []).reduce(
         (acc, note) => {
           const formatted = {
             ...note,
+            folder_path: note.folder_path ?? '/',
+            parent_id: note.parent_id ?? null,
             createdAt: new Date(note.created_at),
             updatedAt: new Date(note.updated_at),
             reminders: note.reminders || [],
@@ -415,16 +935,40 @@ export const useDataStore = create<DataState>((set, get) => ({
         },
         {} as Record<string, Note>,
       );
-      
+
+      const formattedRemoteFolders = (folderData ?? []).reduce(
+        (acc, folder) => {
+          const normalizedPath = normalizeFolderPath(folder.path);
+          acc[normalizedPath] = {
+            ...folder,
+            path: normalizedPath,
+            name: folder.name || getFolderName(normalizedPath),
+            parent_path: folder.parent_path
+              ? normalizeFolderPath(folder.parent_path)
+              : getParentPath(normalizedPath),
+            sort_index: folder.sort_index ?? 0,
+          } as Folder;
+          return acc;
+        },
+        {} as Record<string, Folder>,
+      );
+
       // Bulk sync fetched data to local DB
       await localDB.upsertNotes(Object.values(formattedNotes));
+      await localDB.upsertFolders(Object.values(formattedRemoteFolders));
 
-      set({ notes: formattedNotes, activityCache: null }); 
+      set({
+        notes: formattedNotes,
+        folders: { ...formattedLocalFolders, ...formattedRemoteFolders },
+        activityCache: null,
+      });
     } catch (err) {
       console.error('Online initialization failed, running in offline mode:', err);
-      // Keep using local data if online fetch fails
+      set({ channels: [] });
+      return; // 오프라인 모드에서는 리얼타임 구독 스킵
     }
 
+    // 3. Setup Realtime subscriptions
     const handleNoteChange = (payload: RealtimePostgresChangesPayload<Note>) => {
       if (payload.eventType === 'INSERT') {
         get().addNoteState({ ...(payload.new as Note), reminders: [] });
@@ -466,10 +1010,10 @@ export const useDataStore = create<DataState>((set, get) => ({
             const targetNote = state.notes[noteId];
             if (targetNote) {
               const updatedNote = {
-                    ...targetNote,
-                    reminders: [...(targetNote.reminders || []), newReminder],
+                ...targetNote,
+                reminders: [...(targetNote.reminders || []), newReminder],
               };
-              localDB.upsertNote(updatedNote); // Sync local
+              enqueueLocalUpsert(updatedNote);
               return {
                 notes: {
                   ...state.notes,
@@ -495,13 +1039,13 @@ export const useDataStore = create<DataState>((set, get) => ({
           set((state) => {
             const targetNote = state.notes[noteId];
             if (targetNote) {
-               const updatedNote = {
-                    ...targetNote,
-                    reminders: (targetNote.reminders || []).map((r) =>
-                      r.id === updatedReminder.id ? updatedReminder : r,
-                    ),
-                  };
-              localDB.upsertNote(updatedNote); // Sync local
+              const updatedNote = {
+                ...targetNote,
+                reminders: (targetNote.reminders || []).map((r) =>
+                  r.id === updatedReminder.id ? updatedReminder : r,
+                ),
+              };
+              enqueueLocalUpsert(updatedNote);
               return {
                 notes: {
                   ...state.notes,
@@ -528,12 +1072,12 @@ export const useDataStore = create<DataState>((set, get) => ({
             const targetNote = state.notes[noteId];
             if (targetNote) {
               const updatedNote = {
-                    ...targetNote,
-                    reminders: (targetNote.reminders || []).filter(
-                      (r) => r.id !== oldReminder.id,
-                    ),
-                  };
-              localDB.upsertNote(updatedNote); // Sync local
+                ...targetNote,
+                reminders: (targetNote.reminders || []).filter(
+                  (r) => r.id !== oldReminder.id,
+                ),
+              };
+              enqueueLocalUpsert(updatedNote);
               return {
                 notes: {
                   ...state.notes,
@@ -555,6 +1099,10 @@ export const useDataStore = create<DataState>((set, get) => ({
       worker.terminate();
       worker = null;
     }
+
+    // 남은 배칭 쓰기 플러시
+    await flushPendingWrites();
+
     const { channels } = get();
     if (channels.length > 0) {
       await Promise.all(channels.map((c) => c.unsubscribe()));

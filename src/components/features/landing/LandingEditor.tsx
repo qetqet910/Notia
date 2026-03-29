@@ -35,8 +35,8 @@ export const LandingEditor: React.FC = () => {
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
 
   return (
-    <Card className="w-full max-w-4xl mx-auto bg-white backdrop-blur-sm shadow-2xl shadow-green-500/10 border-gray-200 overflow-hidden">
-      <div className="flex justify-between items-center p-2 border-b border-gray-200 bg-gray-50/80">
+    <Card data-testid="landing-editor" className="w-full max-w-4xl mx-auto bg-white shadow-toss-lg border border-toss-border/50 overflow-hidden rounded-toss-xl">
+      <div className="flex justify-between items-center p-3 border-b border-toss-border/50 bg-toss-lightGray/50">
         <div className="flex items-center gap-2 pl-2">
           <div className="flex space-x-1.5">
             <div className="w-3 h-3 rounded-full bg-red-400/80" />
@@ -44,27 +44,27 @@ export const LandingEditor: React.FC = () => {
             <div className="w-3 h-3 rounded-full bg-green-400/80" />
           </div>
         </div>
-        <div className="flex items-center bg-gray-200/50 p-1 rounded-lg">
+        <div className="flex items-center bg-white p-1 rounded-toss gap-1">
           <button
             onClick={() => setViewMode('edit')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-toss text-sm font-medium transition-all duration-200 ${
               viewMode === 'edit'
-                ? 'bg-white text-primary shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-gray-200/50'
+                ? 'bg-toss-dark text-white shadow-toss'
+                : 'text-toss-gray hover:text-toss-dark hover:bg-toss-lightGray'
             }`}
           >
-            <Code className="w-3.5 h-3.5" />
+            <Code className="w-4 h-4" />
             <span>에디터</span>
           </button>
           <button
             onClick={() => setViewMode('preview')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-toss text-sm font-medium transition-all duration-200 ${
               viewMode === 'preview'
-                ? 'bg-white text-primary shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-gray-200/50'
+                ? 'bg-toss-dark text-white shadow-toss'
+                : 'text-toss-gray hover:text-toss-dark hover:bg-toss-lightGray'
             }`}
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Eye className="w-4 h-4" />
             <span>미리보기</span>
           </button>
         </div>
@@ -78,6 +78,7 @@ export const LandingEditor: React.FC = () => {
         >
           {viewMode === 'edit' ? (
             <Textarea
+              data-testid="landing-editor-textarea"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="여기에 입력해보세요..."
@@ -90,7 +91,7 @@ export const LandingEditor: React.FC = () => {
           )}
         </motion.div>
 
-        <div className="bg-gray-50/50 border-t border-gray-100 p-4 space-y-3 min-h-[120px]">
+        <div className="bg-toss-lightGray/50 border-t border-toss-border/50 p-5 space-y-3 min-h-[120px] rounded-b-toss-xl">
           <AnimatePresence>
             {tags.length > 0 && (
               <motion.div
@@ -104,7 +105,7 @@ export const LandingEditor: React.FC = () => {
                   <Tag className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
                   <div className="flex flex-wrap gap-2">
                     {tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-base cursor-pointer hover:bg-primary/20">
+                      <Badge key={index} variant="secondary" className="text-sm cursor-pointer bg-notia-primary/10 text-notia-primary hover:bg-notia-primary/20 rounded-toss border-none">
                         {tag.text}
                       </Badge>
                     ))}

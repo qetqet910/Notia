@@ -65,6 +65,19 @@ const getSlashCommands = (onImageUpload: () => void): Completion[] => [
     },
   },
   {
+    label: '/link',
+    displayLabel: '🔗 위키 링크',
+    detail: '노트 링크 삽입 [[노트제목]]',
+    type: 'keyword',
+    boost: 16,
+    apply: (view: EditorView, _completion: Completion, from: number, to: number) => {
+      view.dispatch({
+        changes: { from, to, insert: '[[]]' },
+        selection: { anchor: from + 2 },
+      });
+    },
+  },
+  {
     label: '/number',
     displayLabel: '1. 목록',
     detail: 'Ordered List',

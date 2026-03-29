@@ -14,6 +14,8 @@ export type Database = {
           id: string;
           title: string;
           content: string;
+          folder_path: string;
+          parent_id: string | null;
           owner_id: string;
           is_public: boolean;
           note_type: string | null;
@@ -26,6 +28,8 @@ export type Database = {
           id?: string;
           title: string;
           content: string;
+          folder_path?: string;
+          parent_id?: string | null;
           owner_id: string;
           is_public?: boolean;
           note_type?: string | null;
@@ -38,6 +42,8 @@ export type Database = {
           id?: string;
           title?: string;
           content?: string;
+          folder_path?: string;
+          parent_id?: string | null;
           owner_id?: string;
           is_public?: boolean;
           note_type?: string | null;
@@ -45,6 +51,42 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           content_preview?: string | null;
+        };
+        Relationships: [];
+      };
+      folders: {
+        Row: {
+          id: string;
+          owner_id: string;
+          path: string;
+          name: string;
+          parent_path: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+          sort_index: number | null;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          path: string;
+          name: string;
+          parent_path?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+          sort_index?: number | null;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          path?: string;
+          name?: string;
+          parent_path?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+          sort_index?: number | null;
         };
         Relationships: [];
       };

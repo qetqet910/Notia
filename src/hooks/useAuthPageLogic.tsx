@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/useToast';
 import { generateRandomKey, formatKey } from '@/utils/keyValidation';
+import { sanitizeRedirectPath } from '@/utils/safeRedirect';
 import { ToastAction } from '@/components/ui/toast';
 
 export const useAuthPageLogic = () => {
@@ -15,14 +17,14 @@ export const useAuthPageLogic = () => {
     createEmailUserWithEdgeFunction,
   } = useAuthStore();
 
+  const location = useLocation();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [showKey, setShowKey] = useState(false);
-
   useEffect(() => {
-    const { isAuthenticated, isSessionCheckLoading } = useAuthStore.getState();
+    const { isSessionCheckLoading } = useAuthStore.getState();
     if (!isSessionCheckLoading) {
       useAuthStore.getState().checkSession();
     }
@@ -146,9 +148,14 @@ export const useAuthPageLogic = () => {
 
   const handleSocialLogin = useCallback(
     async (provider: 'github' | 'google') => {
+      // OAuth 시작 전에 리다이렉트 경로 저장
+      const fromPath = (location.state as { from?: { pathname?: string } })?.from?.pathname ?? '/dashboard';
+      const safePath = sanitizeRedirectPath(fromPath);
+      localStorage.setItem('auth_redirect', safePath);
+      
       await loginWithSocial(provider);
     },
-    [loginWithSocial],
+    [loginWithSocial, location.state],
   );
 
   const handleCreateAnonymousKey = useCallback(

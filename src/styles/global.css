@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Pretendard 폰트 (Toss 스타일) */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 기존 GmarketSans 폰트 (fallback) */
 @font-face {
   font-family: 'GmarketSans';
   src: url('/fonts/GmarketSansTTFMedium.ttf') format('woff');
@@ -12,26 +22,27 @@
 
 @layer base {
   :root {
+    /* Toss 스타일 색상 변수 */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 215 19% 14%; /* #191F28 */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 19% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 175 36% 71%;
-    --primary-foreground: 210 40% 98%;
+    --popover-foreground: 215 19% 14%;
+    --primary: 175 36% 71%; /* Notia Primary */
+    --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary-foreground: 215 19% 14%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 34.9%;
+    --muted-foreground: 215 12% 35%; /* #4E5968 */
     --accent: 175 36% 85%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent-foreground: 215 19% 14%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 12% 92%; /* #E5E8EB */
+    --input: 215 12% 92%;
     --ring: 175 36% 71%;
-    --radius: 0.5rem;
+    --radius: 1rem; /* Toss 스타일 큰 radius */
   }
 
   .dark {
@@ -94,8 +105,12 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'GmarketSans', sans-serif;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', sans-serif;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+    line-height: 1.7; /* Toss 스타일 넉넉한 line-height */
+    letter-spacing: -0.02em; /* Toss 스타일 자간 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* 폼 요소가 부모(body) 폰트를 상속받도록 강제 */

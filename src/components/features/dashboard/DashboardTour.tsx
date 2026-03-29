@@ -8,8 +8,9 @@ import Joyride, {
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { useThemeStore } from '@/stores/themeStore';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Liquid Glass Style Custom Tooltip
+// Premium Liquid Glass Style Custom Tooltip
 const CustomTooltip = ({
   index,
   step,
@@ -20,39 +21,47 @@ const CustomTooltip = ({
   isLastStep,
 }: TooltipRenderProps) => {
   return (
-    <div
-      {...tooltipProps}
-      className="relative max-w-sm rounded-xl border border-white/20 bg-background/80 p-5 shadow-2xl backdrop-blur-md supports-[backdrop-filter]:bg-background/60 dark:bg-black/60 dark:border-white/10"
-    >
-      {step.title && (
-        <h4 className="mb-3 text-lg font-bold leading-none tracking-tight text-blue-600 dark:text-blue-400">
-          {step.title}
-        </h4>
-      )}
-      <div className="mb-6 text-[15px] leading-relaxed font-medium text-foreground/90">
-        {step.content}
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          {...skipProps}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          건너뛰기
-        </Button>
-        <div className="flex gap-2">
-          {index > 0 && (
-            <Button variant="outline" size="sm" {...backProps}>
-              이전
-            </Button>
-          )}
-          <Button variant="default" size="sm" {...primaryProps}>
-            {isLastStep ? '완료' : '다음'}
-          </Button>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={index}
+        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        {...tooltipProps}
+        className="relative w-[340px] rounded-2xl border border-border/50 bg-background/95 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] ring-1 ring-border"
+      >
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-primary/5 to-transparent pointer-events-none" />
+        {step.title && (
+          <h4 className="mb-3 text-[17px] font-bold leading-none tracking-tight text-primary">
+            {step.title}
+          </h4>
+        )}
+        <div className="mb-6 text-[14px] leading-relaxed text-foreground/80 font-medium">
+          {step.content}
         </div>
-      </div>
-    </div>
+        <div className="flex items-center justify-between gap-3 relative z-10">
+          <Button
+            variant="ghost"
+            size="sm"
+            {...skipProps}
+            className="text-xs text-muted-foreground hover:bg-muted-foreground/10 h-8"
+          >
+            건너뛰기
+          </Button>
+          <div className="flex gap-2">
+            {index > 0 && (
+              <Button variant="outline" size="sm" className="h-8 text-xs bg-background/50 backdrop-blur-sm" {...backProps}>
+                이전
+              </Button>
+            )}
+            <Button variant="default" size="sm" className="h-8 text-xs shadow-md" {...primaryProps}>
+              {isLastStep ? '시작하기' : '다음'}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
@@ -108,6 +117,21 @@ export const DashboardTour: React.FC = () => {
       title: '새 노트 작성',
       content: '언제든지 이 버튼을 눌러 새로운 아이디어를 기록하세요.',
       placement: 'bottom',
+    },
+    {
+      target: 'body',
+      placement: 'center',
+      title: '노트를 연결하세요 🔗',
+      content: (
+        <div>
+          <p>[[노트제목]] 형식으로 다른 노트를 링크할 수 있습니다.</p>
+          <p className="mt-2 text-xs text-muted-foreground/80">
+            에디터에서 /link 명령어를 사용하거나,<br/>
+            직접 [[ 를 입력하면 자동완성이 나타납니다.
+          </p>
+        </div>
+      ),
+      disableBeacon: true,
     },
     {
       target: '#tour-user-profile',

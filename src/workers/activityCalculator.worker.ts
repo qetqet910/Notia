@@ -26,9 +26,20 @@ interface ActivityData {
   level: number;
 }
 
+interface WorkerInput {
+  jobId: number;
+  notes: WorkerNote[];
+}
+
+interface WorkerOutput {
+  jobId: number;
+  stats: Stats;
+  activityData: ActivityData[];
+}
+
 // self는 웹 워커의 전역 스코프를 참조합니다.
-self.onmessage = (event: MessageEvent<WorkerNote[]>) => {
-  const notes = event.data;
+self.onmessage = (event: MessageEvent<WorkerInput>) => {
+  const { jobId, notes } = event.data;
 
   const data = new Map<string, number>();
   let totalNotes = 0;
@@ -37,10 +48,12 @@ self.onmessage = (event: MessageEvent<WorkerNote[]>) => {
   const tags = new Set<string>();
 
   if (!notes || !Array.isArray(notes)) {
-    self.postMessage({ 
+    const emptyResult: WorkerOutput = { 
+      jobId,
       stats: { totalNotes: 0, totalReminders: 0, completedReminders: 0, completionRate: 0, tagsUsed: 0 }, 
       activityData: [] 
-    });
+    };
+    self.postMessage(emptyResult);
     return;
   }
 
@@ -95,5 +108,6 @@ self.onmessage = (event: MessageEvent<WorkerNote[]>) => {
   };
 
   // 계산된 결과를 메인 스레드로 다시 보냅니다.
-  self.postMessage({ stats: finalStats, activityData: finalActivityData });
+  const result: WorkerOutput = { jobId, stats: finalStats, activityData: finalActivityData };
+  self.postMessage(result);
 };

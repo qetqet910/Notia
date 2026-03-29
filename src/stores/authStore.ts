@@ -5,7 +5,6 @@ import type { User, Session } from '@supabase/supabase-js';
 import type { UserProfile } from '@/types';
 import { formatKey } from '@/utils/keyValidation';
 import { checkCreationLimit } from '@/utils/registerValidation';
-import { supabase } from '@/services/supabaseClient';
 import { guideNoteContent } from '@/constants/basicNote';
 import { useDataStore } from '@/stores/dataStore';
 import { parseNoteContent } from '@/utils/noteParser'; // 올바른 파서 import
@@ -141,6 +140,15 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       checkSession: async () => {
+        // Dev-only E2E bypass
+        if (import.meta.env.DEV && import.meta.env.VITE_E2E_BYPASS_AUTH === '1') {
+          const mockUser = { id: '00000000-0000-0000-0000-000000000000', email: 'e2e@example.com' } as any;
+          const mockSession = { user: mockUser } as any;
+          const mockProfile = { id: mockUser.id, email: mockUser.email, terms_agreed: true, display_name: 'E2E User' } as any;
+          set({ user: mockUser, session: mockSession, isAuthenticated: true, userProfile: mockProfile, isSessionCheckLoading: false, isProfileLoading: false });
+          return true;
+        }
+
         try {
           set({ isSessionCheckLoading: true });
           const {

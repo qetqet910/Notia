@@ -22,6 +22,7 @@ export default defineConfig({
       VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
       VITE_SUPABASE_ANON_KEY: 'local-anon-key',
       VITE_VAPID_PUBLIC_KEY: 'local-vapid-key',
+      VITE_E2E_BYPASS_AUTH: '1',
     },
   },
   projects: [

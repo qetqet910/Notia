@@ -56,6 +56,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ToastAction } from '@/components/ui/toast';
+import { resolveWikiLinkTitle } from '@/utils/wikiLinkSelection';
 
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
 import { EditorLoader } from '@/components/loader/dashboard/EditorLoader';
@@ -129,6 +138,7 @@ const EmptyNoteState = ({
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   useReminderScheduler();
+  const { toast } = useToast();
   const { session } = useAuthStore();
   const {
     notes,
@@ -160,6 +170,9 @@ export const Dashboard: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isWikiLinkDialogOpen, setIsWikiLinkDialogOpen] = useState(false);
+  const [wikiLinkTargetTitle, setWikiLinkTargetTitle] = useState('');
+  const [wikiLinkCandidates, setWikiLinkCandidates] = useState<Note[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const editorRef = useRef<{ save: () => void } | null>(null);
@@ -240,6 +253,67 @@ export const Dashboard: React.FC = () => {
       }
     },
     [fetchNoteContent],
+  );
+
+  const createAndOpenNoteFromWikiLink = useCallback(
+    async (title: string) => {
+      if (!session?.user?.id) return;
+
+      const newNote = await addNote({
+        title: title.trim() || '새로운 노트',
+        content: '',
+        tags: [],
+      });
+
+      if (!newNote) {
+        toast({
+          title: '노트 생성에 실패했어요',
+          description: '잠시 후 다시 시도해주세요.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setSelectedNoteId(newNote.id);
+      setActiveTab('notes');
+    },
+    [addNote, session?.user?.id, toast],
+  );
+
+  const openNoteByTitle = useCallback(
+    (title: string) => {
+      const resolution = resolveWikiLinkTitle(notes || [], title);
+
+      if (resolution.type === 'single') {
+        setActiveTab('notes');
+        void handleSelectNote(resolution.note);
+        return;
+      }
+
+      if (resolution.type === 'none') {
+        toast({
+          title: '노트를 찾을 수 없어요',
+          description: `"${title}" 제목의 노트를 찾지 못했어요.`,
+          variant: 'destructive',
+          action: (
+            <ToastAction
+              altText={`"${title}" 노트 생성`}
+              onClick={() => {
+                void createAndOpenNoteFromWikiLink(title);
+              }}
+            >
+              생성 후 열기
+            </ToastAction>
+          ),
+        });
+        return;
+      }
+
+      setWikiLinkTargetTitle(title);
+      setWikiLinkCandidates(resolution.candidates);
+      setIsWikiLinkDialogOpen(true);
+    },
+    [createAndOpenNoteFromWikiLink, handleSelectNote, notes, toast],
   );
 
   const handleEnterEditMode = useCallback(() => {
@@ -410,6 +484,7 @@ export const Dashboard: React.FC = () => {
                 ref={editorRef}
                 key={selectedNote.id}
                 note={selectedNote}
+                notes={notes || []}
                 onSave={handleSaveNote}
                 onDeleteRequest={() => setIsDeleteDialogOpen(true)}
                 onTogglePin={() => togglePinNote(selectedNote.id)}
@@ -419,6 +494,7 @@ export const Dashboard: React.FC = () => {
                 onContentChange={() => setHasUnsavedChanges(true)}
                 hasUnsavedChanges={hasUnsavedChanges}
                 onBack={() => setSelectedNoteId(null)}
+                onWikiLinkClick={openNoteByTitle}
               />
             ) : (
               <EmptyNoteState handleCreateNote={handleCreateNote} />
@@ -451,6 +527,7 @@ export const Dashboard: React.FC = () => {
                 onSelectNote={handleSelectNote}
                 selectedNote={selectedNote}
                 onTogglePin={togglePinNote}
+                onWikiLinkClick={openNoteByTitle}
               />
             </Suspense>
           </div>
@@ -650,6 +727,51 @@ export const Dashboard: React.FC = () => {
     >
       <DashboardTour />
       <FeedbackDialog />
+      <Dialog
+        open={isWikiLinkDialogOpen}
+        onOpenChange={(open) => {
+          setIsWikiLinkDialogOpen(open);
+          if (!open) {
+            setWikiLinkCandidates([]);
+            setWikiLinkTargetTitle('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>동일한 제목의 노트가 여러 개 있어요</DialogTitle>
+            <DialogDescription>
+              {"\""}{wikiLinkTargetTitle}{"\""} 제목의 노트를 선택해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+            {wikiLinkCandidates.map((candidate) => (
+              <Button
+                key={candidate.id}
+                variant="outline"
+                className="h-auto w-full justify-start py-3 text-left"
+                onClick={() => {
+                  setActiveTab('notes');
+                  setIsWikiLinkDialogOpen(false);
+                  setWikiLinkCandidates([]);
+                  setWikiLinkTargetTitle('');
+                  void handleSelectNote(candidate);
+                }}
+              >
+                <div className="flex w-full flex-col gap-1">
+                  <span className="font-medium">{candidate.title}</span>
+                  <span className="text-xs text-muted-foreground">
+                    경로: {candidate.folder_path || '/'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    수정일: {new Date(candidate.updated_at).toLocaleString('ko-KR')}
+                  </span>
+                </div>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-col h-full bg-background text-foreground">
         <Toaster />
         <header className="flex justify-between items-center px-4 py-3 border-b border-border flex-shrink-0">

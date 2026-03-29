@@ -7,47 +7,59 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# 환경 변수
-.env
-.env.local.
-.env.*.local
-.env.development
-.env.production
-
-# 빌드 및 출력 파일
-out/
-build/
-coverage/
-
-# OS/IDE 파일
+# OS/IDE Files
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
-
-.vite-cache/
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
+.vscode/
 !.vscode/extensions.json
-.idea
-debug.dev.md
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
 
-.gemini
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.local
+
+# Node.js
+node_modules/
+.npm/
+.vite-cache/
+
+# Build and Output
+dist/
+dist-ssr/
+out/
+build/
+target/
+src-tauri/target/
+.netlify/
+
+# Testing
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Project Specific
 md/
 GEMINI.md
-target
-# Local Netlify folder
-.netlify
-
-src-tauri/target
+AGENTS.md
+.sisyphus/
+.opencode/
+.gemini/
 qodana.yaml
+debug.dev.md
+
+# Tauri specific
+src-tauri/gen/
+src-tauri/bin/
+src-tauri/target/
+*.tsbuildinfo
