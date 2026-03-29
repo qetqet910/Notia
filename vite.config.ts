@@ -84,7 +84,8 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          importScripts: ['push-sw.js']
+          importScripts: ['push-sw.js'],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 // 5MB
         }
       })
     );
