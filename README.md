@@ -8,7 +8,7 @@
   <br>
   마크다운으로 자유롭게 기록하고, 태그로 연동하며 일상 속 중요한 약속까지 알려주는<br>가장 가볍고 빠른 당신의 새로운 생산성 도구입니다.
   <br><br>
-  > A lightweight note app with #tag linking and @reminder parsing.  
+  > A lightweight note app with #tag linking and @reminder parsing.<br>
   > Built with React + Tauri + Supabase. Works on Web & Desktop.
 </p>
 <p align="center">
