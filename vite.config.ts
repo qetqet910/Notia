@@ -113,15 +113,20 @@ export default defineConfig(({ mode }) => {
         name: 'html-env-injection',
         transformIndexHtml(html) {
           const envScript = `<script>window.__ENV__ = { VITE_SUPABASE_URL: ${JSON.stringify(env.VITE_SUPABASE_URL)}, VITE_SUPABASE_ANON_KEY: ${JSON.stringify(env.VITE_SUPABASE_ANON_KEY)}, VITE_VAPID_PUBLIC_KEY: ${JSON.stringify(env.VITE_VAPID_PUBLIC_KEY)} };</script>`;
-          // Tauri 환경에서는 서비스 워커를 강제로 해제하는 스크립트 주입
-          const swKiller = isTauri ? `
+          // 서비스 워커 강제 해제 스크립트 주입 (캐시 오염 방지 및 업데이트 강제)
+          const swKiller = `
             <script>
               if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(registrations => {
                   for (let registration of registrations) { registration.unregister(); }
                 });
               }
-            </script>` : '';
+              if ('caches' in window) {
+                caches.keys().then(names => {
+                  for (let name of names) caches.delete(name);
+                });
+              }
+            </script>`;
           return html.replace('<head>', `<head>${envScript}${swKiller}`);
         }
       }
@@ -182,9 +187,11 @@ export default defineConfig(({ mode }) => {
                 normalizedId.includes('/embla-carousel/') ||
                 normalizedId.includes('/clsx/') ||
                 normalizedId.includes('/tailwind-merge/') ||
-                normalizedId.includes('/class-variance-authority/')
+                normalizedId.includes('/class-variance-authority/') ||
+                normalizedId.includes('/zustand/') ||
+                normalizedId.includes('/uuid/')
               ) {
-                return 'vendor-core';
+                return 'vendor-lib';
               }
 
               // 2. Heavy async-only libraries (Feature-specific lazy-loaded)
