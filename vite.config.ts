@@ -158,56 +158,68 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: { main: path.resolve(__dirname, 'index.html') },
         treeshake: {
-          moduleSideEffects: false,
+          moduleSideEffects: true,
           propertyReadSideEffects: false,
         },
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              // 1. Core React Packages (Must be first to avoid dependency issues)
+              // Normalize path for robust Windows/Linux matching
+              const normalizedId = id.replace(/\\/g, '/');
+
+              // 1. Core Framework & UI Foundation (Must be together for dependency safety)
               if (
-                id.includes('react/') ||
-                id.includes('react-dom/') ||
-                id.includes('react-router-dom/') ||
-                id.includes('@remix-run/') ||
-                id.includes('scheduler/')
+                normalizedId.includes('/react/') ||
+                normalizedId.includes('/react-dom/') ||
+                normalizedId.includes('/react-router-dom/') ||
+                normalizedId.includes('/@remix-run/') ||
+                normalizedId.includes('/scheduler/') ||
+                normalizedId.includes('/framer-motion/') ||
+                normalizedId.includes('/@radix-ui/') ||
+                normalizedId.includes('/lucide-react/') ||
+                normalizedId.includes('/react-icons/') ||
+                normalizedId.includes('/@dnd-kit/') ||
+                normalizedId.includes('/embla-carousel/') ||
+                normalizedId.includes('/clsx/') ||
+                normalizedId.includes('/tailwind-merge/') ||
+                normalizedId.includes('/class-variance-authority/')
               ) {
-                return 'vendor-react';
+                return 'vendor-core';
               }
-              // 2. Heavy async-only libraries (lazy-loaded features)
-              if (id.includes('mermaid') || id.includes('cytoscape')) {
+
+              // 2. Heavy async-only libraries (Feature-specific lazy-loaded)
+              if (normalizedId.includes('/mermaid/') || normalizedId.includes('/cytoscape/')) {
                 return 'vendor-mermaid';
               }
-              if (id.includes('react-syntax-highlighter') || id.includes('highlight.js') || id.includes('refractor') || id.includes('prismjs')) {
+              if (
+                normalizedId.includes('/react-syntax-highlighter/') ||
+                normalizedId.includes('/highlight.js/') ||
+                normalizedId.includes('/refractor/') ||
+                normalizedId.includes('/prismjs/')
+              ) {
                 return 'vendor-highlighter';
               }
-              if (id.includes('@lottiefiles') || id.includes('dotlottie')) {
+              if (normalizedId.includes('/@lottiefiles/') || normalizedId.includes('/dotlottie/')) {
                 return 'vendor-lottie';
               }
-              // 3. UI libraries & Motion
-              if (id.includes('framer-motion') || id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('react-icons')) {
-                return 'vendor-ui';
-              }
-              // 4. DnD & Date utilities
-              if (id.includes('@dnd-kit') || id.includes('embla-carousel')) {
-                return 'vendor-dnd';
-              }
-              if (id.includes('date-fns')) {
-                return 'vendor-date';
-              }
-              // 5. CodeMirror editor
-              if (id.includes('@codemirror') || id.includes('@lezer') || id.includes('@uiw')) {
+
+              // 3. Editor & CodeMirror
+              if (normalizedId.includes('/@codemirror/') || normalizedId.includes('/@lezer/') || normalizedId.includes('/@uiw/')) {
                 return 'vendor-codemirror';
               }
-              // 6. D3 charts
-              if (id.includes('d3') || id.includes('d3-')) {
+
+              // 4. Data & Utils
+              if (normalizedId.includes('/d3/') || normalizedId.includes('/d3-')) {
                 return 'vendor-charts';
               }
-              // 7. Supabase
-              if (id.includes('@supabase')) {
+              if (normalizedId.includes('/@supabase/')) {
                 return 'vendor-supabase';
               }
-              // 8. Default Vendor
+              if (normalizedId.includes('/date-fns/')) {
+                return 'vendor-date';
+              }
+
+              // 5. Default Vendor
               return 'vendor';
             }
           },
