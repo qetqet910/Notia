@@ -92,9 +92,15 @@ export const useNotes = () => {
   useEffect(() => {
     if (user) {
       setLoading(true);
-      initialize(user.id).finally(() => {
-        setLoading(false);
-      });
+      console.info(`[useNotes] Initializing notes for user: ${user.id}`);
+      initialize(user.id)
+        .then(() => {
+          const notesCount = Object.values(useDataStore.getState().notes).length;
+          console.info(`[useNotes] Initialization complete. Store has ${notesCount} total notes.`);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
       setLoading(false);
       unsubscribeAll();
@@ -259,17 +265,17 @@ export const useNotes = () => {
           if (upsertError) throw upsertError;
   
           // 3. For each upserted reminder, regenerate its notification schedules
+          const allSchedulesToCreate = [];
+          const reminderIds = upsertedReminders.map(r => r.id);
+
+          // A. Delete all old schedules for these reminders in one go
+          if (reminderIds.length > 0) {
+            await supabase.from('notification_schedules').delete().in('reminder_id', reminderIds);
+          }
+
+          // B. Prepare all new schedules
           for (const reminder of upsertedReminders) {
-             // ... existing schedule logic ...
-             // (Optimized: Only regenerate if time/enabled changed? 
-             //  For now, keep existing logic for safety, but it creates churn.)
-            
-            // A. Delete all old schedules for this reminder
-            await supabase.from('notification_schedules').delete().eq('reminder_id', reminder.id);
-  
-            // B. Create new schedules only if the reminder is enabled
             if (reminder.enabled) {
-              const schedulesToCreate = [];
               const originalTime = new Date(reminder.reminder_time);
               const now = new Date();
   
@@ -286,7 +292,7 @@ export const useNotes = () => {
               for (const interval of intervals) {
                 const beforeTime = new Date(originalTime.getTime() - interval.minutes * 60 * 1000);
                 if (beforeTime > now) {
-                  schedulesToCreate.push({
+                  allSchedulesToCreate.push({
                     reminder_id: reminder.id,
                     owner_id: user.id,
                     notification_type: interval.type,
@@ -295,20 +301,21 @@ export const useNotes = () => {
                 }
               }
   
-              schedulesToCreate.push({
+              allSchedulesToCreate.push({
                 reminder_id: reminder.id,
                 owner_id: user.id,
                 notification_type: 'at_time',
                 scheduled_time: reminder.reminder_time,
               });
-  
-              if (schedulesToCreate.length > 0) {
-                const { error: scheduleError } = await supabase
-                  .from('notification_schedules')
-                  .insert(schedulesToCreate);
-                if (scheduleError) throw scheduleError;
-              }
             }
+          }
+
+          // C. Bulk insert all schedules
+          if (allSchedulesToCreate.length > 0) {
+            const { error: scheduleError } = await supabase
+              .from('notification_schedules')
+              .insert(allSchedulesToCreate);
+            if (scheduleError) throw scheduleError;
           }
   
           return upsertedReminders;
@@ -705,9 +712,7 @@ export const useNotes = () => {
     updateUserGoals,
     addNote,
     updateNote,
-    deleteNote, // This calls removeNoteState + DB delete directly in existing code.
-    // We should probably update deleteNote to use softDeleteNote if we want default behavior to be trash.
-    // But for now, let's expose the specific functions.
+    deleteNote,
     togglePinNote,
     softDeleteNote,
     restoreNote,

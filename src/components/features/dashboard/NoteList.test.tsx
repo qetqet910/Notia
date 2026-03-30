@@ -177,7 +177,7 @@ describe("NoteList tree mode folder sync", () => {
 			/>,
 		);
 
-		fireEvent.click(await screen.findByRole("button", { name: /^alpha\s+\d+$/i }));
+		fireEvent.click(await screen.findByRole("button", { name: /^alpha\s*\(?\d+\)?$/i }));
 
 		expect(screen.queryByText("Beta Nested Note")).not.toBeInTheDocument();
 
@@ -230,10 +230,10 @@ describe("NoteList tree mode folder sync", () => {
 
 		await waitFor(() => {
 			expect(
-				screen.getByRole("button", { name: /^alpha\s+\d+$/i }),
+				screen.getByRole("button", { name: /^alpha\s*\(?\d+\)?$/i }),
 			).toBeInTheDocument();
 			expect(
-				screen.getByRole("button", { name: /^beta\s+\d+$/i }),
+				screen.getByRole("button", { name: /^beta\s*\(?\d+\)?$/i }),
 			).toBeInTheDocument();
 		});
 	});
@@ -278,7 +278,7 @@ describe("NoteList tree mode folder sync", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /^work\s+\d+$/i }));
+		fireEvent.click(screen.getByRole("button", { name: /^work\s*\(?\d+\)?$/i }));
 		fireEvent.pointerDown(screen.getByRole("button", { name: "work 폴더 메뉴" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "이름 변경" }));
 
@@ -308,8 +308,8 @@ describe("NoteList tree mode folder sync", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /^work\s+\d+$/i }));
-		fireEvent.click(screen.getByRole("button", { name: /^sub\s+\d+$/i }));
+		fireEvent.click(screen.getByRole("button", { name: /^work\s*\(?\d+\)?$/i }));
+		fireEvent.click(screen.getByRole("button", { name: /^sub\s*\(?\d+\)?$/i }));
 
 		fireEvent.pointerDown(screen.getByRole("button", { name: "sub 폴더 메뉴" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "폴더 삭제" }));
@@ -319,8 +319,8 @@ describe("NoteList tree mode folder sync", () => {
 		});
 
 		await waitFor(() => {
-			expect(screen.queryByRole("button", { name: /^sub\s+\d+$/i })).not.toBeInTheDocument();
-			expect(screen.getByRole("button", { name: /^work\s+\d+$/i })).toBeInTheDocument();
+			expect(screen.queryByRole("button", { name: /^sub\s*\(?\d+\)?$/i })).not.toBeInTheDocument();
+			expect(screen.getByRole("button", { name: /^work\s*\(?\d+\)?$/i })).toBeInTheDocument();
 		});
 	});
 
@@ -348,12 +348,12 @@ describe("NoteList tree mode folder sync", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /^work\s+\d+$/i }));
-		fireEvent.click(screen.getByRole("button", { name: /^sub\s+\d+$/i }));
+		fireEvent.click(screen.getByRole("button", { name: /^work\s*\(?\d+\)?$/i }));
+		fireEvent.click(screen.getByRole("button", { name: /^sub\s*\(?\d+\)?$/i }));
 
 		await waitFor(() => {
 			expect(screen.getByText("Sub Note")).toBeInTheDocument();
-			expect(screen.queryByText("Work Note")).not.toBeInTheDocument();
+			expect(screen.getByText("Work Note")).toBeInTheDocument();
 		});
 
 		fireEvent.pointerDown(screen.getByRole("button", { name: "sub 폴더 메뉴" }));
@@ -370,7 +370,7 @@ describe("NoteList tree mode folder sync", () => {
 		});
 
 		expect(screen.getByText("Sub Note")).toBeInTheDocument();
-		expect(screen.queryByText("Work Note")).not.toBeInTheDocument();
+		expect(screen.getByText("Work Note")).toBeInTheDocument();
 	});
 
 	it("keeps rename dialog open and shows toast when rename fails", async () => {
@@ -386,7 +386,7 @@ describe("NoteList tree mode folder sync", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /^work\s+\d+$/i }));
+		fireEvent.click(screen.getByRole("button", { name: /^work\s*\(?\d+\)?$/i }));
 		fireEvent.pointerDown(screen.getByRole("button", { name: "work 폴더 메뉴" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "이름 변경" }));
 

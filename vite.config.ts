@@ -149,35 +149,69 @@ export default defineConfig(({ mode }) => {
     },
     
     build: {
-      target: 'es2015',
+      target: 'es2020',
       outDir: 'dist',
       emptyOutDir: true,
       sourcemap: false,
       minify: 'esbuild',
+      chunkSizeWarningLimit: 1200,
       rollupOptions: {
         input: { main: path.resolve(__dirname, 'index.html') },
+        treeshake: {
+          moduleSideEffects: false,
+          propertyReadSideEffects: false,
+        },
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
+              // 1. Core React Packages (Must be first to avoid dependency issues)
+              if (
+                id.includes('react/') ||
+                id.includes('react-dom/') ||
+                id.includes('react-router-dom/') ||
+                id.includes('@remix-run/') ||
+                id.includes('scheduler/')
+              ) {
+                return 'vendor-react';
+              }
+              // 2. Heavy async-only libraries (lazy-loaded features)
+              if (id.includes('mermaid') || id.includes('cytoscape')) {
+                return 'vendor-mermaid';
+              }
+              if (id.includes('react-syntax-highlighter') || id.includes('highlight.js') || id.includes('refractor') || id.includes('prismjs')) {
+                return 'vendor-highlighter';
+              }
+              if (id.includes('@lottiefiles') || id.includes('dotlottie')) {
+                return 'vendor-lottie';
+              }
+              // 3. UI libraries & Motion
+              if (id.includes('framer-motion') || id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('react-icons')) {
+                return 'vendor-ui';
+              }
+              // 4. DnD & Date utilities
+              if (id.includes('@dnd-kit') || id.includes('embla-carousel')) {
+                return 'vendor-dnd';
+              }
+              if (id.includes('date-fns')) {
+                return 'vendor-date';
+              }
+              // 5. CodeMirror editor
               if (id.includes('@codemirror') || id.includes('@lezer') || id.includes('@uiw')) {
                 return 'vendor-codemirror';
               }
-              if (id.includes('lucide-react') || id.includes('react-icons')) {
-                return 'vendor-icons';
+              // 6. D3 charts
+              if (id.includes('d3') || id.includes('d3-')) {
+                return 'vendor-charts';
               }
-              if (id.includes('framer-motion') || id.includes('@radix-ui') || id.includes('d3')) {
-                return 'vendor-ui';
-              }
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-                return 'vendor-react';
-              }
+              // 7. Supabase
               if (id.includes('@supabase')) {
                 return 'vendor-supabase';
               }
-              return 'vendor'; // Fallback for other modules
+              // 8. Default Vendor
+              return 'vendor';
             }
-          }
-        }
+          },
+        },
       },
     },
     assetsInclude: ['**/*.lottie'],

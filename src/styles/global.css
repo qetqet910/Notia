@@ -2,20 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Pretendard 폰트 (Toss 스타일) */
+/* Pretendard 폰트 (로컬 자산) */
 @font-face {
   font-family: 'Pretendard';
-  src: url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-  font-weight: 100 900;
+  src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
-
-/* 기존 GmarketSans 폰트 (fallback) */
 @font-face {
-  font-family: 'GmarketSans';
-  src: url('/fonts/GmarketSansTTFMedium.ttf') format('woff');
-  font-weight: 300;
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }

@@ -53,9 +53,10 @@
       name="google-site-verification"
       content="g2W-deMeJqgksiMDnBIH-WKP6mPmCxs21UX4C19Ac3o"
     />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+
+    <!-- Resource Hints -->
+    <link rel="dns-prefetch" href="https://aibdezgmtmcjqvamepre.supabase.co" />
+    <link rel="preconnect" href="https://aibdezgmtmcjqvamepre.supabase.co" crossorigin />
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
@@ -78,6 +79,10 @@
       href="/favicon/favicon-16x16.png"
     />
     <link rel="manifest" href="/favicon/site.webmanifest" />
+
+    <!-- Font Preload (Critical path) -->
+    <link rel="preload" href="/fonts/Pretendard-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Pretendard-Medium.woff2" as="font" type="font/woff2" crossorigin />
 
     <!-- PWA -->
     <meta

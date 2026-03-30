@@ -265,22 +265,33 @@ class LocalDBService {
 
     if (isTauri()) {
       try {
+        console.log('[LocalDB] Attempting to load SQLite:', DB_NAME);
         this.db = await Database.load(`sqlite:${DB_NAME}`);
-        await this.initTables();
-        this.isReady = true;
-        console.log('Local SQLite DB initialized');
-        return; // Success, return early
+        if (this.db) {
+          await this.initTables();
+          this.isReady = true;
+          console.log('[LocalDB] Local SQLite DB successfully initialized');
+          return;
+        } else {
+          throw new Error('Database.load returned null');
+        }
       } catch (error) {
-        console.error('Failed to init SQLite, falling back to WebDB:', error);
-        // Fallback to WebDB continues below
+        console.error('[LocalDB] Failed to init SQLite, falling back to WebDB:', error);
       }
     }
 
     // WebDB initialization (Fallback or default)
-    this.webDb = new WebDB();
-    await this.webDb.init();
-    this.isReady = true;
-    console.log('Local IndexedDB initialized');
+    try {
+      console.log('[LocalDB] Initializing WebDB (IndexedDB)...');
+      this.webDb = new WebDB();
+      await this.webDb.init();
+      this.isReady = true;
+      console.log('[LocalDB] Local IndexedDB initialized');
+    } catch (error) {
+      console.error('[LocalDB] Critical failure: Could not initialize any local database:', error);
+      // 이 경우에도 isReady를 true로 만들어 무한 루프 방지하되 기능은 제한됨
+      this.isReady = true;
+    }
   }
 
   private async initTables() {
@@ -406,7 +417,7 @@ class LocalDBService {
       
       await this.db.execute(`
         INSERT INTO notes (id, owner_id, title, content, tags, created_at, updated_at, is_synced, deleted_at, is_pinned, folder_path, parent_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           content = excluded.content,
@@ -428,13 +439,13 @@ class LocalDBService {
       // 'reminders' 프로퍼티가 명시적으로 존재할 때만 로컬 reminders 테이블을 건드림
       // 이는 realtime UPDATE payload가 reminders를 포함하지 않을 때 데이터 손실을 방지
       if ('reminders' in note) {
-        await this.db.execute('DELETE FROM reminders WHERE note_id = $1', [note.id]);
+        await this.db.execute('DELETE FROM reminders WHERE note_id = ?', [note.id]);
         
         if (note.reminders && note.reminders.length > 0) {
           for (const r of note.reminders) {
                await this.db.execute(`
                   INSERT INTO reminders (id, note_id, owner_id, reminder_text, reminder_time, completed, enabled, created_at, updated_at, original_text)
-                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                `, [
                    r.id, r.note_id, r.owner_id, r.reminder_text, r.reminder_time, 
                    r.completed ? 1 : 0, r.enabled ? 1 : 0, 
@@ -457,18 +468,18 @@ class LocalDBService {
     if (isTauri() && this.db) {
       const notesResult = ownerId
         ? await this.db.select<SqliteNoteRow[]>(
-          'SELECT * FROM notes WHERE owner_id = $1 AND is_deleted = 0 ORDER BY is_pinned DESC, updated_at DESC',
-          [ownerId],
+          'SELECT * FROM notes WHERE owner_id = ? AND (deleted_at IS NULL OR deleted_at = "") ORDER BY is_pinned DESC, updated_at DESC',
+          [String(ownerId)],
         )
         : await this.db.select<SqliteNoteRow[]>(
-          'SELECT * FROM notes WHERE is_deleted = 0 ORDER BY is_pinned DESC, updated_at DESC',
+          'SELECT * FROM notes WHERE (deleted_at IS NULL OR deleted_at = "") ORDER BY is_pinned DESC, updated_at DESC',
         );
       
       if (notesResult.length === 0) return [];
 
       // Fetch all reminders in one go to avoid N+1
       const allReminders = ownerId
-        ? await this.db.select<SqliteReminderRow[]>('SELECT * FROM reminders WHERE owner_id = $1', [ownerId])
+        ? await this.db.select<SqliteReminderRow[]>('SELECT * FROM reminders WHERE owner_id = ?', [String(ownerId)])
         : await this.db.select<SqliteReminderRow[]>('SELECT * FROM reminders');
       const remindersMap = new Map<string, SqliteReminderRow[]>();
       
@@ -520,7 +531,7 @@ class LocalDBService {
   async deleteNote(id: string) {
     await this.init();
     if (isTauri() && this.db) {
-      await this.db.execute('DELETE FROM notes WHERE id = $1', [id]);
+      await this.db.execute('DELETE FROM notes WHERE id = ?', [id]);
     } else if (this.webDb) {
       await this.webDb.deleteNote(id);
     }
@@ -534,11 +545,11 @@ class LocalDBService {
     if (isTauri() && this.db) {
       const foldersResult = ownerId
         ? await this.db.select<SqliteFolderRow[]>(
-          'SELECT * FROM folders WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY path ASC',
-          [ownerId],
+          'SELECT * FROM folders WHERE owner_id = ? AND (deleted_at IS NULL OR deleted_at = "") ORDER BY path ASC',
+          [String(ownerId)],
         )
         : await this.db.select<SqliteFolderRow[]>(
-          'SELECT * FROM folders WHERE deleted_at IS NULL ORDER BY path ASC',
+          'SELECT * FROM folders WHERE (deleted_at IS NULL OR deleted_at = "") ORDER BY path ASC',
         );
 
       return foldersResult.map((row) => ({
@@ -568,7 +579,7 @@ class LocalDBService {
       await this.db.execute(
         `
           INSERT INTO folders (id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(owner_id, path) DO UPDATE SET
             id = excluded.id,
             name = excluded.name,
@@ -633,9 +644,9 @@ class LocalDBService {
 
     if (isTauri() && this.db) {
       if (ownerId) {
-        await this.db.execute('DELETE FROM folders WHERE owner_id = $1 AND path = $2', [ownerId, folderPath]);
+        await this.db.execute('DELETE FROM folders WHERE owner_id = ? AND path = ?', [ownerId, folderPath]);
       } else {
-        await this.db.execute('DELETE FROM folders WHERE path = $1', [folderPath]);
+        await this.db.execute('DELETE FROM folders WHERE path = ?', [folderPath]);
       }
       return;
     }

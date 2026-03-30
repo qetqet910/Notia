@@ -272,7 +272,7 @@ describe('LocalDB Service', () => {
       expect(folders[0].owner_id).toBe('userA');
       expect(folders.some((folder) => folder.owner_id === 'userB')).toBe(false);
       expect(mockSelect).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM folders WHERE owner_id = $1 AND deleted_at IS NULL'),
+        expect.stringContaining('SELECT * FROM folders WHERE owner_id = ? AND deleted_at IS NULL'),
         ['userA'],
       );
     });
@@ -318,12 +318,12 @@ describe('LocalDB Service', () => {
       expect(notes.some((note) => note.owner_id === 'userB')).toBe(false);
       expect(mockSelect).toHaveBeenNthCalledWith(
         1,
-        expect.stringContaining('SELECT * FROM notes WHERE owner_id = $1 AND is_deleted = 0'),
+        expect.stringContaining('SELECT * FROM notes WHERE owner_id = ? AND is_deleted = 0'),
         ['userA'],
       );
       expect(mockSelect).toHaveBeenNthCalledWith(
         2,
-        'SELECT * FROM reminders WHERE owner_id = $1',
+        'SELECT * FROM reminders WHERE owner_id = ?',
         ['userA'],
       );
     });
@@ -354,7 +354,7 @@ describe('LocalDB Service', () => {
       );
 
       await localDB.deleteFolder('user1', '/work');
-      expect(mockExecute).toHaveBeenCalledWith('DELETE FROM folders WHERE owner_id = $1 AND path = $2', ['user1', '/work']);
+      expect(mockExecute).toHaveBeenCalledWith('DELETE FROM folders WHERE owner_id = ? AND path = ?', ['user1', '/work']);
     });
 
     it('upsertFolders should batch upsert folder records', async () => {

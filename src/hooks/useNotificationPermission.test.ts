@@ -11,6 +11,10 @@ vi.mock('@/services/supabaseClient', () => ({
       getSession: vi.fn().mockResolvedValue({
         data: { session: { user: { id: 'test-user-id' } } },
       }),
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: { id: 'test-user-id' } },
+      }),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
     from: vi.fn(() => ({
       upsert: vi.fn().mockResolvedValue({ error: null }),
@@ -58,7 +62,7 @@ describe('useNotificationPermission (Self-healing Logic)', () => {
     // Default: Permission granted
     mockCheckPermission.mockResolvedValue('granted');
     // Default: VAPID Key exists
-    import.meta.env.VITE_VAPID_PUBLIC_KEY = 'test-vapid-key';
+    vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'test-vapid-key');
   });
 
   it('should automatically resubscribe if permission is already granted on mount', async () => {

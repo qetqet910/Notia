@@ -5,21 +5,6 @@ import { useDataStore } from '@/stores/dataStore';
 import { useAuthStore } from '@/stores/authStore';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Mock Supabase
-vi.mock('@/services/supabaseClient', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-    })),
-    channel: vi.fn(() => ({
-        on: vi.fn().mockReturnThis(),
-        subscribe: vi.fn(),
-    })),
-  },
-}));
-
 // Mock isTauri
 vi.mock('@/utils/isTauri', () => ({
     isTauri: () => false,

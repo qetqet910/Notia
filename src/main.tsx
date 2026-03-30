@@ -6,8 +6,10 @@ import { isTauri } from '@/utils/isTauri';
 // 프로덕션 빌드에서 흰 화면만 뜨는 문제를 디버깅하기 위해 필수적입니다.
 window.onerror = function (message, source, lineno, colno, error) {
   console.error('Global Error Caught:', message, error);
-  // Tauri 환경에서 즉시 확인 가능한 alert 추가
-  window.alert(`CRITICAL ERROR:\n${message}\n${source}:${lineno}`);
+  // Tauri 환경의 개발 모드에서만 alert 표시
+  if (import.meta.env.DEV) {
+    window.alert(`CRITICAL ERROR:\n${message}\n${source}:${lineno}`);
+  }
   
   // Clear body safely
   document.body.innerHTML = '';
@@ -60,8 +62,10 @@ window.onerror = function (message, source, lineno, colno, error) {
 
 window.onunhandledrejection = function (event) {
   console.error('Unhandled Rejection:', event.reason);
-  // Tauri 환경에서 즉시 확인 가능한 alert 추가
-  window.alert(`PROMISE ERROR:\n${event.reason?.message || event.reason}`);
+  // 개발 모드에서만 alert 표시
+  if (import.meta.env.DEV) {
+    window.alert(`PROMISE ERROR:\n${event.reason?.message || event.reason}`);
+  }
   document.body.innerHTML = `
     <div style="
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -104,7 +108,6 @@ const platformModules = {
  */
 function initializePlatform(platformName: string): boolean { // async 제거
   try {
-    console.log(`Attempting to initialize platform module: ${platformName}`);
 
     const initPlatform = platformModules[platformName as keyof typeof platformModules];
 
@@ -114,7 +117,6 @@ function initializePlatform(platformName: string): boolean { // async 제거
 
     initPlatform(); // This function now handles rendering
 
-    console.log(`2️⃣ Platform : ¦¦¦${platformName}¦¦¦ Initialized Successfully`);
     return true;
   } catch (error) {
     console.error(`Failed to initialize platform ${platformName}:`, error);
@@ -127,15 +129,6 @@ function initializePlatform(platformName: string): boolean { // async 제거
  */
 async function initializeApp(): Promise<void> { // async 유지 (service worker 등록, await는 initializePlatform에서 제거됨)
   try {
-    console.log('--- Notia Initialization ---');
-    console.log('Current URL:', window.location.href);
-    console.log('Environment:', {
-      isTauri: isTauri(),
-      hasTauriInternals: typeof window !== 'undefined' && !!window.__TAURI_INTERNALS__,
-      platform: import.meta.env.VITE_PLATFORM || 'web',
-      mode: import.meta.env.MODE
-    });
-
     // 1. 플랫폼 결정
     const platform = import.meta.env.VITE_PLATFORM || 'web';
     console.log('Current Platform:', platform);
@@ -145,7 +138,6 @@ async function initializeApp(): Promise<void> { // async 유지 (service worker 
 
     // 3. 전체 초기화 결과 로깅
     if (platformInitialized) {
-      console.log('4️⃣ Application initialized successfully');
     } else {
       console.warn(
         'Application initialized with warnings (platform initialization failed)',

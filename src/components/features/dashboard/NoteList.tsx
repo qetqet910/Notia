@@ -152,31 +152,44 @@ export const NoteList: FC<NoteListProps> = ({
 		performSearch();
 	}, [debouncedSearchTerm, notes]);
 
-	// Radix UI Dialog 닫힘 버그 (pointer-events: none 잔류) 패치
+	// Radix UI Dialog / DropdownMenu 닫힘 버그 (pointer-events: none 및 overflow: hidden 잔류) 강제 복구
 	useEffect(() => {
 		if (!isFolderDialogOpen) {
-			setTimeout(() => {
-				document.body.style.pointerEvents = "";
-			}, 100);
+			const timer = setTimeout(() => {
+				// 다이얼로그가 닫힌 후에도 스타일이 남아있다면 강제로 초기화
+				if (document.body.style.pointerEvents === "none") {
+					document.body.style.pointerEvents = "";
+				}
+				if (document.body.style.overflow === "hidden") {
+					document.body.style.overflow = "";
+				}
+			}, 150);
+			return () => clearTimeout(timer);
 		}
 	}, [isFolderDialogOpen]);
-
 
 	const folderPaths = useMemo(() => Object.keys(folders), [folders]);
 
 	const openCreateFolderDialog = (parentPath: string) => {
-		setFolderDialogMode("create");
-		setFolderDialogPath(normalizeFolderPath(parentPath));
-		setFolderInput("");
-		setIsFolderDialogOpen(true);
+		const action = () => {
+			setFolderDialogMode("create");
+			setFolderDialogPath(normalizeFolderPath(parentPath));
+			setFolderInput("");
+			setIsFolderDialogOpen(true);
+		};
+		// DropdownMenu 등 다른 overlay가 닫히는 시간을 벌어줌 (프리징 방지)
+		setTimeout(action, 10);
 	};
 
 	const openRenameFolderDialog = (path: string) => {
-		const normalizedPath = normalizeFolderPath(path);
-		setFolderDialogMode("rename");
-		setFolderDialogPath(normalizedPath);
-		setFolderInput(normalizedPath === "/" ? "" : normalizedPath.split("/").pop() ?? "");
-		setIsFolderDialogOpen(true);
+		const action = () => {
+			const normalizedPath = normalizeFolderPath(path);
+			setFolderDialogMode("rename");
+			setFolderDialogPath(normalizedPath);
+			setFolderInput(normalizedPath === "/" ? "" : normalizedPath.split("/").pop() ?? "");
+			setIsFolderDialogOpen(true);
+		};
+		setTimeout(action, 10);
 	};
 
 	const resolveCreatePath = (parentPath: string, value: string) => {
@@ -245,33 +258,34 @@ export const NoteList: FC<NoteListProps> = ({
 	const handleFolderDialogSubmit = async () => {
 		const trimmed = folderInput.trim();
 		if (!trimmed) {
-			return;
-		}
-
-		if (folderDialogMode === "create") {
-			const createdPath = useDataStore
-				.getState()
-				.createFolder(resolveCreatePath(folderDialogPath, trimmed));
-			setSelectedFolderPath(createdPath);
 			setIsFolderDialogOpen(false);
 			return;
 		}
 
-		const targetPath = resolveRenamePath(folderDialogPath, trimmed);
 		try {
-			await useDataStore.getState().renameFolder(folderDialogPath, targetPath);
-			setSelectedFolderPath((prev) => remapSelectedPath(prev, folderDialogPath, targetPath));
-			setIsFolderDialogOpen(false);
+			if (folderDialogMode === "create") {
+				const createdPath = useDataStore
+					.getState()
+					.createFolder(resolveCreatePath(folderDialogPath, trimmed));
+				setSelectedFolderPath(createdPath);
+			} else {
+				const targetPath = resolveRenamePath(folderDialogPath, trimmed);
+				await useDataStore.getState().renameFolder(folderDialogPath, targetPath);
+				setSelectedFolderPath((prev) => remapSelectedPath(prev, folderDialogPath, targetPath));
+			}
 		} catch (error) {
-			console.error("Failed to rename folder:", error);
+			console.error("Folder operation failed:", error);
 			toast({
-				title: "폴더 이름 변경 실패",
+				title: "폴더 작업 실패",
 				description:
 					error instanceof Error
 						? error.message
-						: "폴더 이름 변경 중 오류가 발생했습니다.",
+						: "작업 중 오류가 발생했습니다.",
 				variant: "destructive",
 			});
+		} finally {
+			setIsFolderDialogOpen(false);
+			setFolderInput("");
 		}
 	};
 
@@ -304,25 +318,25 @@ export const NoteList: FC<NoteListProps> = ({
 	};
 
 	return (
-		<div className="flex flex-col h-full">
-			<div className="p-3 border-b pt-4">
+		<div className="flex flex-col h-full min-w-0 bg-background">
+			<div className="p-3 border-b pt-4 shrink-0 overflow-hidden">
 				<div className="flex items-center gap-2 mb-2">
 					<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 						<TabsList className="grid w-full grid-cols-2">
-							<TabsTrigger value="list" className="flex items-center gap-2">
-								<List className="h-4 w-4" />
-								<span>노트</span>
+							<TabsTrigger value="list" className="flex items-center gap-2 overflow-hidden">
+								<List className="h-4 w-4 shrink-0" />
+								<span className="truncate">노트</span>
 							</TabsTrigger>
-							<TabsTrigger value="graph" className="flex items-center gap-2">
-								<Share2 className="h-4 w-4" />
-								<span>그래프</span>
+							<TabsTrigger value="graph" className="flex items-center gap-2 overflow-hidden">
+								<Share2 className="h-4 w-4 shrink-0" />
+								<span className="truncate">그래프</span>
 							</TabsTrigger>
 						</TabsList>
 					</Tabs>
 				</div>
 
 				<div className="flex items-center gap-2">
-					<div className="relative flex-1">
+					<div className="relative flex-1 min-w-0">
 						<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 						<Input
 							type="text"
@@ -338,6 +352,7 @@ export const NoteList: FC<NoteListProps> = ({
 						size="icon"
 						onClick={() => openCreateFolderDialog(selectedFolderPath)}
 						aria-label="새 폴더 만들기"
+						className="shrink-0"
 					>
 						<FolderPlus className="h-4 w-4" />
 					</Button>
@@ -350,7 +365,7 @@ export const NoteList: FC<NoteListProps> = ({
 				)}
 			</div>
 
-			<div className="flex-1 overflow-hidden">
+			<div className="flex-1 min-h-0 min-w-0">
 				{activeTab === "list" ? (
 					<ScrollArea className="h-full">
 						<NoteTree
@@ -367,7 +382,7 @@ export const NoteList: FC<NoteListProps> = ({
 						/>
 					</ScrollArea>
 				) : (
-					<div className="h-full p-2">
+					<div className="h-full p-2 overflow-hidden">
 						<WikiLinkGraph 
 							notes={filteredNotes} 
 							onWikiLinkClick={onWikiLinkClick || (() => {})} 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
@@ -25,8 +25,28 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { faqItems } from '@/constants/home';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+// Removed direct import to avoid duplicate and unused warning - using lazy import instead
 import landingAnimation from '/lottie/landingAnimation.lottie';
+
+// Lottie - Hero 뷰포트 진입 후 lazy 렌더링
+const LazyHeroLottie = React.lazy(() =>
+  import('@lottiefiles/dotlottie-react').then((m) => ({
+    default: function HeroLottie() {
+      const { DotLottieReact } = m;
+      return (
+        <DotLottieReact
+          src={landingAnimation}
+          loop
+          autoplay
+          className="w-full h-full"
+        />
+      );
+    },
+  }))
+);
+
+// --- Toss Style Animation Constants ---
+const TOSS_EASE = [0.16, 1, 0.3, 1] as any;
 
 // --- Toss Style Animation Variants ---
 const tossFadeIn = {
@@ -34,7 +54,7 @@ const tossFadeIn = {
   visible: { 
     opacity: 1, 
     y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
+    transition: { duration: 0.6, ease: TOSS_EASE }
   }
 };
 
@@ -50,6 +70,25 @@ export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [showEditor, setShowEditor] = useState(false);
+  const [showLottie, setShowLottie] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
+
+  // Hero Lottie: IntersectionObserver로 뷰포트 진입 시 로드
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShowLottie(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // 1. Redirect Logic
   if (user) {
@@ -146,18 +185,20 @@ export default function Home() {
 
             {/* Hero Visual */}
             <motion.div
+              ref={heroRef}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: 0.2, ease: TOSS_EASE }}
               className="hidden md:flex items-center justify-center"
             >
               <div className="relative w-full max-w-[500px] aspect-square">
-                <DotLottieReact
-                  src={landingAnimation}
-                  loop
-                  autoplay
-                  className="w-full h-full"
-                />
+                {showLottie ? (
+                  <React.Suspense fallback={<div className="w-full h-full" />}>
+                    <LazyHeroLottie />
+                  </React.Suspense>
+                ) : (
+                  <div className="w-full h-full" />
+                )}
               </div>
             </motion.div>
           </div>
@@ -267,7 +308,7 @@ export default function Home() {
                         initial={{ width: 0 }}
                         whileInView={{ width: '95%' }}
                         viewport={{ once: true }}
-                        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: 1, ease: TOSS_EASE }}
                         className="h-full bg-notia-primary rounded-full"
                       />
                     </div>
@@ -316,7 +357,7 @@ export default function Home() {
               whileInView={{ y: 0, opacity: 1 }}
               viewport={{ once: true, amount: 0.2 }}
               onViewportEnter={() => setShowEditor(true)}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: TOSS_EASE }}
               className="w-full"
             >
               {!showEditor ? (

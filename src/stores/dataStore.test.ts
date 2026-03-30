@@ -28,6 +28,12 @@ const {
 
 vi.mock('@/services/supabaseClient', () => ({
   supabase: {
+    auth: {
+      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+      getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+    },
     from: (table: string) => {
       mockSupabaseFrom(table);
       const query = {
@@ -180,8 +186,10 @@ describe('dataStore - New Features', () => {
     useDataStore.setState({ notes: { 'note-1': noteWithReminders } });
 
     const { localDB } = await import('@/services/localDB');
-    const upsertNoteSpy = vi.mocked(localDB.upsertNote);
-    upsertNoteSpy.mockClear();
+    const upsertNotesSpy = vi.mocked(localDB.upsertNotes);
+    upsertNotesSpy.mockClear();
+
+    vi.useFakeTimers();
 
     useDataStore.getState().updateNoteState({
       id: 'note-1',
@@ -196,14 +204,19 @@ describe('dataStore - New Features', () => {
       deleted_at: null,
     } as Note);
 
+    // Advance timers to trigger the debounced flush
+    vi.advanceTimersByTime(250);
+
     const updatedNote = useDataStore.getState().notes['note-1'];
     expect(updatedNote.reminders).toHaveLength(1);
     expect(updatedNote.reminders?.[0]?.id).toBe('reminder-1');
 
-    expect(upsertNoteSpy).toHaveBeenCalled();
-    const savedNote = upsertNoteSpy.mock.calls[0][0];
+    expect(upsertNotesSpy).toHaveBeenCalled();
+    const savedNote = upsertNotesSpy.mock.calls[0][0][0];
     expect(savedNote.reminders).toHaveLength(1);
     expect(savedNote.reminders?.[0]?.id).toBe('reminder-1');
+
+    vi.useRealTimers();
   });
 
   it('createFolder/getNotesByFolder should normalize folder paths', () => {

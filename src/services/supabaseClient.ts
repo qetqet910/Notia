@@ -3,48 +3,25 @@ import type { Database } from '@/types/supabase';
 
 // 1. window.__ENV__ (HTML 주입) 확인
 // 2. import.meta.env (Vite define 치환) 확인
+// 3. process.env (Node/Tauri 환경) 확인
 const SUPABASE_URL = 
   window.__ENV__?.VITE_SUPABASE_URL || 
-  import.meta.env.VITE_SUPABASE_URL;
+  import.meta.env.VITE_SUPABASE_URL ||
+  (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_URL : '');
 
 const SUPABASE_ANON_KEY = 
   window.__ENV__?.VITE_SUPABASE_ANON_KEY || 
-  import.meta.env.VITE_SUPABASE_ANON_KEY;
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_ANON_KEY : '');
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  const errorMessage =
-    'Supabase URL과 Anon Key가 환경 변수에 설정되어 있지 않습니다.';
+  // 개발 환경에서만 에러 표시, 프로덕션에서는 사용자 경험을 위해 대체 처리 가능
+  const errorMessage = 'Supabase URL 또는 Anon Key가 설정되지 않았습니다.';
+  console.error(errorMessage);
   
-  console.error(errorMessage, {
-    URL_Exists: !!SUPABASE_URL,
-    Key_Exists: !!SUPABASE_ANON_KEY,
-    Source: window.__ENV__ ? 'window.__ENV__' : 'import.meta.env'
-  });
-
-  document.body.innerHTML = `
-    <div style="
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #f8d7da;
-      color: #721c24;
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-    ">
-      <h1 style="margin-bottom: 10px;">Critical Configuration Error</h1>
-      <p style="font-size: 1.2rem;">${errorMessage}</p>
-      <div style="text-align: left; background: rgba(0,0,0,0.1); padding: 10px; margin-top: 20px; border-radius: 4px;">
-        <p><strong>URL:</strong> ${SUPABASE_URL ? '✅ Loaded' : '❌ Missing'}</p>
-        <p><strong>Key:</strong> ${SUPABASE_ANON_KEY ? '✅ Loaded' : '❌ Missing'}</p>
-        <p><strong>Inject Method:</strong> ${window.__ENV__ ? 'HTML Injection' : 'Vite Define'}</p>
-      </div>
-      <p style="font-size: 1rem; margin-top: 20px;">Please check .env file and rebuild.</p>
-    </div>
-  `;
-  throw new Error(errorMessage);
+  if (import.meta.env.DEV) {
+    document.body.innerHTML = `<div style="padding: 20px; color: red;">${errorMessage}</div>`;
+  }
 }
 
 const realSupabase = createClient<Database>(
@@ -58,13 +35,15 @@ const realSupabase = createClient<Database>(
       flowType: 'pkce',
       storage: localStorage,
     },
-    global: {},
+    global: {
+      headers: { 'x-application-name': 'Notia' }
+    },
   },
 );
 
-// --- E2E Mock Logic ---
+// --- E2E Mock Logic (Only in DEV) ---
 const isE2EBypass = 
-  import.meta.env.DEV && 
+  import.meta.env.MODE === 'development' && 
   import.meta.env.VITE_E2E_BYPASS_AUTH === '1';
 
 /**

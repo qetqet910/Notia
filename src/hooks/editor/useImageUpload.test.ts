@@ -29,6 +29,11 @@ vi.mock('@/utils/isTauri', () => ({
 // 4. Mock Supabase
 vi.mock('@/services/supabaseClient', () => ({
   supabase: {
+    auth: {
+      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+      getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    },
     storage: {
       from: vi.fn(() => ({
         upload: vi.fn(),

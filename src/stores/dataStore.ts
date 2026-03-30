@@ -67,18 +67,22 @@ let currentJobId = 0;
 
 // --- Folder path utilities ---
 
-function normalizeFolderPath(path: string): string {
+function normalizeFolderPath(path: string | null | undefined): string {
+  if (!path || typeof path !== 'string') return '/';
+
   const trimmed = path.trim();
-  if (!trimmed || trimmed === '/') {
+  if (!trimmed || trimmed === '/' || trimmed === '.') {
     return '/';
   }
 
-  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  const collapsed = withLeadingSlash.replace(/\/+/g, '/');
-  const withoutTrailingSlash = collapsed.replace(/\/+$/g, '');
+  // 앞뒤 슬래시 정리 및 중복 슬래시 제거
+  let normalized = trimmed.replace(/\/+/g, '/');
+  if (!normalized.startsWith('/')) normalized = '/' + normalized;
+  if (normalized.endsWith('/') && normalized.length > 1) normalized = normalized.slice(0, -1);
 
-  return withoutTrailingSlash || '/';
+  return normalized || '/';
 }
+
 
 function doesPathMatch(targetPath: string, basePath: string): boolean {
   if (basePath === '/') {
@@ -190,16 +194,17 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   // --- Folder Operations ---
 
-  createFolder: (path: string) => {
+  createFolder: async (path: string) => {
     const normalizedPath = normalizeFolderPath(path);
     if (normalizedPath === '/') {
       return '/';
     }
 
     const now = new Date().toISOString();
-    const ownerId = get().currentUserId ?? Object.values(get().notes)[0]?.owner_id ?? '';
+    const state = get();
+    const ownerId = state.currentUserId ?? Object.values(state.notes)[0]?.owner_id ?? '';
     const foldersToEnsure = getAncestorPaths(normalizedPath);
-    const existingFolders = get().folders;
+    const existingFolders = state.folders;
     const createdFolders: Folder[] = [];
 
     for (const folderPath of foldersToEnsure) {
@@ -229,22 +234,20 @@ export const useDataStore = create<DataState>((set, get) => ({
         return { folders: nextFolders };
       });
 
-      void (async () => {
-        try {
-          await localDB.upsertFolders(createdFolders);
-        } catch (error) {
-          console.error('Failed to persist folders locally:', error);
-        }
+      try {
+        await localDB.upsertFolders(createdFolders);
+      } catch (error) {
+        console.error('[DataStore] Failed to persist folders locally:', error);
+      }
 
-        try {
-          const { error } = await supabase.from('folders').insert(createdFolders);
-          if (error) {
-            throw error;
-          }
-        } catch (error) {
-          console.error('Failed to sync folders to Supabase:', error);
+      try {
+        const { error } = await supabase.from('folders').insert(createdFolders);
+        if (error) {
+          throw error;
         }
-      })();
+      } catch (error) {
+        console.error('[DataStore] Failed to sync folders to Supabase:', error);
+      }
     }
 
     return normalizedPath;
@@ -290,13 +293,17 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (normalizedOldPath === normalizedNewPath || normalizedOldPath === '/') return;
 
     try {
+      console.log(`[DataStore] Renaming folder: ${normalizedOldPath} -> ${normalizedNewPath}`);
       const { error } = await supabase.rpc('rename_folder', {
-        old_path: normalizedOldPath,
-        new_path: normalizedNewPath,
+        p_old_path: normalizedOldPath,
+        p_new_path: normalizedNewPath,
       });
-      if (error) throw error;
+      if (error) {
+        console.error('[DataStore] Supabase RPC rename_folder error:', error);
+        throw error;
+      }
     } catch (error) {
-      console.error('Failed to rename folder:', error);
+      console.error('[DataStore] Failed to rename folder on Supabase:', error);
       throw error;
     }
 
@@ -350,7 +357,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ notes: nextNotes, folders: nextFolders, activityCache: null });
 
     if (changedNotes.length > 0) {
-      await localDB.upsertNotes(changedNotes);
+      await localDB.upsertNotes(changedNotes).catch(e => console.error('[DataStore] Failed to update moved notes locally:', e));
     }
     if (removedFolderPaths.length > 0) {
       const ownerId =
@@ -363,10 +370,10 @@ export const useDataStore = create<DataState>((set, get) => ({
             ? localDB.deleteFolder(ownerId, folderPath)
             : localDB.deleteFolder(folderPath),
         ),
-      );
+      ).catch(e => console.error('[DataStore] Failed to remove old folders locally:', e));
     }
     if (movedFolders.length > 0) {
-      await localDB.upsertFolders(movedFolders);
+      await localDB.upsertFolders(movedFolders).catch(e => console.error('[DataStore] Failed to save moved folders locally:', e));
     }
   },
 
@@ -375,12 +382,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (normalizedPath === '/') return;
 
     try {
+      console.log(`[DataStore] Deleting folder: ${normalizedPath}`);
       const { error } = await supabase.rpc('delete_folder', {
-        path: normalizedPath,
+        p_path: normalizedPath,
       });
-      if (error) throw error;
+      if (error) {
+        console.error('[DataStore] Supabase RPC delete_folder error:', error);
+        throw error;
+      }
     } catch (error) {
-      console.error('Failed to delete folder:', error);
+      console.error('[DataStore] Failed to delete folder on Supabase:', error);
       throw error;
     }
 
@@ -419,7 +430,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ notes: nextNotes, folders: nextFolders, activityCache: null });
 
     if (changedNotes.length > 0) {
-      await localDB.upsertNotes(changedNotes);
+      await localDB.upsertNotes(changedNotes).catch(e => console.error('[DataStore] Failed to update deleted folder notes locally:', e));
     }
     if (removedFolderPaths.length > 0) {
       const ownerId =
@@ -432,7 +443,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             ? localDB.deleteFolder(ownerId, folderPath)
             : localDB.deleteFolder(folderPath),
         ),
-      );
+      ).catch(e => console.error('[DataStore] Failed to remove folders locally:', e));
     }
   },
 
@@ -843,7 +854,12 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   initialize: async (userId: string) => {
     const { isInitialized, currentUserId } = get();
-    if (isInitialized && currentUserId === userId) return;
+    console.log(`[DataStore] initialize called for userId: ${userId}`);
+    
+    if (isInitialized && currentUserId === userId) {
+      console.log('[DataStore] Already initialized for this user.');
+      return;
+    }
 
     await get().unsubscribeAll();
 
@@ -858,17 +874,21 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     set({ isInitialized: true, currentUserId: userId });
 
-    let formattedLocalNotes: Record<string, Note> = {};
-    let formattedLocalFolders: Record<string, Folder> = {};
+    let finalNotes: Record<string, Note> = {};
+    let finalFolders: Record<string, Folder> = {};
 
-    // 1. Load from Local DB first (Fast!)
+    // 1. Load from Local DB first (Fast UI updates)
     try {
+      console.log('[DataStore] Loading from local DB...');
+      await localDB.init();
       const [localNotes, localFolders] = await Promise.all([
         localDB.getNotes(userId),
         localDB.getFolders(userId),
       ]);
 
-      formattedLocalNotes = localNotes.reduce(
+      console.log(`[DataStore] Local DB results - Notes: ${localNotes.length}, Folders: ${localFolders.length}`);
+
+      const initialLocalNotes = localNotes.reduce(
         (acc, note) => {
           acc[note.id] = note;
           return acc;
@@ -876,7 +896,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         {} as Record<string, Note>,
       );
 
-      formattedLocalFolders = localFolders.reduce(
+      const initialLocalFolders = localFolders.reduce(
         (acc, folder) => {
           const normalizedPath = normalizeFolderPath(folder.path);
           acc[normalizedPath] = {
@@ -891,81 +911,113 @@ export const useDataStore = create<DataState>((set, get) => ({
         {} as Record<string, Folder>,
       );
 
-      if (Object.keys(formattedLocalNotes).length > 0 || Object.keys(formattedLocalFolders).length > 0) {
-        set({ notes: formattedLocalNotes, folders: formattedLocalFolders, activityCache: null });
-        console.log('Loaded notes/folders from Local DB');
+      // UI를 즉시 로컬 데이터로 업데이트
+      finalNotes = { ...initialLocalNotes };
+      finalFolders = { ...initialLocalFolders };
+      
+      if (Object.keys(finalNotes).length > 0 || Object.keys(finalFolders).length > 0) {
+        set({ notes: finalNotes, folders: finalFolders, activityCache: null });
+        console.log(`[DataStore] UI updated with ${Object.keys(finalNotes).length} local notes.`);
       }
     } catch (err) {
-      console.error('Failed to load from local DB:', err);
+      console.error('[DataStore] Failed to load from local DB:', err);
     }
 
-    // 2. Fetch from Supabase and sync
+    // 2. Fetch from Supabase and Merge
     try {
-      const [{ data: noteData, error: notesError }, { data: folderData, error: foldersError }] =
-        await Promise.all([
-          supabase
-            .from('notes')
-            .select(
-              'id, title, owner_id, is_public, note_type, tags, folder_path, parent_id, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
-            )
-            .eq('owner_id', userId),
-          supabase
-            .from('folders')
-            .select('id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at')
-            .eq('owner_id', userId),
-        ]);
+      console.log('[DataStore] Fetching from Supabase...');
+      const [notesResult, foldersResult] = await Promise.allSettled([
+        supabase
+          .from('notes')
+          .select(
+            'id, title, owner_id, is_public, note_type, tags, folder_path, parent_id, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
+          )
+          .eq('owner_id', userId),
+        supabase
+          .from('folders')
+          .select('id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at')
+          .eq('owner_id', userId),
+      ]);
 
-      if (notesError) throw notesError;
-      if (foldersError) throw foldersError;
+      let remoteNotesCount = 0;
+      let remoteFoldersCount = 0;
 
-      const formattedNotes = (noteData ?? []).reduce(
-        (acc, note) => {
-          const formatted = {
-            ...note,
-            folder_path: note.folder_path ?? '/',
-            parent_id: note.parent_id ?? null,
-            createdAt: new Date(note.created_at),
-            updatedAt: new Date(note.updated_at),
-            reminders: note.reminders || [],
-            is_pinned: note.is_pinned || false,
-            deleted_at: note.deleted_at || null,
-          };
-          acc[note.id] = formatted;
-          return acc;
-        },
-        {} as Record<string, Note>,
-      );
+      // Process and Merge Notes
+      if (notesResult.status === 'fulfilled') {
+        const { data: noteData, error: notesError } = notesResult.value;
+        if (notesError) {
+          console.error('[DataStore] Supabase notes fetch error:', notesError);
+        } else if (noteData) {
+          remoteNotesCount = noteData.length;
+          console.log(`[DataStore] Supabase returned ${remoteNotesCount} notes.`);
+          noteData.forEach((rn) => {
+            const ln = finalNotes[rn.id];
+            
+            // 병합 조건: 로컬에 없거나, 서버의 데이터가 더 최근인 경우
+            if (!ln || new Date(rn.updated_at) > new Date(ln.updated_at)) {
+              finalNotes[rn.id] = {
+                ...rn,
+                folder_path: rn.folder_path ?? '/',
+                parent_id: rn.parent_id ?? null,
+                createdAt: new Date(rn.created_at),
+                updatedAt: new Date(rn.updated_at),
+                reminders: rn.reminders || [],
+                is_pinned: rn.is_pinned || false,
+                deleted_at: rn.deleted_at || null,
+              };
+            }
+          });
+        }
+      } else {
+        console.error('[DataStore] Supabase notes fetch promise rejected:', notesResult.reason);
+      }
 
-      const formattedRemoteFolders = (folderData ?? []).reduce(
-        (acc, folder) => {
-          const normalizedPath = normalizeFolderPath(folder.path);
-          acc[normalizedPath] = {
-            ...folder,
-            path: normalizedPath,
-            name: folder.name || getFolderName(normalizedPath),
-            parent_path: folder.parent_path
-              ? normalizeFolderPath(folder.parent_path)
-              : getParentPath(normalizedPath),
-            sort_index: folder.sort_index ?? 0,
-          } as Folder;
-          return acc;
-        },
-        {} as Record<string, Folder>,
-      );
+      // Process and Merge Folders
+      if (foldersResult.status === 'fulfilled') {
+        const { data: folderData, error: foldersError } = foldersResult.value;
+        if (foldersError) {
+          console.error('[DataStore] Supabase folders fetch error:', foldersError);
+        } else if (folderData) {
+          remoteFoldersCount = folderData.length;
+          console.log(`[DataStore] Supabase returned ${remoteFoldersCount} folders.`);
+          folderData.forEach((rf) => {
+            const normalizedPath = normalizeFolderPath(rf.path);
+            const lf = finalFolders[normalizedPath];
 
-      // Bulk sync fetched data to local DB
-      await localDB.upsertNotes(Object.values(formattedNotes));
-      await localDB.upsertFolders(Object.values(formattedRemoteFolders));
+            if (!lf || new Date(rf.updated_at) > new Date(lf.updated_at)) {
+              finalFolders[normalizedPath] = {
+                ...rf,
+                path: normalizedPath,
+                name: rf.name || getFolderName(normalizedPath),
+                parent_path: rf.parent_path
+                  ? normalizeFolderPath(rf.parent_path)
+                  : getParentPath(normalizedPath),
+                sort_index: rf.sort_index ?? 0,
+              } as Folder;
+            }
+          });
+        }
+      } else {
+        console.error('[DataStore] Supabase folders fetch promise rejected:', foldersResult.reason);
+      }
 
+      console.log(`[DataStore] Final state update: ${Object.keys(finalNotes).length} total merged notes.`);
+
+      // 병합된 최종 데이터를 상태에 반영 및 로컬 DB에 영구 저장
       set({
-        notes: formattedNotes,
-        folders: { ...formattedLocalFolders, ...formattedRemoteFolders },
+        notes: finalNotes,
+        folders: finalFolders,
         activityCache: null,
       });
+
+      // 백그라운드에서 로컬 DB 업데이트
+      void Promise.all([
+        localDB.upsertNotes(Object.values(finalNotes)),
+        localDB.upsertFolders(Object.values(finalFolders))
+      ]).catch(e => console.error('[DataStore] Failed to sync back to local DB:', e));
+
     } catch (err) {
-      console.error('Online initialization failed, running in offline mode:', err);
-      set({ channels: [] });
-      return; // 오프라인 모드에서는 리얼타임 구독 스킵
+      console.error('[DataStore] Critical initialization error:', err);
     }
 
     // 3. Setup Realtime subscriptions

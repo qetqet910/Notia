@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2 } from 'lucide-react';
 import { CloseHandler } from '@/components/common/CloseHandler';
+import { DataResync } from '@/components/providers/DataResync';
 
 const ScrollToTop = () => {
   const location = useLocation();
@@ -212,7 +213,6 @@ function App() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       if (code) {
-        console.log('Tauri Auth Redirect: Converting to Hash...');
         // URL의 쿼리 파라미터를 제거하여 깨끗한 상태로 만듭니다. (페이지 리로드 없음)
         window.history.replaceState({}, document.title, window.location.pathname);
         // Router를 사용하여 페이지 리로드 없이 이동하여 IPC 컨텍스트 유실을 방지합니다.
@@ -221,14 +221,8 @@ function App() {
       }
     }
 
-    console.log('Environment Debug:', {
-      isTauri: isTauriEnv,
-      hasTauriInternals,
-      mode: import.meta.env.MODE,
-      VITE_IS_TAURI: import.meta.env.VITE_IS_TAURI
-    });
     
-    const handleBeforeInstallPrompt = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
@@ -257,6 +251,7 @@ function App() {
   return (
     <div className="max-w-[1920px] mx-auto min-h-screen bg-background">
       <RouterProvider router={router} />
+      <DataResync />
       <CloseHandler />
       
       <AlertDialog open={!!updateAvailable}>
