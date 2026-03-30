@@ -172,7 +172,8 @@ export default defineConfig(({ mode }) => {
               // Normalize path for robust Windows/Linux matching
               const normalizedId = id.replace(/\\/g, '/');
 
-              // 1. Core Framework & UI Foundation (Must be together for dependency safety)
+              // 1. 핵심 라이브러리 및 UI 기반 (Core Libraries & UI Foundation)
+              // 모든 핵심 의존성을 하나로 묶어 초기화 순서 문제와 'createContext' 등의 에러를 방지합니다.
               if (
                 normalizedId.includes('/react/') ||
                 normalizedId.includes('/react-dom/') ||
@@ -189,44 +190,31 @@ export default defineConfig(({ mode }) => {
                 normalizedId.includes('/tailwind-merge/') ||
                 normalizedId.includes('/class-variance-authority/') ||
                 normalizedId.includes('/zustand/') ||
-                normalizedId.includes('/uuid/')
+                normalizedId.includes('/uuid/') ||
+                normalizedId.includes('/@supabase/') ||
+                normalizedId.includes('/date-fns/') ||
+                normalizedId.includes('/@lottiefiles/') ||
+                normalizedId.includes('/dotlottie/') ||
+                normalizedId.includes('/react-syntax-highlighter/') ||
+                normalizedId.includes('/highlight.js/') ||
+                normalizedId.includes('/refractor/') ||
+                normalizedId.includes('/prismjs/') ||
+                normalizedId.includes('/d3/') ||
+                normalizedId.includes('/d3-')
               ) {
                 return 'vendor-lib';
               }
 
-              // 2. Heavy async-only libraries (Feature-specific lazy-loaded)
+              // 2. 대용량 특수 라이브러리 (Heavy async-only libraries)
+              // 이들은 용량이 매우 크기 때문에 별도 분리하여 초기 로딩 속도를 유지합니다.
               if (normalizedId.includes('/mermaid/') || normalizedId.includes('/cytoscape/')) {
                 return 'vendor-mermaid';
               }
-              if (
-                normalizedId.includes('/react-syntax-highlighter/') ||
-                normalizedId.includes('/highlight.js/') ||
-                normalizedId.includes('/refractor/') ||
-                normalizedId.includes('/prismjs/')
-              ) {
-                return 'vendor-highlighter';
-              }
-              if (normalizedId.includes('/@lottiefiles/') || normalizedId.includes('/dotlottie/')) {
-                return 'vendor-lottie';
-              }
-
-              // 3. Editor & CodeMirror
               if (normalizedId.includes('/@codemirror/') || normalizedId.includes('/@lezer/') || normalizedId.includes('/@uiw/')) {
                 return 'vendor-codemirror';
               }
 
-              // 4. Data & Utils
-              if (normalizedId.includes('/d3/') || normalizedId.includes('/d3-')) {
-                return 'vendor-charts';
-              }
-              if (normalizedId.includes('/@supabase/')) {
-                return 'vendor-supabase';
-              }
-              if (normalizedId.includes('/date-fns/')) {
-                return 'vendor-date';
-              }
-
-              // 5. Default Vendor
+              // 3. 기타 라이브러리
               return 'vendor';
             }
           },
