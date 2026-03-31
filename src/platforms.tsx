@@ -15,8 +15,7 @@ export function initWeb(): void {
   async function showInstallPrompt() {
     if (deferredInstallPrompt) {
       deferredInstallPrompt.prompt();
-      const { outcome } = await deferredInstallPrompt.userChoice;
-      console.log(`User response to the install prompt: ${outcome}`);
+      await deferredInstallPrompt.userChoice;
       deferredInstallPrompt = null;
     }
   }
@@ -57,22 +56,18 @@ function initAppState() {
 
 function handleVisibilityChange() {
   if (document.visibilityState === 'visible') {
-    console.log('App is now visible');
     // work when tab becomes visible
   } else {
-    console.log('App is now hidden');
     // work when tab is hidden
   }
 }
 
 function setupOfflineDetection() {
   window.addEventListener('online', () => {
-    console.log('App is online');
     // online recovery
   });
 
   window.addEventListener('offline', () => {
-    console.log('App is offline');
     // offline mode
   });
 }
@@ -86,7 +81,6 @@ function handleInstallPrompt() {
     // install prompt handling
     e.preventDefault();
     window.deferredInstallPrompt = e as BeforeInstallPromptEvent;
-    console.log('Install prompt available');
   });
 }
 
@@ -128,7 +122,6 @@ export async function initExtension(): Promise<void> {
 
 function setupExtensionMessageListeners(api: typeof chrome) {
   api.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Received extension message:', message);
     // message handling
     sendResponse({ status: 'received' });
   });
@@ -136,7 +129,6 @@ function setupExtensionMessageListeners(api: typeof chrome) {
 
 function checkExtensionPermissions(api: typeof chrome) {
   api.permissions.getAll((permissions) => {
-    console.log('Extension permissions:', permissions);
   });
 }
 

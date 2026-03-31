@@ -24,7 +24,6 @@ describe('Download Page Logic (Real API Check)', () => {
             return;
         }
         release = await response.json() as GithubRelease;
-        console.log(`Fetched release: ${release.tag_name}`);
     } catch (e) {
         console.warn("Network error or API unavailable", e);
     }
@@ -34,7 +33,6 @@ describe('Download Page Logic (Real API Check)', () => {
     // If this fails, it means we couldn't fetch data (maybe rate limit or no internet), 
     // but if we did, it must have the right shape.
     if (!release) {
-        console.log("Skipping logic check because release data could not be fetched.");
         return;
     }
     expect(release).toBeDefined();
@@ -52,7 +50,6 @@ describe('Download Page Logic (Real API Check)', () => {
     
     // We expect to find one if the release is properly formed
     if (asset) {
-        console.log(`Found Windows asset: ${asset.name}`);
         expect(asset.browser_download_url).toContain('.exe');
     } else {
         console.warn('No .exe asset found in latest release. Check if release has attached binaries.');
@@ -67,7 +64,6 @@ describe('Download Page Logic (Real API Check)', () => {
     const asset = assets.find(a => (a.name.endsWith('.dmg') || a.name.endsWith('.app.tar.gz')) && !a.name.includes('sig'));
 
     if (asset) {
-        console.log(`Found macOS asset: ${asset.name}`);
         expect(asset.browser_download_url).toMatch(/(\.dmg|\.app\.tar\.gz)$/);
     } else {
         console.warn('No macOS asset found in latest release.');
@@ -82,7 +78,6 @@ describe('Download Page Logic (Real API Check)', () => {
     const asset = assets.find(a => a.name.endsWith('.AppImage') && !a.name.includes('sig'));
 
     if (asset) {
-        console.log(`Found Linux asset: ${asset.name}`);
         expect(asset.browser_download_url).toContain('.AppImage');
     } else {
         console.warn('No Linux asset found in latest release.');

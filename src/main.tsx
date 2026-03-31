@@ -1,3 +1,13 @@
+console.log(`
+    _   __      __  _      
+   / | / /___  / /_(_)___ _
+  /  |/ / __ \/ __/ / __ \`/
+ / /|  / /_/ / /_/ / /_/ / 
+/_/ |_/\____/\__/_/\__,_/  
+      
+   Notia - Organized Creativity
+`);
+
 import './styles/global.css';
 import { isTauri } from '@/utils/isTauri';
 
@@ -131,7 +141,6 @@ async function initializeApp(): Promise<void> { // async 유지 (service worker 
   try {
     // 1. 플랫폼 결정
     const platform = import.meta.env.VITE_PLATFORM || 'web';
-    console.log('Current Platform:', platform);
 
     // 2. 플랫폼별 초기화 모듈 로드 및 실행 (렌더링 포함)
     const platformInitialized = initializePlatform(platform); // await 제거

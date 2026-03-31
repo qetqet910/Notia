@@ -265,12 +265,10 @@ class LocalDBService {
 
     if (isTauri()) {
       try {
-        console.log('[LocalDB] Attempting to load SQLite:', DB_NAME);
         this.db = await Database.load(`sqlite:${DB_NAME}`);
         if (this.db) {
           await this.initTables();
           this.isReady = true;
-          console.log('[LocalDB] Local SQLite DB successfully initialized');
           return;
         } else {
           throw new Error('Database.load returned null');
@@ -282,11 +280,9 @@ class LocalDBService {
 
     // WebDB initialization (Fallback or default)
     try {
-      console.log('[LocalDB] Initializing WebDB (IndexedDB)...');
       this.webDb = new WebDB();
       await this.webDb.init();
       this.isReady = true;
-      console.log('[LocalDB] Local IndexedDB initialized');
     } catch (error) {
       console.error('[LocalDB] Critical failure: Could not initialize any local database:', error);
       // 이 경우에도 isReady를 true로 만들어 무한 루프 방지하되 기능은 제한됨

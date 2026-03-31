@@ -15,8 +15,11 @@ describe('useNotes Hook', () => {
     useDataStore.setState({ 
         notes: {}, 
         isInitialized: true,
+        currentUserId: 'user-1',
         channels: [],
-        activityCache: null
+        activityCache: null,
+        initialize: vi.fn().mockResolvedValue(undefined),
+        unsubscribeAll: vi.fn().mockResolvedValue(undefined)
     });
     // Mock user in auth store
     useAuthStore.setState({ 

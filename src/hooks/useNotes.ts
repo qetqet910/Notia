@@ -530,7 +530,7 @@ export const useNotes = () => {
   const getNotesByDate = useCallback(
     (date: Date) => {
       return notes.filter((note) => {
-        const noteDate = new Date(note.createdAt);
+        const noteDate = new Date(note.created_at);
         return (
           noteDate.getFullYear() === date.getFullYear() &&
           noteDate.getMonth() === date.getMonth() &&

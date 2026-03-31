@@ -13,7 +13,7 @@ describe('noteParser', () => {
   it('should parse specific date', () => {
     const content = '회의 @2024-12-25 14시.';
     const { reminders } = parseNoteContent(content, baseDate);
-    expect(reminders[0].parsedDate).toEqual(new Date(2024, 11, 25, 14, 0));
+    expect(reminders[0].parsedDate?.toISOString()).toBe(new Date(2024, 11, 25, 14, 0).toISOString());
   });
 
   it('should parse relative days (tomorrow)', () => {

@@ -53,7 +53,6 @@ export const useNotificationPermission = () => {
       const existingSubscription = await registration.pushManager.getSubscription();
 
       if (existingSubscription) {
-        console.log('User is already subscribed.');
         await saveSubscription(existingSubscription);
         return;
       }
@@ -95,7 +94,6 @@ export const useNotificationPermission = () => {
     if (error) {
       console.error('Failed to save subscription:', error);
     } else {
-      console.log('Subscription saved successfully.');
     }
   };
 

@@ -53,10 +53,6 @@ export const schedulePreNotifications = async (
       .insert(notificationsToSchedule);
 
     if (error) throw error;
-
-    console.log(
-      `${notificationsToSchedule.length}개의 사전 알림 생성 성공.`,
-    );
   } catch (error) {
     console.error('사전 알림 생성 오류:', error);
   }
@@ -81,7 +77,6 @@ export const deleteReminderNotificationsByOriginalText = async (
 
     if (error) throw error;
 
-    console.log(`'${originalText}' 관련 리마인더 모두 삭제 성공`);
     return true;
   } catch (error) {
     console.error('리마인더 그룹 삭제 오류:', error);

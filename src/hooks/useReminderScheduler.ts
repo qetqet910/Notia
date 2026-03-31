@@ -30,9 +30,7 @@ export const useReminderScheduler = () => {
           const diffSeconds = differenceInSeconds(now, reminderTime);
 
           if (diffSeconds >= 0 && diffSeconds < 60) {
-             console.log('[Scheduler] Match found:', reminder.reminder_text, 'ID:', reminder.id, 'Diff:', diffSeconds);
              if (!notifiedIds.current.has(reminder.id)) {
-                console.log('[Scheduler] Sending notification for:', reminder.reminder_text);
                 
                 // 1. Always send system notification (User allowed simultaneous notifications)
                 // This ensures the notification is in the notification center even if the user is looking at the app but misses the toast

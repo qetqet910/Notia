@@ -13,14 +13,12 @@ export interface UpdateStatus {
 
 export const checkForUpdates = async (): Promise<UpdateStatus> => {
   if (!isTauri()) {
-    console.log('Not in Tauri environment, skipping update check.');
     return { shouldUpdate: false };
   }
 
   try {
     const update = await check();
     if (update) {
-      console.log(`Update available: ${update.version} ${update.date} ${update.body}`);
       return {
         shouldUpdate: true,
         manifest: {
@@ -30,7 +28,6 @@ export const checkForUpdates = async (): Promise<UpdateStatus> => {
         },
       };
     } else {
-      console.log('You are on the latest version.');
       return { shouldUpdate: false };
     }
   } catch (error) {
@@ -45,9 +42,7 @@ export const installUpdate = async () => {
   try {
     const update = await check();
     if (update) {
-      console.log('Downloading and installing update...');
       await update.downloadAndInstall();
-      console.log('Update installed, restarting...');
       await relaunch();
     }
   } catch (error) {

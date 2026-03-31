@@ -99,7 +99,6 @@ export const supabase = isE2EBypass ? createMockSupabase() : realSupabase;
  */
 export const resetSupabaseClient = (): boolean => {
   try {
-    console.log('Supabase 클라이언트 재설정 시도');
 
     // 새 클라이언트 생성
     const newClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -113,7 +112,6 @@ export const resetSupabaseClient = (): boolean => {
 
     // 기존 클라이언트 교체
     Object.assign(supabase, newClient);
-    console.log('Supabase 클라이언트 재설정 완료');
     return true;
   } catch (error) {
     console.error('Supabase 클라이언트 재설정 실패:', error);
