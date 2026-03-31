@@ -172,49 +172,36 @@ export default defineConfig(({ mode }) => {
               // Normalize path for robust Windows/Linux matching
               const normalizedId = id.replace(/\\/g, '/');
 
-              // 1. 핵심 라이브러리 및 UI 기반 (Core Libraries & UI Foundation)
-              // 모든 핵심 의존성을 하나로 묶어 초기화 순서 문제와 'createContext' 등의 에러를 방지합니다.
-              if (
-                normalizedId.includes('/react/') ||
-                normalizedId.includes('/react-dom/') ||
-                normalizedId.includes('/react-router-dom/') ||
-                normalizedId.includes('/@remix-run/') ||
-                normalizedId.includes('/scheduler/') ||
-                normalizedId.includes('/framer-motion/') ||
-                normalizedId.includes('/@radix-ui/') ||
-                normalizedId.includes('/lucide-react/') ||
-                normalizedId.includes('/react-icons/') ||
-                normalizedId.includes('/@dnd-kit/') ||
-                normalizedId.includes('/embla-carousel/') ||
-                normalizedId.includes('/clsx/') ||
-                normalizedId.includes('/tailwind-merge/') ||
-                normalizedId.includes('/class-variance-authority/') ||
-                normalizedId.includes('/zustand/') ||
-                normalizedId.includes('/uuid/') ||
-                normalizedId.includes('/@supabase/') ||
-                normalizedId.includes('/date-fns/') ||
-                normalizedId.includes('/@lottiefiles/') ||
-                normalizedId.includes('/dotlottie/') ||
-                normalizedId.includes('/react-syntax-highlighter/') ||
-                normalizedId.includes('/highlight.js/') ||
-                normalizedId.includes('/refractor/') ||
-                normalizedId.includes('/prismjs/') ||
-                normalizedId.includes('/d3/') ||
-                normalizedId.includes('/d3-')
-              ) {
-                return 'vendor-lib';
-              }
-
-              // 2. 대용량 특수 라이브러리 (Heavy async-only libraries)
-              // 이들은 용량이 매우 크기 때문에 별도 분리하여 초기 로딩 속도를 유지합니다.
+              // 1. 대용량 비동기 라이브러리 (Isolated huge libraries)
+              // 이들은 독립적으로 동작하거나 특정 뷰에서만 사용되므로 분리해도 안전합니다.
               if (normalizedId.includes('/mermaid/') || normalizedId.includes('/cytoscape/')) {
                 return 'vendor-mermaid';
               }
-              if (normalizedId.includes('/@codemirror/') || normalizedId.includes('/@lezer/') || normalizedId.includes('/@uiw/')) {
-                return 'vendor-codemirror';
+              if (
+                normalizedId.includes('/@codemirror/') || 
+                normalizedId.includes('/@lezer/') || 
+                normalizedId.includes('/@uiw/')
+              ) {
+                return 'vendor-editor';
               }
 
-              // 3. 기타 라이브러리
+              // 2. 핵심 프레임워크 및 UI (React core ecosystem)
+              // React, Radix UI, Framer Motion 등을 하나로 묶어 'createContext' 관련 초기화 에러를 원천 방지합니다.
+              // 'react-is' 등 이름에 react가 포함된 유틸리티도 모두 이 청크에 포함됩니다.
+              if (
+                normalizedId.includes('react') ||
+                normalizedId.includes('/@radix-ui/') ||
+                normalizedId.includes('/framer-motion/') ||
+                normalizedId.includes('/lucide-react/') ||
+                normalizedId.includes('/@supabase/') ||
+                normalizedId.includes('/zustand/') ||
+                normalizedId.includes('/date-fns/') ||
+                normalizedId.includes('/@dnd-kit/')
+              ) {
+                return 'vendor-core';
+              }
+
+              // 3. 기타 모든 node_modules
               return 'vendor';
             }
           },
