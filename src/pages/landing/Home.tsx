@@ -18,15 +18,12 @@ const LazyLandingEditor = React.lazy(() =>
 );
 
 import { useAuthStore } from '@/stores/authStore';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { faqItems } from '@/constants/home';
-// Removed direct import to avoid duplicate and unused warning - using lazy import instead
 import landingAnimation from '/lottie/landingAnimation.lottie';
+
+// HomeExtra (FAQ, CTA) - 뷰포트 인근 진입 시 lazy-load
+const LazyHomeExtra = React.lazy(() =>
+  import('@/components/features/landing/HomeExtra').then(m => ({ default: m.HomeExtra }))
+);
 
 // Lottie - Hero 뷰포트 진입 후 lazy 렌더링
 const LazyHeroLottie = React.lazy(() =>
@@ -71,23 +68,33 @@ export default function Home() {
   const { user } = useAuthStore();
   const [showEditor, setShowEditor] = useState(false);
   const [showLottie, setShowLottie] = useState(false);
+  const [showExtra, setShowExtra] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
+  const extraRef = useRef<HTMLDivElement>(null);
 
-  // Hero Lottie: IntersectionObserver로 뷰포트 진입 시 로드
+  // IntersectionObserver: 뷰포트 진입 시 무거운 컴포넌트 활성화
   useEffect(() => {
-    const el = heroRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
+    const heroEl = heroRef.current;
+    if (heroEl) {
+      const heroObs = new IntersectionObserver(([entry]) => {
         if (entry.isIntersecting) {
           setShowLottie(true);
-          obs.disconnect();
+          heroObs.disconnect();
         }
-      },
-      { threshold: 0.1 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+      }, { threshold: 0.1 });
+      heroObs.observe(heroEl);
+    }
+
+    const extraEl = extraRef.current;
+    if (extraEl) {
+      const extraObs = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          setShowExtra(true);
+          extraObs.disconnect();
+        }
+      }, { rootMargin: '200px' }); // 미리 로드 시작
+      extraObs.observe(extraEl);
+    }
   }, []);
 
   // 1. Redirect Logic
@@ -385,107 +392,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FAQ Section - Toss Style */}
-        <section className="py-24 sm:py-32 px-6 bg-toss-lightGray">
-          <div className="max-w-3xl mx-auto">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              variants={tossStagger}
-              className="text-center mb-12"
-            >
-              <motion.h2 
-                variants={tossFadeIn}
-                className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 text-toss-dark"
-              >
-                자주 묻는 질문
-              </motion.h2>
-              <motion.p 
-                variants={tossFadeIn}
-                className="text-toss-gray"
-              >
-                궁금한 점을 해결해 드려요
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
-              variants={tossFadeIn}
-            >
-              <Accordion type="single" collapsible className="w-full space-y-3">
-                {faqItems.map((item, index) => (
-                  <AccordionItem
-                    key={index}
-                    value={`item-${index}`}
-                    className="bg-white rounded-toss-lg px-6 border-none shadow-toss data-[state=open]:shadow-toss-lg transition-all duration-300"
-                  >
-                    <AccordionTrigger className="text-base font-medium text-left hover:no-underline py-5 text-toss-dark hover:text-notia-primary">
-                      {item.question}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-toss-gray pb-5 leading-relaxed">
-                      {item.answer}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* CTA Section - Toss Style */}
-        <section className="py-24 sm:py-32 px-6 bg-white">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={tossStagger}
-            className="max-w-4xl mx-auto text-center"
-          >
-            <motion.h2 
-              variants={tossFadeIn}
-              className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-6 text-toss-dark leading-tight"
-            >
-              생산성의 새로운 기준,<br/>
-              <span className="text-notia-primary">Notia</span>와 함께하세요.
-            </motion.h2>
-            <motion.p 
-              variants={tossFadeIn}
-              className="text-lg text-toss-gray mb-10 max-w-2xl mx-auto leading-relaxed"
-            >
-              지금 시작하면 모든 기능을 평생 무료로 사용할 수 있습니다.<br className="hidden sm:block"/>
-              더 이상 흩어진 도구들 사이에서 길을 잃지 마세요.
-            </motion.p>
-            <motion.div 
-              variants={tossFadeIn}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
-              <Button 
-                size="lg" 
-                className="h-14 px-10 text-base font-medium rounded-toss-lg bg-notia-primary hover:bg-notia-hover text-white shadow-toss-lg hover:shadow-toss-xl transition-all duration-300 hover:-translate-y-0.5"
-                onClick={() => navigate('/login')}
-              >
-                무료로 시작하기
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="h-14 px-10 text-base font-medium rounded-toss-lg border-toss-border text-toss-dark hover:bg-toss-lightGray transition-all duration-300"
-                onClick={() => navigate('/download')}
-              >
-                데스크탑 앱 다운로드
-              </Button>
-            </motion.div>
-            <motion.p 
-              variants={tossFadeIn}
-              className="mt-8 text-sm text-toss-light"
-            >
-              macOS, Windows, Linux 지원 • 모바일 앱 출시 예정
-            </motion.p>
-          </motion.div>
-        </section>
+        <div ref={extraRef}>
+          {showExtra ? (
+            <React.Suspense fallback={<div className="h-96 bg-toss-lightGray animate-pulse" />}>
+              <LazyHomeExtra />
+            </React.Suspense>
+          ) : (
+            <div className="h-96 bg-toss-lightGray" />
+          )}
+        </div>
       </main>
 
       <Footer />

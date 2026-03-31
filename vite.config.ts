@@ -144,6 +144,9 @@ export default defineConfig(({ mode }) => {
         '@styles': path.resolve(__dirname, './src/styles'),
         '@stores': path.resolve(__dirname, './src/stores'),
         '@assets': path.resolve(__dirname, './src/assets'),
+        'react': path.resolve(__dirname, 'node_modules/react'),
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+        'react-is': path.resolve(__dirname, 'node_modules/react-is'),
       },
     },
     
@@ -169,39 +172,8 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              // Normalize path for robust Windows/Linux matching
-              const normalizedId = id.replace(/\\/g, '/');
-
-              // 1. 대용량 비동기 라이브러리 (Isolated huge libraries)
-              // 이들은 독립적으로 동작하거나 특정 뷰에서만 사용되므로 분리해도 안전합니다.
-              if (normalizedId.includes('/mermaid/') || normalizedId.includes('/cytoscape/')) {
-                return 'vendor-mermaid';
-              }
-              if (
-                normalizedId.includes('/@codemirror/') || 
-                normalizedId.includes('/@lezer/') || 
-                normalizedId.includes('/@uiw/')
-              ) {
-                return 'vendor-editor';
-              }
-
-              // 2. 핵심 프레임워크 및 UI (React core ecosystem)
-              // React, Radix UI, Framer Motion 등을 하나로 묶어 'createContext' 관련 초기화 에러를 원천 방지합니다.
-              // 'react-is' 등 이름에 react가 포함된 유틸리티도 모두 이 청크에 포함됩니다.
-              if (
-                normalizedId.includes('react') ||
-                normalizedId.includes('/@radix-ui/') ||
-                normalizedId.includes('/framer-motion/') ||
-                normalizedId.includes('/lucide-react/') ||
-                normalizedId.includes('/@supabase/') ||
-                normalizedId.includes('/zustand/') ||
-                normalizedId.includes('/date-fns/') ||
-                normalizedId.includes('/@dnd-kit/')
-              ) {
-                return 'vendor-core';
-              }
-
-              // 3. 기타 모든 node_modules
+              // 모든 외부 라이브러리를 하나의 'vendor' 청크로 통합하여 
+              // React Context 공유 및 초기화 순서 문제를 완벽히 방지합니다.
               return 'vendor';
             }
           },
