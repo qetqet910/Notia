@@ -85,7 +85,7 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           importScripts: ['push-sw.js'],
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 // 5MB
+          maximumFileSizeToCacheInBytes: 12 * 1024 * 1024 // 12MB
         }
       })
     );
@@ -172,8 +172,20 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              // 모든 외부 라이브러리를 하나의 'vendor' 청크로 통합하여 
-              // React Context 공유 및 초기화 순서 문제를 완벽히 방지합니다.
+              const normalizedId = id.replace(/\\/g, '/');
+
+              // 1. 초대형 독립 라이브러리 (React Context와 무관하며 독립적으로 동작)
+              // mermaid, cytoscape, supabase 등은 안전하게 분산 가능합니다.
+              if (normalizedId.includes('/mermaid/') || normalizedId.includes('/cytoscape/')) {
+                return 'vendor-visual';
+              }
+              if (normalizedId.includes('/@supabase/')) {
+                return 'vendor-db';
+              }
+
+              // 2. 나머지 모든 node_modules (React core + 핵심 UI + 에디터)
+              // 이들은 컨텍스트 전파 및 초기화 순서 이슈를 방지하기 위해 하나로 묶습니다.
+              // framer-motion, radix-ui, codemirror, lucide-react 등이 포함됩니다.
               return 'vendor';
             }
           },
