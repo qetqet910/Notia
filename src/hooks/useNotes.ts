@@ -4,6 +4,7 @@ import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { v4 as uuidv4 } from 'uuid';
+import { parseObsidianLinks } from '@/utils/obsidianLinks';
 
 const getStartOfWeek = () => {
   const now = new Date();
@@ -27,8 +28,9 @@ export const useNotes = () => {
   } = useDataStore.getState();
 
   const notes = useMemo(
-    () =>
-      Object.values(allNotes || {})
+    () => {
+      const notesArray = Array.isArray(allNotes) ? allNotes : Object.values(allNotes || {});
+      return notesArray
         .filter(
           (note) =>
             note && 
@@ -42,13 +44,15 @@ export const useNotes = () => {
              if (pinDiff !== 0) return pinDiff;
              return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
           }
-        ),
+        );
+    },
     [allNotes, user],
   );
 
   const trashNotes = useMemo(
-    () =>
-      Object.values(allNotes || {})
+    () => {
+      const notesArray = Array.isArray(allNotes) ? allNotes : Object.values(allNotes || {});
+      return notesArray
         .filter(
           (note) =>
             note && 
@@ -59,7 +63,8 @@ export const useNotes = () => {
         .sort(
           (a, b) =>
             new Date(b.deleted_at!).getTime() - new Date(a.deleted_at!).getTime(),
-        ),
+        );
+    },
     [allNotes, user],
   );
 
@@ -71,11 +76,13 @@ export const useNotes = () => {
     async (newNoteData: Pick<Note, 'title' | 'content' | 'tags'>) => {
       if (!user) return null;
       try {
+        const links = Array.from(new Set(parseObsidianLinks(newNoteData.content || '').map((l) => l.target)));
         const note = await useDataStore.getState().createNote({
           title: newNoteData.title,
-          content: newNoteData.content || '', // content가 undefined일 경우 빈 문자열을 전달
+          content: newNoteData.content || '',
           tags: newNoteData.tags,
           owner_id: user.id,
+          links: links,
         });
         return note;
       } catch (err) {
@@ -264,59 +271,9 @@ export const useNotes = () => {
   
           if (upsertError) throw upsertError;
   
-          // 3. For each upserted reminder, regenerate its notification schedules
-          const allSchedulesToCreate = [];
-          const reminderIds = upsertedReminders.map(r => r.id);
-
-          // A. Delete all old schedules for these reminders in one go
-          if (reminderIds.length > 0) {
-            await supabase.from('notification_schedules').delete().in('reminder_id', reminderIds);
-          }
-
-          // B. Prepare all new schedules
-          for (const reminder of upsertedReminders) {
-            if (reminder.enabled) {
-              const originalTime = new Date(reminder.reminder_time);
-              const now = new Date();
-  
-              const intervals = [
-                { minutes: 30, type: 'before_30m' },
-                { minutes: 20, type: 'before_20m' },
-                { minutes: 15, type: 'before_15m' },
-                { minutes: 10, type: 'before_10m' },
-                { minutes: 5, type: 'before_5m' },
-                { minutes: 3, type: 'before_3m' },
-                { minutes: 1, type: 'before_1m' },
-              ];
-  
-              for (const interval of intervals) {
-                const beforeTime = new Date(originalTime.getTime() - interval.minutes * 60 * 1000);
-                if (beforeTime > now) {
-                  allSchedulesToCreate.push({
-                    reminder_id: reminder.id,
-                    owner_id: user.id,
-                    notification_type: interval.type,
-                    scheduled_time: beforeTime.toISOString(),
-                  });
-                }
-              }
-  
-              allSchedulesToCreate.push({
-                reminder_id: reminder.id,
-                owner_id: user.id,
-                notification_type: 'at_time',
-                scheduled_time: reminder.reminder_time,
-              });
-            }
-          }
-
-          // C. Bulk insert all schedules
-          if (allSchedulesToCreate.length > 0) {
-            const { error: scheduleError } = await supabase
-              .from('notification_schedules')
-              .insert(allSchedulesToCreate);
-            if (scheduleError) throw scheduleError;
-          }
+          // Notification schedules are now handled dynamically by the Edge Function
+          // based on the user's notification_offsets in their profile.
+          // No need to create static schedules here.
   
           return upsertedReminders;
         } catch (err) {
@@ -349,12 +306,18 @@ export const useNotes = () => {
       // 1. Create a single, consistent timestamp for this entire update operation.
       const newUpdatedAt = new Date();
 
+      // 1.5. Extract wiki links for the knowledge graph
+      const links = updates.content 
+        ? Array.from(new Set(parseObsidianLinks(updates.content).map(l => l.target)))
+        : originalNote.links || [];
+
       // 2. Optimistic update for immediate UI feedback.
       const optimisticallyUpdatedNote: Note = {
         ...originalNote,
         title: updates.title ?? originalNote.title,
         content: updates.content ?? originalNote.content,
         tags: updates.tags ?? originalNote.tags,
+        links: links,
         updated_at: newUpdatedAt.toISOString(),
         // Optimistically update reminders structure, but the real data will come from saveReminders
         reminders: (updates.reminders || []).map(
@@ -387,6 +350,7 @@ export const useNotes = () => {
             title: updates.title,
             content: updates.content,
             tags: updates.tags,
+            links: links, // Save extracted links
             updated_at: newUpdatedAt.toISOString(), // Use the consistent timestamp
           })
           .eq('id', noteId)

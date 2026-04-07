@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Bell from 'lucide-react/dist/esm/icons/bell';
 import Trash2 from 'lucide-react/dist/esm/icons/trash-2';
 import Download from 'lucide-react/dist/esm/icons/download';
@@ -37,15 +37,21 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useNavigate } from 'react-router-dom';
 import { loadFont } from '@/utils/fontLoader';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useNotes } from '@/hooks/useNotes';
 import Info from 'lucide-react/dist/esm/icons/info';
+import Clock from 'lucide-react/dist/esm/icons/clock';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import { checkForUpdates, installUpdate } from '@/utils/updater';
 import { isTauri } from '@/utils/isTauri';
 import { sendNotification } from '@/utils/notification';
+
+import { Badge } from '@/components/ui/badge';
+import X from 'lucide-react/dist/esm/icons/x';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 
 const FONT_OPTIONS = [
   { value: 'Noto Sans KR', label: 'Noto Sans KR (기본)', family: 'Noto Sans KR, sans-serif' },
@@ -56,16 +62,34 @@ const FONT_OPTIONS = [
   { value: 'Keris Kedu', label: '눈누(케리스 케듀체)', family: 'Keris Kedu, sans-serif' },
 ];
 
+const NOTIFICATION_OFFSET_PRESETS = [
+  { value: 1, label: '1분 전' },
+  { value: 5, label: '5분 전' },
+  { value: 10, label: '10분 전' },
+  { value: 30, label: '30분 전' },
+  { value: 60, label: '1시간 전' },
+];
+
 export const SettingsTab: React.FC = React.memo(() => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signOut, user, deleteAccount } = useAuthStore();
-  const { notes, createNote } = useDataStore();
-  const { theme, setTheme, fontFamily, setFontFamily } = useThemeStore();
+  const rawNotes = useDataStore(state => state.notes);
+  const notes = useMemo(() => Array.isArray(rawNotes) ? rawNotes : Object.values(rawNotes || {}), [rawNotes]);
+  const createNote = useDataStore(state => state.createNote);
+  const { 
+    theme, 
+    setTheme, 
+    fontFamily, 
+    setFontFamily, 
+    notificationOffsets, 
+    setNotificationOffsets 
+  } = useThemeStore();
   const { goalStats, updateUserGoals } = useNotes();
   const { permission, requestPermission } = useNotificationPermission();
   
   const [fontLoading, setFontLoading] = useState(false);
+  const [customOffset, setCustomOffset] = useState('');
 
   useEffect(() => {
     Promise.all(FONT_OPTIONS.map((option) => loadFont(option.value))).catch((error) => {
@@ -90,6 +114,73 @@ export const SettingsTab: React.FC = React.memo(() => {
     } finally {
       setFontLoading(false);
     }
+  };
+
+  const handleAddOffset = async (value: number) => {
+    if (notificationOffsets.includes(value)) {
+      toast({
+        title: '이미 존재하는 시간',
+        description: '동일한 알림 시간이 이미 설정되어 있습니다.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (notificationOffsets.length >= 10) {
+      toast({
+        title: '최대 개수 도달',
+        description: '알림 시간은 최대 10개까지 설정할 수 있습니다.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newOffsets = [...notificationOffsets, value].sort((a, b) => a - b);
+    try {
+      await setNotificationOffsets(newOffsets);
+      setCustomOffset('');
+    } catch {
+      toast({
+        title: '저장 실패',
+        description: '알림 설정을 저장하지 못했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRemoveOffset = async (value: number) => {
+    const newOffsets = notificationOffsets.filter(offset => offset !== value);
+    try {
+      await setNotificationOffsets(newOffsets);
+    } catch {
+      toast({
+        title: '삭제 실패',
+        description: '알림 설정을 저장하지 못했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCustomOffsetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = parseInt(customOffset);
+    if (isNaN(val) || val <= 0) {
+      toast({
+        title: '잘못된 입력',
+        description: '1분 이상의 정수를 입력해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (val > 43200) { // 1개월
+      toast({
+        title: '너무 큰 시간',
+        description: '알림 시간은 최대 1개월(43,200분)까지 가능합니다.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    handleAddOffset(val);
   };
 
   const [updateStatus, setUpdateStatus] = useState<{
@@ -160,7 +251,9 @@ export const SettingsTab: React.FC = React.memo(() => {
   }, [goalStats]);
 
   const handleExport = useCallback(() => {
-    const dataStr = JSON.stringify({ notes }, null, 2);
+    // notes는 Record<string, Note> 이므로 배열로 변환하여 내보냄
+    const notesArray = Object.values(notes);
+    const dataStr = JSON.stringify({ notes: notesArray }, null, 2);
     const dataUri =
       'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const exportFileDefaultName = `Notia_backup_${new Date().toISOString()}.json`;
@@ -188,14 +281,18 @@ export const SettingsTab: React.FC = React.memo(() => {
           const importedData = JSON.parse(content);
 
           if (importedData && importedData.notes) {
-            const notesToImport: Note[] = Object.values(importedData.notes);
+            // 가져온 데이터가 배열인지 객체인지 확인하여 안전하게 변환
+            const notesToImport: Note[] = Array.isArray(importedData.notes) 
+              ? importedData.notes 
+              : Object.values(importedData.notes);
+            
             let successCount = 0;
             let errorCount = 0;
 
             for (const note of notesToImport) {
               const newNoteData = {
-                owner_id: user.id, // 현재 사용자의 ID로 설정
-                title: note.title,
+                owner_id: user.id,
+                title: note.title || '가져온 노트',
                 content: note.content || '',
                 tags: note.tags || [],
                 reminders: (note.reminders || []).map((r) => ({
@@ -430,6 +527,79 @@ export const SettingsTab: React.FC = React.memo(() => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>알림 설정</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <Label className="font-medium">사전 알림 시간</Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-8">
+              리마인더 시간 전에 미리 알림을 받을 시간을 설정하세요.
+            </p>
+            
+            {/* 현재 설정된 알림 리스트 (배지 형태) */}
+            <div className="ml-8 flex flex-wrap gap-2 mb-4">
+              <Badge variant="secondary" className="px-3 py-1.5 bg-notia-primary/20 text-notia-primary border-notia-primary/30 hover:bg-notia-primary/20">
+                정시 (0분)
+              </Badge>
+              {notificationOffsets.map((offset) => (
+                <Badge 
+                  key={offset} 
+                  variant="outline" 
+                  className="px-3 py-1.5 flex items-center gap-1.5 bg-background group"
+                >
+                  {offset >= 60 ? `${Math.floor(offset/60)}시간 전` : `${offset}분 전`}
+                  <button 
+                    onClick={() => handleRemoveOffset(offset)}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+
+            {/* 알림 추가 UI */}
+            <div className="ml-8 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {NOTIFICATION_OFFSET_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.value}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={notificationOffsets.includes(preset.value)}
+                    onClick={() => handleAddOffset(preset.value)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+
+              <form onSubmit={handleCustomOffsetSubmit} className="flex items-center gap-2 max-w-xs">
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    placeholder="직접 입력 (분)"
+                    value={customOffset}
+                    onChange={(e) => setCustomOffset(e.target.value)}
+                    className="h-9 pr-8"
+                    min="1"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">분</span>
+                </div>
+                <Button type="submit" size="sm" className="h-9">추가</Button>
+              </form>
+            </div>
           </div>
         </CardContent>
       </Card>

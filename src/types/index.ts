@@ -16,6 +16,7 @@ export interface Note {
   updatedAt: Date;
   reminders: Reminder[];
   content_preview: string;
+  links?: string[];
 }
 
 export interface Folder {
@@ -115,7 +116,18 @@ export type ChangeCategory =
   | '💅 디자인'
   | '🔧 리팩토링'
   | '📝 문서'
-  | '⚙️ 기타';
+  | '⚙️ 기타'
+  | '🔔 알림'
+  | '💾 데이터베이스'
+  | '🛡️ 보안'
+  | '🧪 테스트'
+  | '🖥️ 데스크톱'
+  | '📡 오프라인'
+  | '🔄 업데이트'
+  | '⚡ 성능'
+  | '🎨 디자인'
+  | '⚙️ 백엔드'
+  | '💾 데이터베이스'; // Duplicate check - removing duplicate in next step if necessary
 
 export interface ChangelogEntry {
   version: string;

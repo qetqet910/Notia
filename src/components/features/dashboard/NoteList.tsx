@@ -256,6 +256,10 @@ export const NoteList: FC<NoteListProps> = ({
 	};
 
 	const handleFolderDialogSubmit = async () => {
+		if (typeof folderInput !== "string") {
+			setIsFolderDialogOpen(false);
+			return;
+		}
 		const trimmed = folderInput.trim();
 		if (!trimmed) {
 			setIsFolderDialogOpen(false);
@@ -264,7 +268,7 @@ export const NoteList: FC<NoteListProps> = ({
 
 		try {
 			if (folderDialogMode === "create") {
-				const createdPath = useDataStore
+				const createdPath = await useDataStore
 					.getState()
 					.createFolder(resolveCreatePath(folderDialogPath, trimmed));
 				setSelectedFolderPath(createdPath);
@@ -370,7 +374,7 @@ export const NoteList: FC<NoteListProps> = ({
 					<ScrollArea className="h-full">
 						<NoteTree
 							notes={filteredNotes}
-							folderPaths={folderPaths}
+							folders={folders}
 							selectedNote={selectedNote}
 							selectedFolderPath={selectedFolderPath}
 							onSelectNote={onSelectNote}

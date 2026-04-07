@@ -6,14 +6,16 @@ type Theme = 'dark' | 'light' | 'deepdark' | 'system';
 
 type ThemeState = {
   theme: Theme;
-  fontFamily: string; // 폰트 상태 추가
+  fontFamily: string;
+  notificationOffsets: number[]; // 알림 오프셋 상태 추가
   isDarkMode: boolean;
   isDeepDarkMode: boolean;
   isDashboardActive: boolean;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
-  setFontFamily: (font: string) => Promise<void>; // 폰트 변경 함수
-  loadFontSettings: (userId: string) => Promise<void>; // DB에서 폰트 설정 로드
+  setFontFamily: (font: string) => Promise<void>;
+  setNotificationOffsets: (offsets: number[]) => Promise<void>; // 오프셋 설정 함수
+  loadFontSettings: (userId: string) => Promise<void>;
   updateThemeFromSystem: () => void;
   setDashboardActive: (active: boolean) => void;
 };
@@ -22,7 +24,8 @@ export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
       theme: 'system',
-      fontFamily: 'Noto Sans KR', // 기본값 변경
+      fontFamily: 'Noto Sans KR',
+      notificationOffsets: [1, 5, 10, 15, 30], // 기본값
       isDarkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       isDeepDarkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       isDashboardActive: false,
@@ -52,7 +55,7 @@ export const useThemeStore = create<ThemeState>()(
         if (user) {
           await supabase
             .from('profiles')
-            .upsert({ id: user.id, theme: theme }); // Upsert 사용 (기존 데이터 유지하며 업데이트)
+            .upsert({ id: user.id, theme: theme });
         }
       },
 
@@ -67,10 +70,21 @@ export const useThemeStore = create<ThemeState>()(
         }
       },
 
+      setNotificationOffsets: async (offsets: number[]) => {
+        set({ notificationOffsets: offsets });
+        // DB 업데이트
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .upsert({ id: user.id, notification_offsets: offsets });
+        }
+      },
+
       loadFontSettings: async (userId: string) => {
         const { data, error } = await supabase
           .from('profiles')
-          .select('font_family, theme')
+          .select('font_family, theme, notification_offsets')
           .eq('id', userId)
           .single();
         
@@ -85,6 +99,7 @@ export const useThemeStore = create<ThemeState>()(
            set({ 
              fontFamily: data.font_family || 'Noto Sans KR',
              theme: newTheme,
+             notificationOffsets: data.notification_offsets || [1, 5, 10, 15, 30],
              isDarkMode: isDark,
              isDeepDarkMode: isDeepDark
            });

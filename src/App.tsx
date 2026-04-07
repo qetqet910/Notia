@@ -16,18 +16,7 @@ import {
 import { NotFoundPageLoader } from '@/components/loader/landing/NotFoundPageLoader';
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
 import DesktopLogin from '@/pages/auth/DesktopLogin';
-const MyPage = lazy(() => import('@/pages/dashboard/MyPage'));
-const HelpPage = lazy(() => import('@/pages/dashboard/HelpPage'));
-
-const Home = lazy(() => import('@/pages/landing/Home'));
-const DownloadPage = lazy(() => import('@/pages/landing/Download'));
-const ChangelogPage = lazy(() => import('@/pages/landing/ChangelogPage'));
-const Dashboard = lazy(() => import('@/pages/dashboard/Index'));
-const Login = lazy(() => import('@/pages/auth/Login'));
-const TermsAgreement = lazy(() => import('@/pages/auth/TermsAgreement'));
-const NotFound = lazy(() => import('@/pages/NotFoundPage'));
-const GlobalError = lazy(() => import('@/pages/GlobalError'));
-
+import { Toaster } from '@/components/ui/toaster';
 import { AuthCallback } from '@/pages/auth/AuthCallback';
 import { ProtectedRoute } from '@/components/providers/ProtectedRoute';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
@@ -47,6 +36,17 @@ import {
 import { Loader2 } from 'lucide-react';
 import { CloseHandler } from '@/components/common/CloseHandler';
 import { DataResync } from '@/components/providers/DataResync';
+
+const MyPage = lazy(() => import('@/pages/dashboard/MyPage'));
+const HelpPage = lazy(() => import('@/pages/dashboard/HelpPage'));
+const Home = lazy(() => import('@/pages/landing/Home'));
+const DownloadPage = lazy(() => import('@/pages/landing/Download'));
+const ChangelogPage = lazy(() => import('@/pages/landing/ChangelogPage'));
+const Dashboard = lazy(() => import('@/pages/dashboard/Index'));
+const Login = lazy(() => import('@/pages/auth/Login'));
+const TermsAgreement = lazy(() => import('@/pages/auth/TermsAgreement'));
+const NotFound = lazy(() => import('@/pages/NotFoundPage'));
+const GlobalError = lazy(() => import('@/pages/GlobalError'));
 
 const ScrollToTop = () => {
   const location = useLocation();
@@ -175,8 +175,8 @@ const router = createRouter([
     ],
   },
 ]);
- 
-function App() {
+
+export default function App() {
   const { setDeferredPrompt } = usePwaStore();
   const [updateAvailable, setUpdateAvailable] = React.useState<{ version: string; body: string } | null>(null);
   const [isUpdating, setIsUpdating] = React.useState(false);
@@ -252,6 +252,7 @@ function App() {
     <div className="max-w-[1920px] mx-auto min-h-screen bg-background">
       <RouterProvider router={router} />
       <DataResync />
+      <Toaster />
       <CloseHandler />
       
       <AlertDialog open={!!updateAvailable}>
@@ -285,5 +286,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

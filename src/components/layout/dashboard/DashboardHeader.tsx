@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { useThemeStore } from '@/stores/themeStore';
 
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
+import { useDataStore } from '@/stores/dataStore';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 
 export const DashboardHeader: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ export const DashboardHeader: React.FC = () => {
     () => (isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage),
     [isDarkMode, isDeepDarkMode],
   );
+  const isSyncing = useDataStore((state) => state.isSyncing);
 
   const handleBackUrl = useCallback(() => {
     navigate('/dashboard');
@@ -50,6 +53,19 @@ export const DashboardHeader: React.FC = () => {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <AnimatePresence>
+            {isSyncing && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
+              >
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <span className="hidden sm:inline">동기화 중</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <UserProfile />
         </div>
       </div>

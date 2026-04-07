@@ -83,8 +83,16 @@ export const WikiLinkGraph: React.FC<WikiLinkGraphProps> = ({ notes, onWikiLinkC
     const connectionCounts = new Map<string, number>();
 
     notes.forEach((note) => {
-      const obsidianLinks = parseObsidianLinks(note.content || '');
-      const uniqueTargets = new Set(obsidianLinks.map(l => l.target.toLowerCase()));
+      // Use pre-extracted links if available, fallback to parsing content
+      let linkedTitles: string[] = [];
+      if (note.links && note.links.length > 0) {
+        linkedTitles = note.links;
+      } else {
+        const obsidianLinks = parseObsidianLinks(note.content || '');
+        linkedTitles = obsidianLinks.map(l => l.target);
+      }
+
+      const uniqueTargets = new Set(linkedTitles.map(t => t.toLowerCase()));
       
       uniqueTargets.forEach((targetTitle) => {
         const targetId = titleToId.get(targetTitle);

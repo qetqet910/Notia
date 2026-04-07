@@ -2,6 +2,44 @@ import { ChangelogEntry } from '@/types';
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: 'v1.2.1',
+    date: '2026년 4월 7일',
+    userChanges: [
+      { category: '✨ 기능', description: '지식 그래프 고도화: 이제 노트를 열지 않아도 위키링크([[노트 제목]]) 간의 연결이 즉시 그래프에 반영됩니다.' },
+      { category: '🔔 알림', description: '알림 설정 UX 개선: 사전 알림 시간을 배지 형태로 관리하고, 원하는 분(minute) 단위를 직접 입력하여 추가할 수 있습니다.' },
+      { category: '🚀 성능', description: '앱 안정성 강화: MyPage 로딩 지연 현상을 해결하고 데이터 동기화 정합성을 높였습니다.' },
+    ],
+    devChanges: [
+      { category: '💾 데이터베이스', description: 'Schema: `notes` 테이블에 `links` (TEXT ARRAY) 컬럼을 추가하고 SQLite 마이그레이션 로직을 통합했습니다.' },
+      { category: '🔧 리팩토링', description: 'Data Flow: 위키링크 자동 추출 및 저장 로직을 `useNotes` 훅에 통합하여 데이터 일관성을 확보했습니다.' },
+    ],
+  },
+  {
+    version: 'v1.2.0',
+    date: '2026년 3월 30일',
+    userChanges: [
+      { category: '✨ 기능', description: '계층형 노트 트리: 폴더와 하위 노트 구조를 지원하며, 드래그 앤 드롭(DND)으로 자유롭게 구성할 수 있습니다.' },
+      { category: '🛡️ 보안', description: '알림 권한 고도화: HTTPS 환경 검증을 강화하고 알림 클릭 시의 보안 세션을 정교하게 처리합니다.' },
+      { category: '💅 디자인', description: '대시보드 레이아웃 최적화: 사이드바 및 노트 리스트의 렌더링 성능을 개선했습니다.' },
+    ],
+    devChanges: [
+      { category: '🚀 성능', description: 'Vite Optimization: 청크 분할 전략을 개선하여 업데이트 후 발생하던 `ChunkLoadError`를 방지했습니다.' },
+      { category: '🔧 리팩토링', description: 'Folder Logic: 폴더 정렬을 위한 전용 인덱스와 경로 자동 정규화 엔진을 도입했습니다.' },
+    ],
+  },
+  {
+    version: 'v1.1.5',
+    date: '2026년 1월 22일',
+    userChanges: [
+      { category: '🛡️ 보안', description: 'XSS 방지 필터: 모든 입력 필드에 강력한 보안 필터를 적용하여 악성 스크립트 실행을 원천 차단합니다.' },
+      { category: '🚀 성능', description: '체감 속도 개선: 데이터 저장 및 동기화 처리 속도를 약 2배 이상 향상시켰습니다.' },
+    ],
+    devChanges: [
+      { category: '💾 데이터베이스', description: 'Performance: DB 배치 처리(Batch Upsert)를 전면 도입하여 N+1 쿼리 문제를 근본적으로 해결했습니다.' },
+      { category: '⚙️ 기타', description: 'DevOps: GitHub Codespaces를 통한 클라우드 개발 환경 지원을 강화했습니다.' },
+    ],
+  },
+  {
     version: 'v1.1.2',
     date: '2026년 1월 19일',
     userChanges: [

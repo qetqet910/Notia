@@ -14,6 +14,7 @@ interface SqliteNoteRow {
   updated_at: string;
   deleted_at?: string | null;
   is_pinned: number;
+  links?: string; // JSON string array
 }
 
 interface SqliteReminderRow {
@@ -325,6 +326,9 @@ class LocalDBService {
     try {
       await this.db.execute('ALTER TABLE notes ADD COLUMN parent_id TEXT');
     } catch { /* ignore if exists */ }
+    try {
+      await this.db.execute('ALTER TABLE notes ADD COLUMN links TEXT');
+    } catch { /* ignore if exists */ }
 
     // 리마인더 테이블
     await this.db.execute(`
@@ -409,15 +413,17 @@ class LocalDBService {
     
     if (isTauri() && this.db) {
       const tagsJson = JSON.stringify(note.tags || []);
+      const linksJson = JSON.stringify(note.links || []);
       const syncedVal = isSynced ? 1 : 0;
       
       await this.db.execute(`
-        INSERT INTO notes (id, owner_id, title, content, tags, created_at, updated_at, is_synced, deleted_at, is_pinned, folder_path, parent_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO notes (id, owner_id, title, content, tags, links, created_at, updated_at, is_synced, deleted_at, is_pinned, folder_path, parent_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           content = excluded.content,
           tags = excluded.tags,
+          links = excluded.links,
           updated_at = excluded.updated_at,
           is_synced = excluded.is_synced,
           deleted_at = excluded.deleted_at,
@@ -425,15 +431,13 @@ class LocalDBService {
           folder_path = excluded.folder_path,
           parent_id = excluded.parent_id
       `, [
-          note.id, note.owner_id, note.title, note.content || '', tagsJson, 
+          note.id, note.owner_id, note.title, note.content || '', tagsJson, linksJson,
           note.created_at, note.updated_at, syncedVal, 
           note.deleted_at || null, note.is_pinned ? 1 : 0,
           note.folder_path || '/', note.parent_id ?? null
       ]);
 
       // Handle Reminders - 조건부로만 삭제/재삽입
-      // 'reminders' 프로퍼티가 명시적으로 존재할 때만 로컬 reminders 테이블을 건드림
-      // 이는 realtime UPDATE payload가 reminders를 포함하지 않을 때 데이터 손실을 방지
       if ('reminders' in note) {
         await this.db.execute('DELETE FROM reminders WHERE note_id = ?', [note.id]);
         
@@ -449,10 +453,7 @@ class LocalDBService {
                ]);
           }
         }
-        // reminders가 빈 배열이면 delete만 수행 (의도적 비우기)
       }
-      // reminders 프로퍼티가 아예 없으면 로컬 reminders 테이블을 건드리지 않음
-
     } else if (this.webDb) {
       await this.webDb.saveNote(note);
     }
@@ -473,7 +474,6 @@ class LocalDBService {
       
       if (notesResult.length === 0) return [];
 
-      // Fetch all reminders in one go to avoid N+1
       const allReminders = ownerId
         ? await this.db.select<SqliteReminderRow[]>('SELECT * FROM reminders WHERE owner_id = ?', [String(ownerId)])
         : await this.db.select<SqliteReminderRow[]>('SELECT * FROM reminders');
@@ -498,7 +498,8 @@ class LocalDBService {
           content: row.content,
           folder_path: row.folder_path || '/',
           parent_id: row.parent_id ?? null,
-          tags: JSON.parse(row.tags),
+          tags: JSON.parse(row.tags || '[]'),
+          links: JSON.parse(row.links || '[]'),
           created_at: row.created_at,
           updated_at: row.updated_at,
           deleted_at: row.deleted_at,

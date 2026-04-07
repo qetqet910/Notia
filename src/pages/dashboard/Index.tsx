@@ -65,6 +65,8 @@ import {
 } from '@/components/ui/dialog';
 import { ToastAction } from '@/components/ui/toast';
 import { resolveWikiLinkTitle } from '@/utils/wikiLinkSelection';
+import { useDataStore } from '@/stores/dataStore';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 
 import { DashboardPageLoader } from '@/components/loader/dashboard/DashboardPageLoader';
 import { EditorLoader } from '@/components/loader/dashboard/EditorLoader';
@@ -140,6 +142,7 @@ export const Dashboard: React.FC = () => {
   useReminderScheduler();
   const { toast } = useToast();
   const { session } = useAuthStore();
+  const isSyncing = useDataStore((state) => state.isSyncing);
   const {
     notes,
     trashNotes,
@@ -785,6 +788,19 @@ export const Dashboard: React.FC = () => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <AnimatePresence>
+              {isSyncing && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span className="hidden sm:inline">동기화 중</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <div className="md:hidden">
               <MobileNavigation
                 activeTab={activeTab}

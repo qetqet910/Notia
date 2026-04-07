@@ -59,7 +59,8 @@ interface FolderNode {
 	notes: NoteWithChildren[];
 }
 
-export function normalizeFolderPath(path: string): string {
+export function normalizeFolderPath(path: string | null | undefined): string {
+	if (!path || typeof path !== "string") return "/";
 	const trimmed = path.trim();
 	if (!trimmed || trimmed === "/") return "/";
 	const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
@@ -168,16 +169,35 @@ const DraggableNoteRow: FC<{
 		opacity: isDragging ? 0.4 : 1,
 	};
 
+	const lastChangedNoteId = useDataStore((state) => state.lastChangedNoteId);
+	const setLastChangedNoteId = useDataStore((state) => state.setLastChangedNoteId);
+	const isRecentlyChanged = lastChangedNoteId === note.id;
+
+	useEffect(() => {
+		if (isRecentlyChanged) {
+			const timer = setTimeout(() => {
+				setLastChangedNoteId(null);
+			}, 3000); // 3초간 효과 유지 후 초기화
+			return () => clearTimeout(timer);
+		}
+	}, [isRecentlyChanged, setLastChangedNoteId]);
+
 	// 깊이가 깊어질 때 패딩을 더 줄여서 콘텐츠 영역 확보
 	const calculatedPaddingLeft = Math.min(depth * 8 + 6, 60);
 
 	return (
 		<div ref={setNodeRef} style={style} className="relative group w-full min-w-0">
-			<div
+			<motion.div
+				key={`${note.id}-${note.updated_at}`}
 				className={cn(
 					"grid grid-cols-[1fr_22px] items-center py-2 pr-2 transition-colors hover:bg-muted/50 border-b border-border/30 cursor-grab active:cursor-grabbing w-full min-w-0 overflow-hidden",
 					selectedNote?.id === note.id ? "bg-muted" : isOver ? "bg-primary/10" : ""
 				)}
+				animate={isRecentlyChanged ? { 
+					backgroundColor: ["rgba(var(--primary-rgb), 0)", "rgba(var(--primary-rgb), 0.1)", "rgba(var(--primary-rgb), 0)"],
+					boxShadow: ["0 0 0px rgba(var(--primary-rgb), 0)", "0 0 15px rgba(var(--primary-rgb), 0.4)", "0 0 0px rgba(var(--primary-rgb), 0)"]
+				} : {}}
+				transition={isRecentlyChanged ? { duration: 2, repeat: 0 } : {}}
 				style={{ paddingLeft: `${calculatedPaddingLeft}px` }}
 				{...listeners}
 				{...attributes}
@@ -211,7 +231,7 @@ const DraggableNoteRow: FC<{
 						{formatDistanceToNow(new Date(note.updated_at), { addSuffix: false, locale: ko })}
 					</span>
 				</div>
-			</div>
+			</motion.div>
 
 			{isExpanded && hasChildren && (
 				<div className="border-l border-border/40 ml-[14px]">

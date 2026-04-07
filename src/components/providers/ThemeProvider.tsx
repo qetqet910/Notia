@@ -59,11 +59,13 @@ export function ThemeProvider({
         (el as HTMLElement).style.fontFamily = `"${appliedFont}", sans-serif`;
       });
     } else {
-      document.body.style.fontFamily = '"GmarketSans", sans-serif';
+      // 대시보드 이외 (랜딩, 로그인 등): 기본 폰트(Pretendard) 적용
+      // global.css에 정의된 기본 Pretendard가 적용되도록 스타일 초기화
+      document.body.style.fontFamily = '';
       
       const formElements = document.querySelectorAll('input, button, textarea, select');
       formElements.forEach((el) => {
-        (el as HTMLElement).style.fontFamily = '"GmarketSans", sans-serif';
+        (el as HTMLElement).style.fontFamily = '';
       });
     }
   }, [fontFamily, location.pathname]);

@@ -35,11 +35,15 @@ interface DataState {
   channels: RealtimeChannel[];
   activityCache: CalculationResult | null;
   isCalculating: boolean;
+  isSyncing: boolean;
+  lastChangedNoteId: string | null;
   initialize: (userId: string) => Promise<void>;
   unsubscribeAll: () => Promise<void>;
+  setLastChangedNoteId: (id: string | null) => void;
   createNote: (
     noteData: Pick<Note, 'owner_id' | 'title' | 'content' | 'tags'> & {
       reminders?: Omit<EditorReminder, 'id'>[];
+      links?: string[];
     },
   ) => Promise<Note | null>;
   updateNoteState: (updatedNote: Note) => void;
@@ -47,7 +51,7 @@ interface DataState {
     reminderId: string,
     updates: Partial<Reminder>,
   ) => void;
-  createFolder: (path: string) => string;
+  createFolder: (path: string) => Promise<string>;
   moveNote: (noteId: string, newPath: string) => Promise<void>;
   renameFolder: (oldPath: string, newPath: string) => Promise<void>;
   deleteFolder: (path: string) => Promise<void>;
@@ -191,6 +195,12 @@ export const useDataStore = create<DataState>((set, get) => ({
   channels: [],
   activityCache: null,
   isCalculating: false,
+  isSyncing: false,
+  lastChangedNoteId: null,
+
+  setLastChangedNoteId: (id: string | null) => {
+    set({ lastChangedNoteId: id });
+  },
 
   // --- Folder Operations ---
 
@@ -272,6 +282,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     };
 
     updateNoteState(updatedNote);
+    set({ lastChangedNoteId: noteId });
 
     try {
       const { error } = await supabase
@@ -282,8 +293,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       if (error) throw error;
     } catch (error) {
       console.error('Failed to sync move note to Supabase (Local DB is updated):', error);
-      // 의도적 주석 처리: offline 상태이거나 Supabase 스키마에 folder_path가 없을 때
-      // UI를 원복시키지 않고 로컬에서 그대로 진행되도록 롤백(updateNoteState(note))을 무시합니다.
     }
   },
 
@@ -520,6 +529,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     
     // Optimistic Update
     updateNoteState(updatedNote);
+    set({ lastChangedNoteId: noteId });
 
     try {
       const { error } = await supabase
@@ -584,7 +594,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     
     // 백업: 롤백을 위해 노트 정보 저장
     const backupNote = notes[noteId];
-    if (!backupNote) return; // 존재하지 않는 노트면 종료
+    if (!backupNote) return; 
     
     // Optimistic
     removeNoteState(noteId);
@@ -595,13 +605,11 @@ export const useDataStore = create<DataState>((set, get) => ({
       await supabase.from('reminders').delete().eq('note_id', noteId);
     } catch (error) {
       console.error('Failed to permanently delete note:', error);
-      // 롤백: 백업된 노트를 state에 복원
       addNoteState(backupNote);
     }
   },
 
   calculateActivityData: async (notes: Note[]) => {
-    // 새 요청이 오면 이전 계산을 취소
     currentJobId++;
     const thisJobId = currentJobId;
 
@@ -610,7 +618,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (isTauri()) {
       try {
         const result = await invoke<CalculationResult>('calculate_activity', { notes });
-        // stale 체크
         if (thisJobId === currentJobId) {
           set({ activityCache: result, isCalculating: false });
         }
@@ -620,7 +627,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
     }
 
-    // 기존 워커가 있으면 종료하고 새로 생성
     if (worker) {
       worker.terminate();
       worker = null;
@@ -633,7 +639,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       );
 
       worker.onmessage = (event: MessageEvent<CalculationResult & { jobId: number }>) => {
-        // stale 결과 무시
         if (event.data.jobId !== currentJobId) {
           return;
         }
@@ -667,6 +672,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   createNote: async (
     noteData: Pick<Note, 'owner_id' | 'title' | 'content' | 'tags'> & {
       reminders?: Omit<EditorReminder, 'id'>[];
+      links?: string[];
     },
   ): Promise<Note | null> => {
     const { addNoteState } = get();
@@ -689,6 +695,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       updatedAt: nowDate,
       reminders: [],
       content_preview: '',
+      links: noteData.links || [], // Initialize with extracted links
     };
 
     if (noteData.reminders && noteData.reminders.length > 0) {
@@ -708,12 +715,11 @@ export const useDataStore = create<DataState>((set, get) => ({
         }));
     }
 
-    // 1. Optimistic Update & Local DB Save
     addNoteState(newNote);
+    set({ lastChangedNoteId: newNoteId });
     await localDB.upsertNote(newNote, false);
 
     try {
-      // 2. Sync to Supabase
       const { data: noteResult, error: noteError } = await supabase
         .from('notes')
         .insert([
@@ -725,6 +731,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             folder_path: '/',
             parent_id: null,
             tags: noteData.tags,
+            links: newNote.links,
           },
         ])
         .select()
@@ -753,7 +760,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
       }
 
-      // Mark as synced in local DB
       await localDB.upsertNote(newNote, true);
       return newNote;
     } catch (err) {
@@ -768,28 +774,28 @@ export const useDataStore = create<DataState>((set, get) => ({
     set((state) => {
       const existingNote = state.notes[updatedNote.id];
       let mergedNote: Note;
+      let shouldGlow = false;
 
       if (existingNote) {
         const existingDate = new Date(existingNote.updated_at).getTime();
         const newDate = new Date(updatedNote.updated_at).getTime();
+
         if (newDate >= existingDate) {
-          // 병합: 기존 note와 updatedNote를 합침
           mergedNote = { ...existingNote, ...updatedNote };
 
-          // updatedNote에 reminders 프로퍼티가 없으면 기존 reminders 유지
           if (!('reminders' in updatedNote) && existingNote.reminders) {
             mergedNote.reminders = existingNote.reminders;
           }
+
+          shouldGlow = newDate > existingDate;
         } else {
-          // 기존 데이터가 더 최신이면 변경하지 않음
           return state;
         }
       } else {
-        // Realtime INSERT 이벤트 등으로 노트가 새로 추가될 때
         mergedNote = updatedNote;
+        shouldGlow = true; 
       }
 
-      // Sync to local DB (배칭)
       enqueueLocalUpsert(mergedNote);
 
       return {
@@ -797,6 +803,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           ...state.notes,
           [mergedNote.id]: mergedNote,
         },
+        lastChangedNoteId: shouldGlow ? mergedNote.id : state.lastChangedNoteId,
         activityCache: null,
       };
     });
@@ -805,6 +812,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   updateReminderState: (reminderId: string, updates: Partial<Reminder>) => {
     set((state) => {
       const newNotes = { ...state.notes };
+      let noteIdForGlow: string | null = null;
       for (const noteId in newNotes) {
         const note = newNotes[noteId];
         const reminderIndex = (note.reminders || []).findIndex(
@@ -818,13 +826,13 @@ export const useDataStore = create<DataState>((set, get) => ({
           };
           const updatedNote = { ...note, reminders: newReminders };
           newNotes[noteId] = updatedNote;
+          noteIdForGlow = noteId;
 
-          // Sync to local DB (배칭)
           enqueueLocalUpsert(updatedNote);
           break;
         }
       }
-      return { notes: newNotes, activityCache: null };
+      return { notes: newNotes, lastChangedNoteId: noteIdForGlow, activityCache: null };
     });
   },
 
@@ -835,6 +843,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         ...state.notes,
         [newNote.id]: newNote,
       },
+      lastChangedNoteId: newNote.id,
       activityCache: null,
     }));
   },
@@ -857,280 +866,339 @@ export const useDataStore = create<DataState>((set, get) => ({
       return;
     }
 
-    await get().unsubscribeAll();
+    set({ isSyncing: true });
 
-    if (currentUserId !== userId) {
-      set({
-        notes: {},
-        folders: {},
-        activityCache: null,
-        channels: [],
-      });
-    }
-
-    set({ isInitialized: true, currentUserId: userId });
-
-    let finalNotes: Record<string, Note> = {};
-    let finalFolders: Record<string, Folder> = {};
-
-    // 1. Load from Local DB first (Fast UI updates)
     try {
-      await localDB.init();
-      const [localNotes, localFolders] = await Promise.all([
-        localDB.getNotes(userId),
-        localDB.getFolders(userId),
-      ]);
+      await get().unsubscribeAll();
 
-      const initialLocalNotes = localNotes.reduce(
-        (acc, note) => {
-          acc[note.id] = note;
-          return acc;
-        },
-        {} as Record<string, Note>,
-      );
-
-      const initialLocalFolders = localFolders.reduce(
-        (acc, folder) => {
-          const normalizedPath = normalizeFolderPath(folder.path);
-          acc[normalizedPath] = {
-            ...folder,
-            path: normalizedPath,
-            name: folder.name || getFolderName(normalizedPath),
-            parent_path: folder.parent_path ? normalizeFolderPath(folder.parent_path) : getParentPath(normalizedPath),
-            sort_index: folder.sort_index ?? 0,
-          };
-          return acc;
-        },
-        {} as Record<string, Folder>,
-      );
-
-      // UI를 즉시 로컬 데이터로 업데이트
-      finalNotes = { ...initialLocalNotes };
-      finalFolders = { ...initialLocalFolders };
-      
-      if (Object.keys(finalNotes).length > 0 || Object.keys(finalFolders).length > 0) {
-        set({ notes: finalNotes, folders: finalFolders, activityCache: null });
+      if (currentUserId !== userId) {
+        set({
+          notes: {},
+          folders: {},
+          activityCache: null,
+          channels: [],
+        });
       }
-    } catch (err) {
-      console.error('[DataStore] Failed to load from local DB:', err);
-    }
 
-    // 2. Fetch from Supabase and Merge
-    try {
-      const [notesResult, foldersResult] = await Promise.allSettled([
-        supabase
-          .from('notes')
-          .select(
-            'id, title, owner_id, is_public, note_type, tags, folder_path, parent_id, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
-          )
-          .eq('owner_id', userId),
-        supabase
-          .from('folders')
-          .select('id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at')
-          .eq('owner_id', userId),
-      ]);
+      set({ isInitialized: true, currentUserId: userId });
 
-      let remoteNotesCount = 0;
-      let remoteFoldersCount = 0;
+      let finalNotes: Record<string, Note> = {};
+      let finalFolders: Record<string, Folder> = {};
 
-      // Process and Merge Notes
-      if (notesResult.status === 'fulfilled') {
-        const { data: noteData, error: notesError } = notesResult.value;
-        if (notesError) {
-          console.error('[DataStore] Supabase notes fetch error:', notesError);
-        } else if (noteData) {
-          remoteNotesCount = noteData.length;
-          noteData.forEach((rn) => {
-            const ln = finalNotes[rn.id];
-            
-            // 병합 조건: 로컬에 없거나, 서버의 데이터가 더 최근인 경우
-            if (!ln || new Date(rn.updated_at) > new Date(ln.updated_at)) {
-              finalNotes[rn.id] = {
-                ...rn,
-                folder_path: rn.folder_path ?? '/',
-                parent_id: rn.parent_id ?? null,
-                createdAt: new Date(rn.created_at),
-                updatedAt: new Date(rn.updated_at),
-                reminders: rn.reminders || [],
-                is_pinned: rn.is_pinned || false,
-                deleted_at: rn.deleted_at || null,
-              };
-            }
-          });
+      // 1. Load from Local DB first (Fast UI updates)
+      try {
+        await localDB.init();
+        const [localNotes, localFolders] = await Promise.all([
+          localDB.getNotes(userId),
+          localDB.getFolders(userId),
+        ]);
+
+        const initialLocalNotes = localNotes.reduce(
+          (acc, note) => {
+            acc[note.id] = note;
+            return acc;
+          },
+          {} as Record<string, Note>,
+        );
+
+        const initialLocalFolders = localFolders.reduce(
+          (acc, folder) => {
+            const normalizedPath = normalizeFolderPath(folder.path);
+            acc[normalizedPath] = {
+              ...folder,
+              path: normalizedPath,
+              name: folder.name || getFolderName(normalizedPath),
+              parent_path: folder.parent_path ? normalizeFolderPath(folder.parent_path) : getParentPath(normalizedPath),
+              sort_index: folder.sort_index ?? 0,
+            };
+            return acc;
+          },
+          {} as Record<string, Folder>,
+        );
+
+        finalNotes = { ...initialLocalNotes };
+        finalFolders = { ...initialLocalFolders };
+
+        if (Object.keys(finalNotes).length > 0 || Object.keys(finalFolders).length > 0) {
+          set({ notes: finalNotes, folders: finalFolders, activityCache: null });
         }
-      } else {
-        console.error('[DataStore] Supabase notes fetch promise rejected:', notesResult.reason);
+      } catch (err) {
+        console.error('[DataStore] Failed to load from local DB:', err);
       }
 
-      // Process and Merge Folders
-      if (foldersResult.status === 'fulfilled') {
-        const { data: folderData, error: foldersError } = foldersResult.value;
-        if (foldersError) {
-          console.error('[DataStore] Supabase folders fetch error:', foldersError);
-        } else if (folderData) {
-          remoteFoldersCount = folderData.length;
-          folderData.forEach((rf) => {
-            const normalizedPath = normalizeFolderPath(rf.path);
-            const lf = finalFolders[normalizedPath];
-
-            if (!lf || new Date(rf.updated_at) > new Date(lf.updated_at)) {
-              finalFolders[normalizedPath] = {
-                ...rf,
-                path: normalizedPath,
-                name: rf.name || getFolderName(normalizedPath),
-                parent_path: rf.parent_path
-                  ? normalizeFolderPath(rf.parent_path)
-                  : getParentPath(normalizedPath),
-                sort_index: rf.sort_index ?? 0,
-              } as Folder;
-            }
-          });
+      // 2. Setup Realtime subscriptions FIRST
+      const handleNoteChange = (payload: RealtimePostgresChangesPayload<Note>) => {
+        if (payload.eventType === 'INSERT') {
+          get().addNoteState({ ...(payload.new as Note), reminders: [] });
+        } else if (payload.eventType === 'UPDATE') {
+          get().updateNoteState(payload.new as Note);
+        } else if (payload.eventType === 'DELETE') {
+          get().removeNoteState((payload.old as { id: string }).id);
         }
-      } else {
-        console.error('[DataStore] Supabase folders fetch promise rejected:', foldersResult.reason);
+      };
+
+      const notesChannel = supabase
+        .channel(`notes-changes-for-user-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notes',
+            filter: `owner_id=eq.${userId}`,
+          },
+          handleNoteChange,
+        )
+        .subscribe();
+
+      const remindersChannel = supabase
+        .channel(`reminders-changes-for-user-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'reminders',
+            filter: `owner_id=eq.${userId}`,
+          },
+          (payload) => {
+            const newReminder = payload.new as Reminder;
+            const noteId = newReminder.note_id;
+            set((state) => {
+              const targetNote = state.notes[noteId];
+              if (targetNote) {
+                const updatedNote = {
+                  ...targetNote,
+                  reminders: [...(targetNote.reminders || []), newReminder],
+                };
+                enqueueLocalUpsert(updatedNote);
+                return {
+                  notes: {
+                    ...state.notes,
+                    [noteId]: updatedNote,
+                  },
+                };
+              }
+              return state;
+            });
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'reminders',
+            filter: `owner_id=eq.${userId}`,
+          },
+          (payload) => {
+            const updatedReminder = payload.new as Reminder;
+            const noteId = updatedReminder.note_id;
+            set((state) => {
+              const targetNote = state.notes[noteId];
+              if (targetNote) {
+                const updatedNote = {
+                  ...targetNote,
+                  reminders: (targetNote.reminders || []).map((r) =>
+                    r.id === updatedReminder.id ? updatedReminder : r,
+                  ),
+                };
+                enqueueLocalUpsert(updatedNote);
+                return {
+                  notes: {
+                    ...state.notes,
+                    [noteId]: updatedNote,
+                  },
+                };
+              }
+              return state;
+            });
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'reminders',
+            filter: `owner_id=eq.${userId}`,
+          },
+          (payload) => {
+            const oldReminder = payload.old as { id: string; note_id?: string };
+
+            set((state) => {
+              let noteId = oldReminder.note_id;
+
+              if (!noteId) {
+                for (const id in state.notes) {
+                  if (state.notes[id].reminders?.some(r => r.id === oldReminder.id)) {
+                    noteId = id;
+                    break;
+                  }
+                }
+              }
+
+              if (noteId) {
+                const targetNote = state.notes[noteId];
+                if (targetNote) {
+                  const updatedNote = {
+                    ...targetNote,
+                    reminders: (targetNote.reminders || []).filter(
+                      (r) => r.id !== oldReminder.id,
+                    ),
+                  };
+                  enqueueLocalUpsert(updatedNote);
+                  return {
+                    notes: {
+                      ...state.notes,
+                      [noteId]: updatedNote,
+                    },
+                  };
+                }
+              }
+              return state;
+            });
+          },
+        )
+        .subscribe();
+
+      const foldersChannel = supabase
+        .channel(`folders-changes-for-user-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'folders',
+            filter: `owner_id=eq.${userId}`,
+          },
+          async (payload) => {
+            const state = get();
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const rf = payload.new as Folder;
+              const normalizedPath = normalizeFolderPath(rf.path);
+              const lf = state.folders[normalizedPath];
+
+              if (!lf || new Date(rf.updated_at) > new Date(lf.updated_at)) {
+                const newFolder = {
+                  ...rf,
+                  path: normalizedPath,
+                  name: rf.name || getFolderName(normalizedPath),
+                  parent_path: rf.parent_path ? normalizeFolderPath(rf.parent_path) : getParentPath(normalizedPath),
+                } as Folder;
+
+                set((state) => ({
+                  folders: {
+                    ...state.folders,
+                    [normalizedPath]: newFolder,
+                  },
+                }));
+                await localDB.upsertFolder(newFolder);
+              }
+            } else if (payload.eventType === 'DELETE') {
+              const oldFolder = payload.old as { id?: string; path?: string };
+              set((state) => {
+                const nextFolders = { ...state.folders };
+                let pathToDelete = oldFolder.path ? normalizeFolderPath(oldFolder.path) : null;
+
+                if (!pathToDelete && oldFolder.id) {
+                  const folder = Object.values(state.folders).find(f => f.id === oldFolder.id);
+                  if (folder) pathToDelete = folder.path;
+                }
+
+                if (pathToDelete) {
+                  delete nextFolders[pathToDelete];
+                  localDB.deleteFolder(userId, pathToDelete);
+                  return { folders: nextFolders };
+                }
+                return state;
+              });
+            }
+          }
+        )
+        .subscribe();
+
+      set({ channels: [notesChannel, remindersChannel, foldersChannel] });
+
+      // 3. Fetch from Supabase and Merge
+      try {
+        const [notesResult, foldersResult] = await Promise.allSettled([
+          supabase
+            .from('notes')
+            .select(
+              'id, title, owner_id, is_public, note_type, tags, links, folder_path, parent_id, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
+            )
+            .eq('owner_id', userId),
+          supabase
+            .from('folders')
+            .select('id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at')
+            .eq('owner_id', userId),
+        ]);
+
+        if (notesResult.status === 'fulfilled') {
+          const { data: noteData, error: notesError } = notesResult.value;
+          if (notesError) {
+            console.error('[DataStore] Supabase notes fetch error:', notesError);
+          } else if (noteData) {
+            noteData.forEach((rn) => {
+              const ln = finalNotes[rn.id];
+              if (!ln || new Date(rn.updated_at) > new Date(ln.updated_at)) {
+                finalNotes[rn.id] = {
+                  ...rn,
+                  folder_path: rn.folder_path ?? '/',
+                  parent_id: rn.parent_id ?? null,
+                  createdAt: new Date(rn.created_at),
+                  updatedAt: new Date(rn.updated_at),
+                  reminders: rn.reminders || [],
+                  is_pinned: rn.is_pinned || false,
+                  deleted_at: rn.deleted_at || null,
+                  links: rn.links || [],
+                };
+              }
+            });
+          }
+        }
+
+        if (foldersResult.status === 'fulfilled') {
+          const { data: folderData, error: foldersError } = foldersResult.value;
+          if (foldersError) {
+            console.error('[DataStore] Supabase folders fetch error:', foldersError);
+          } else if (folderData) {
+            folderData.forEach((rf) => {
+              const normalizedPath = normalizeFolderPath(rf.path);
+              const lf = finalFolders[normalizedPath];
+              if (!lf || new Date(rf.updated_at) > new Date(lf.updated_at)) {
+                finalFolders[normalizedPath] = {
+                  ...rf,
+                  path: normalizedPath,
+                  name: rf.name || getFolderName(normalizedPath),
+                  parent_path: rf.parent_path ? normalizeFolderPath(rf.parent_path) : getParentPath(normalizedPath),
+                  sort_index: rf.sort_index ?? 0,
+                } as Folder;
+              }
+            });
+          }
+        }
+
+        set({
+          notes: finalNotes,
+          folders: finalFolders,
+          activityCache: null,
+        });
+
+        void Promise.all([
+          localDB.upsertNotes(Object.values(finalNotes)),
+          localDB.upsertFolders(Object.values(finalFolders))
+        ]).catch(e => console.error('[DataStore] Failed to sync back to local DB:', e));
+
+      } catch (err) {
+        console.error('[DataStore] Fetch error:', err);
       }
-
-      // 병합된 최종 데이터를 상태에 반영 및 로컬 DB에 영구 저장
-      set({
-        notes: finalNotes,
-        folders: finalFolders,
-        activityCache: null,
-      });
-
-      // 백그라운드에서 로컬 DB 업데이트
-      void Promise.all([
-        localDB.upsertNotes(Object.values(finalNotes)),
-        localDB.upsertFolders(Object.values(finalFolders))
-      ]).catch(e => console.error('[DataStore] Failed to sync back to local DB:', e));
-
     } catch (err) {
       console.error('[DataStore] Critical initialization error:', err);
+    } finally {
+      set({ isSyncing: false });
     }
-
-    // 3. Setup Realtime subscriptions
-    const handleNoteChange = (payload: RealtimePostgresChangesPayload<Note>) => {
-      if (payload.eventType === 'INSERT') {
-        get().addNoteState({ ...(payload.new as Note), reminders: [] });
-      } else if (payload.eventType === 'UPDATE') {
-        get().updateNoteState(payload.new as Note);
-      } else if (payload.eventType === 'DELETE') {
-        get().removeNoteState((payload.old as { id: string }).id);
-      }
-    };
-
-    const notesChannel = supabase
-      .channel(`notes-changes-for-user-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notes',
-          filter: `owner_id=eq.${userId}`,
-        },
-        handleNoteChange,
-      )
-      .subscribe();
-
-    const remindersChannel = supabase
-      .channel(`reminders-changes-for-user-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'reminders',
-          filter: `owner_id=eq.${userId}`,
-        },
-        (payload) => {
-          const newReminder = payload.new as Reminder;
-          const noteId = newReminder.note_id;
-          set((state) => {
-            const targetNote = state.notes[noteId];
-            if (targetNote) {
-              const updatedNote = {
-                ...targetNote,
-                reminders: [...(targetNote.reminders || []), newReminder],
-              };
-              enqueueLocalUpsert(updatedNote);
-              return {
-                notes: {
-                  ...state.notes,
-                  [noteId]: updatedNote,
-                },
-              };
-            }
-            return state;
-          });
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'reminders',
-          filter: `owner_id=eq.${userId}`,
-        },
-        (payload) => {
-          const updatedReminder = payload.new as Reminder;
-          const noteId = updatedReminder.note_id;
-          set((state) => {
-            const targetNote = state.notes[noteId];
-            if (targetNote) {
-              const updatedNote = {
-                ...targetNote,
-                reminders: (targetNote.reminders || []).map((r) =>
-                  r.id === updatedReminder.id ? updatedReminder : r,
-                ),
-              };
-              enqueueLocalUpsert(updatedNote);
-              return {
-                notes: {
-                  ...state.notes,
-                  [noteId]: updatedNote,
-                },
-              };
-            }
-            return state;
-          });
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'reminders',
-          filter: `owner_id=eq.${userId}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Note>) => {
-          const oldReminder = payload.old as { id: string; note_id: string };
-          const noteId = oldReminder.note_id;
-          set((state) => {
-            const targetNote = state.notes[noteId];
-            if (targetNote) {
-              const updatedNote = {
-                ...targetNote,
-                reminders: (targetNote.reminders || []).filter(
-                  (r) => r.id !== oldReminder.id,
-                ),
-              };
-              enqueueLocalUpsert(updatedNote);
-              return {
-                notes: {
-                  ...state.notes,
-                  [noteId]: updatedNote,
-                },
-              };
-            }
-            return state;
-          });
-        },
-      )
-      .subscribe();
-
-    set({ channels: [notesChannel, remindersChannel] });
   },
 
   unsubscribeAll: async () => {
@@ -1139,7 +1207,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       worker = null;
     }
 
-    // 남은 배칭 쓰기 플러시
     await flushPendingWrites();
 
     const { channels } = get();

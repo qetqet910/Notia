@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
+import { useToast } from '@/hooks/useToast';
 
 /**
  * DataResync 컴포넌트
@@ -10,9 +11,24 @@ import { useDataStore } from '@/stores/dataStore';
  */
 export const DataResync = () => {
   const user = useAuthStore((state) => state.user);
-  const initialize = useDataStore((state) => state.initialize);
+  const { initialize, isSyncing } = useDataStore();
+  const { toast } = useToast();
+  
   const lastSyncRef = useRef<number>(0);
+  const prevSyncingRef = useRef<boolean>(false);
   const SYNC_COOLDOWN = 30000; // 30초 이내 중복 동기화 방지
+
+  // 동기화 완료 토스트 알림 로직
+  useEffect(() => {
+    if (prevSyncingRef.current && !isSyncing) {
+      toast({
+        title: "서버와 동기화가 완료되었습니다.",
+        description: "최신 데이터가 성공적으로 반영되었습니다.",
+        duration: 3000,
+      });
+    }
+    prevSyncingRef.current = isSyncing;
+  }, [isSyncing, toast]);
 
   useEffect(() => {
     if (!user?.id) return;
