@@ -73,6 +73,7 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
         // Toss 스타일 큰 radius
+        'toss-sm': '12px',
         'toss': '16px',
         'toss-lg': '20px',
         'toss-xl': '24px',

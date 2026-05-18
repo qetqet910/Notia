@@ -821,7 +821,7 @@ export const Dashboard: React.FC = () => {
         <div className="flex flex-1 overflow-hidden">
           <div
             className={`transition-all duration-300 ease-in-out h-full hidden md:block ${
-              !isEditing && isSidebarVisible ? 'w-56' : 'w-0 opacity-0'
+              !isEditing && isSidebarVisible ? 'w-48' : 'w-0 opacity-0'
             }`}
           >
             <Sidebar
@@ -856,7 +856,7 @@ const Sidebar = ({
   return (
     <aside
       className={`border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col h-full ${
-        isEditing ? 'w-0 opacity-0' : 'w-56'
+        isEditing ? 'w-0 opacity-0' : 'w-48'
       }`}
     >
       <nav id="tour-sidebar-nav" className="flex flex-col gap-2">

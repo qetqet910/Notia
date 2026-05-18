@@ -12,27 +12,39 @@ export const Header: React.FC = () => {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-lg border-b border-toss-border/50"
+      className="fixed top-0 w-full z-50 bg-white/96 backdrop-blur-xl border-b border-toss-border"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-6">
+      <div className="max-w-7xl mx-auto flex items-center justify-between h-[60px] px-10">
         <Link to="/" className="flex items-center">
           <img src={logoImage} className="h-7" alt="Notia" />
         </Link>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/download')}
-            className="text-toss-gray hover:text-toss-dark hover:bg-toss-lightGray rounded-toss"
+        <nav className="hidden md:flex items-center gap-7">
+          <a
+            href="#features"
+            onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}
+            className="text-sm font-medium text-toss-gray hover:text-toss-dark transition-colors cursor-pointer tracking-tight"
           >
-            앱 다운로드
-          </Button>
-          <Button
-            onClick={() => navigate('/login')}
-            className="bg-notia-primary hover:bg-notia-hover text-white rounded-toss font-medium"
+            기능
+          </a>
+          <Link
+            to="/download"
+            className="text-sm font-medium text-toss-gray hover:text-toss-dark transition-colors tracking-tight"
           >
-            로그인
-          </Button>
-        </div>
+            다운로드
+          </Link>
+          <Link
+            to="/changelog"
+            className="text-sm font-medium text-toss-gray hover:text-toss-dark transition-colors tracking-tight"
+          >
+            업데이트
+          </Link>
+        </nav>
+        <Button
+          onClick={() => navigate('/login')}
+          className="h-[38px] px-5 bg-notia-primary hover:bg-notia-hover text-white rounded-toss-sm text-sm font-semibold tracking-tight"
+        >
+          시작하기
+        </Button>
       </div>
     </motion.nav>
   );

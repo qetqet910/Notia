@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://api.anthropic.com/v1/design/h/keH071hMcasR9MwfQ81tPw\" --output /tmp/design_output.bin)",
+      "Bash(echo \"Exit: $?\")",
+      "Read(//c/Users/pc241/Downloads/**)",
+      "Read(//c/Users/pc241/Desktop/**)",
+      "Bash(mkdir -p /tmp/notia-design)",
+      "Bash(unzip -o \"Notia Design System-handoff.zip\" -d /tmp/notia-design)",
+      "Bash(npx tsc *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

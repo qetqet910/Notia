@@ -11,35 +11,18 @@ import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/landing/Header';
 import { Footer } from '@/components/layout/landing/Footer';
+import { AppPreview } from '@/components/features/landing/AppPreview';
 
 // LandingEditor는 뷰포트 진입 시 lazy-load됨
-const LazyLandingEditor = React.lazy(() => 
+const LazyLandingEditor = React.lazy(() =>
   import('@/components/features/landing/LandingEditor').then(m => ({ default: m.LandingEditor }))
 );
 
 import { useAuthStore } from '@/stores/authStore';
-import landingAnimation from '/lottie/landingAnimation.lottie';
 
 // HomeExtra (FAQ, CTA) - 뷰포트 인근 진입 시 lazy-load
 const LazyHomeExtra = React.lazy(() =>
   import('@/components/features/landing/HomeExtra').then(m => ({ default: m.HomeExtra }))
-);
-
-// Lottie - Hero 뷰포트 진입 후 lazy 렌더링
-const LazyHeroLottie = React.lazy(() =>
-  import('@lottiefiles/dotlottie-react').then((m) => ({
-    default: function HeroLottie() {
-      const { DotLottieReact } = m;
-      return (
-        <DotLottieReact
-          src={landingAnimation}
-          loop
-          autoplay
-          className="w-full h-full"
-        />
-      );
-    },
-  }))
 );
 
 // --- Toss Style Animation Constants ---
@@ -67,24 +50,11 @@ export default function Home() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [showEditor, setShowEditor] = useState(false);
-  const [showLottie, setShowLottie] = useState(false);
   const [showExtra, setShowExtra] = useState(false);
-  const heroRef = useRef<HTMLDivElement>(null);
   const extraRef = useRef<HTMLDivElement>(null);
 
   // IntersectionObserver: 뷰포트 진입 시 무거운 컴포넌트 활성화
   useEffect(() => {
-    const heroEl = heroRef.current;
-    if (heroEl) {
-      const heroObs = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) {
-          setShowLottie(true);
-          heroObs.disconnect();
-        }
-      }, { threshold: 0.1 });
-      heroObs.observe(heroEl);
-    }
-
     const extraEl = extraRef.current;
     if (extraEl) {
       const extraObs = new IntersectionObserver(([entry]) => {
@@ -92,7 +62,7 @@ export default function Home() {
           setShowExtra(true);
           extraObs.disconnect();
         }
-      }, { rootMargin: '200px' }); // 미리 로드 시작
+      }, { rootMargin: '200px' });
       extraObs.observe(extraEl);
     }
   }, []);
@@ -190,23 +160,14 @@ export default function Home() {
               </motion.div>
             </motion.div>
 
-            {/* Hero Visual */}
+            {/* Hero Visual — App Preview */}
             <motion.div
-              ref={heroRef}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2, ease: TOSS_EASE }}
               className="hidden md:flex items-center justify-center"
             >
-              <div className="relative w-full max-w-[500px] aspect-square">
-                {showLottie ? (
-                  <React.Suspense fallback={<div className="w-full h-full" />}>
-                    <LazyHeroLottie />
-                  </React.Suspense>
-                ) : (
-                  <div className="w-full h-full" />
-                )}
-              </div>
+              <AppPreview />
             </motion.div>
           </div>
         </section>

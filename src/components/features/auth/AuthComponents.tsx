@@ -25,8 +25,7 @@ export const SocialLoginButton = React.memo<{
   >
     <Button
       variant="ghost"
-      className="w-full flex items-center justify-center gap-2 h-11 mb-2 border !bg-white/80 dark:!bg-black/60 backdrop-blur-md border-white/40 dark:border-white/10 hover:!bg-white dark:hover:!bg-black/80 transition-all hover:shadow-md shadow-sm"
-      style={{ color }}
+      className="w-full flex items-center justify-center gap-2 h-11 mb-2 border !bg-white/88 backdrop-blur-sm border-toss-border/70 hover:!bg-white text-toss-dark transition-all hover:shadow-toss shadow-none rounded-toss-sm"
       onClick={() => onClick(provider)}
       disabled={disabled}
     >
@@ -74,7 +73,7 @@ export const LoginForm = React.memo<{
           <motion.div key="key-button" variants={animations.item}>
             <Button
               type="submit"
-              className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+              className="w-full h-11 bg-notia-primary hover:bg-notia-hover text-white rounded-toss-sm shadow-[0_4px_14px_rgba(104,199,193,0.3)]"
               disabled={isLoginLoading}
             >
               {isLoginLoading ? (
@@ -172,14 +171,14 @@ export const SignupForm = React.memo<{
                 placeholder="이메일 주소"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 border-[#c5e9de] focus:border-[#61C9A8] focus:ring-[#61C9A8]"
+                className="h-11 border-toss-border focus-visible:border-notia-primary focus-visible:ring-notia-primary rounded-toss-sm"
                 required
                 disabled={isRegisterLoading}
               />
             </div>
             <Button
               type="submit"
-              className="w-full h-11 bg-[#61C9A8] hover:bg-[#4db596]"
+              className="w-full h-11 bg-notia-primary hover:bg-notia-hover text-white rounded-toss-sm shadow-[0_4px_14px_rgba(104,199,193,0.3)]"
               disabled={isRegisterLoading || !email.trim()}
             >
               {isRegisterLoading ? (
@@ -202,8 +201,8 @@ export const SignupForm = React.memo<{
         >
           <Button
             type="button"
-            variant="ghost"
-            className="w-full h-11 border border-white/40 dark:border-white/10 !bg-white/80 dark:!bg-black/60 hover:!bg-white dark:hover:!bg-black/80 backdrop-blur-md transition-all hover:shadow-md shadow-sm"
+            variant="outline"
+            className="w-full h-11 !bg-white/85 border-toss-border/80 hover:!bg-white text-toss-dark rounded-toss-sm transition-all hover:shadow-toss"
             disabled={isRegisterLoading}
             onClick={handleCreateAnonymousKey}
           >
