@@ -36,8 +36,10 @@ interface DataState {
   activityCache: CalculationResult | null;
   isCalculating: boolean;
   isSyncing: boolean;
+  lastSyncSuccess: boolean | null;
   lastChangedNoteId: string | null;
   initialize: (userId: string) => Promise<void>;
+  resync: (userId: string) => Promise<void>;
   unsubscribeAll: () => Promise<void>;
   setLastChangedNoteId: (id: string | null) => void;
   createNote: (
@@ -185,6 +187,80 @@ function enqueueLocalUpsert(note: Note) {
   }, FLUSH_DELAY_MS);
 }
 
+// --- Supabase fetch + merge helper (shared by initialize and resync) ---
+
+async function fetchAndMergeFromSupabase(
+  userId: string,
+  currentNotes: Record<string, Note>,
+  currentFolders: Record<string, Folder>,
+): Promise<{ notes: Record<string, Note>; folders: Record<string, Folder>; success: boolean }> {
+  const finalNotes = { ...currentNotes };
+  const finalFolders = { ...currentFolders };
+
+  const [notesResult, foldersResult] = await Promise.allSettled([
+    supabase
+      .from('notes')
+      .select(
+        'id, title, owner_id, is_public, note_type, tags, links, folder_path, parent_id, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
+      )
+      .eq('owner_id', userId),
+    supabase
+      .from('folders')
+      .select('id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at')
+      .eq('owner_id', userId),
+  ]);
+
+  const notesOk = notesResult.status === 'fulfilled' && !notesResult.value.error;
+  const foldersOk = foldersResult.status === 'fulfilled' && !foldersResult.value.error;
+
+  if (notesResult.status === 'fulfilled') {
+    const { data: noteData, error: notesError } = notesResult.value;
+    if (notesError) {
+      console.error('[DataStore] Supabase notes fetch error:', notesError);
+    } else if (noteData) {
+      noteData.forEach((rn) => {
+        const ln = finalNotes[rn.id];
+        if (!ln || new Date(rn.updated_at) > new Date(ln.updated_at)) {
+          finalNotes[rn.id] = {
+            ...rn,
+            folder_path: rn.folder_path ?? '/',
+            parent_id: rn.parent_id ?? null,
+            createdAt: new Date(rn.created_at),
+            updatedAt: new Date(rn.updated_at),
+            reminders: rn.reminders || [],
+            is_pinned: rn.is_pinned || false,
+            deleted_at: rn.deleted_at || null,
+            links: rn.links || [],
+          };
+        }
+      });
+    }
+  }
+
+  if (foldersResult.status === 'fulfilled') {
+    const { data: folderData, error: foldersError } = foldersResult.value;
+    if (foldersError) {
+      console.error('[DataStore] Supabase folders fetch error:', foldersError);
+    } else if (folderData) {
+      folderData.forEach((rf) => {
+        const normalizedPath = normalizeFolderPath(rf.path);
+        const lf = finalFolders[normalizedPath];
+        if (!lf || new Date(rf.updated_at) > new Date(lf.updated_at)) {
+          finalFolders[normalizedPath] = {
+            ...rf,
+            path: normalizedPath,
+            name: rf.name || getFolderName(normalizedPath),
+            parent_path: rf.parent_path ? normalizeFolderPath(rf.parent_path) : getParentPath(normalizedPath),
+            sort_index: rf.sort_index ?? 0,
+          } as Folder;
+        }
+      });
+    }
+  }
+
+  return { notes: finalNotes, folders: finalFolders, success: notesOk && foldersOk };
+}
+
 // --- Store ---
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -196,6 +272,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   activityCache: null,
   isCalculating: false,
   isSyncing: false,
+  lastSyncSuccess: null,
   lastChangedNoteId: null,
 
   setLastChangedNoteId: (id: string | null) => {
@@ -1121,83 +1198,41 @@ export const useDataStore = create<DataState>((set, get) => ({
       set({ channels: [notesChannel, remindersChannel, foldersChannel] });
 
       // 3. Fetch from Supabase and Merge
+      let syncSuccess = false;
       try {
-        const [notesResult, foldersResult] = await Promise.allSettled([
-          supabase
-            .from('notes')
-            .select(
-              'id, title, owner_id, is_public, note_type, tags, links, folder_path, parent_id, created_at, updated_at, deleted_at, is_pinned, content_preview, reminders(*)',
-            )
-            .eq('owner_id', userId),
-          supabase
-            .from('folders')
-            .select('id, owner_id, path, name, parent_path, sort_index, created_at, updated_at, deleted_at')
-            .eq('owner_id', userId),
-        ]);
-
-        if (notesResult.status === 'fulfilled') {
-          const { data: noteData, error: notesError } = notesResult.value;
-          if (notesError) {
-            console.error('[DataStore] Supabase notes fetch error:', notesError);
-          } else if (noteData) {
-            noteData.forEach((rn) => {
-              const ln = finalNotes[rn.id];
-              if (!ln || new Date(rn.updated_at) > new Date(ln.updated_at)) {
-                finalNotes[rn.id] = {
-                  ...rn,
-                  folder_path: rn.folder_path ?? '/',
-                  parent_id: rn.parent_id ?? null,
-                  createdAt: new Date(rn.created_at),
-                  updatedAt: new Date(rn.updated_at),
-                  reminders: rn.reminders || [],
-                  is_pinned: rn.is_pinned || false,
-                  deleted_at: rn.deleted_at || null,
-                  links: rn.links || [],
-                };
-              }
-            });
-          }
-        }
-
-        if (foldersResult.status === 'fulfilled') {
-          const { data: folderData, error: foldersError } = foldersResult.value;
-          if (foldersError) {
-            console.error('[DataStore] Supabase folders fetch error:', foldersError);
-          } else if (folderData) {
-            folderData.forEach((rf) => {
-              const normalizedPath = normalizeFolderPath(rf.path);
-              const lf = finalFolders[normalizedPath];
-              if (!lf || new Date(rf.updated_at) > new Date(lf.updated_at)) {
-                finalFolders[normalizedPath] = {
-                  ...rf,
-                  path: normalizedPath,
-                  name: rf.name || getFolderName(normalizedPath),
-                  parent_path: rf.parent_path ? normalizeFolderPath(rf.parent_path) : getParentPath(normalizedPath),
-                  sort_index: rf.sort_index ?? 0,
-                } as Folder;
-              }
-            });
-          }
-        }
-
-        set({
-          notes: finalNotes,
-          folders: finalFolders,
-          activityCache: null,
-        });
-
+        const merged = await fetchAndMergeFromSupabase(userId, finalNotes, finalFolders);
+        syncSuccess = merged.success;
+        set({ notes: merged.notes, folders: merged.folders, activityCache: null });
         void Promise.all([
-          localDB.upsertNotes(Object.values(finalNotes)),
-          localDB.upsertFolders(Object.values(finalFolders))
+          localDB.upsertNotes(Object.values(merged.notes)),
+          localDB.upsertFolders(Object.values(merged.folders)),
         ]).catch(e => console.error('[DataStore] Failed to sync back to local DB:', e));
-
       } catch (err) {
         console.error('[DataStore] Fetch error:', err);
       }
     } catch (err) {
       console.error('[DataStore] Critical initialization error:', err);
     } finally {
-      set({ isSyncing: false });
+      set({ isSyncing: false, lastSyncSuccess: syncSuccess });
+    }
+  },
+
+  resync: async (userId: string) => {
+    set({ isSyncing: true });
+    let syncSuccess = false;
+    try {
+      const state = get();
+      const merged = await fetchAndMergeFromSupabase(userId, state.notes, state.folders);
+      syncSuccess = merged.success;
+      set({ notes: merged.notes, folders: merged.folders, activityCache: null });
+      void Promise.all([
+        localDB.upsertNotes(Object.values(merged.notes)),
+        localDB.upsertFolders(Object.values(merged.folders)),
+      ]).catch(e => console.error('[DataStore] Failed to sync back to local DB after resync:', e));
+    } catch (err) {
+      console.error('[DataStore] Resync error:', err);
+    } finally {
+      set({ isSyncing: false, lastSyncSuccess: syncSuccess });
     }
   },
 

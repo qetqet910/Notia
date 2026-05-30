@@ -120,7 +120,7 @@ const NAV_ITEMS = [
   { id: 'notes', label: '노트', icon: List },
   { id: 'reminder', label: '리마인더', icon: Clock },
   { id: 'calendar', label: '캘린더', icon: CalendarIcon },
-  { id: 'timeline', label: '타임라인', icon: List },
+  { id: 'timeline', label: '타임라인', icon: Activity },
   { id: 'trash', label: '휴지통', icon: Trash },
 ];
 

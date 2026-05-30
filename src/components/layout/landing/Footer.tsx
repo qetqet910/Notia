@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import logoImage from '@/assets/images/Logo.png';
 
 export const Footer: React.FC = () => {
@@ -13,12 +12,6 @@ export const Footer: React.FC = () => {
             className="text-xs font-medium text-toss-light hover:text-toss-gray transition-colors"
           >
             서비스 이용약관
-          </a>
-          <a
-            href="https://notia.site/privacy"
-            className="text-xs font-medium text-toss-light hover:text-toss-gray transition-colors"
-          >
-            개인정보 처리방침
           </a>
           <a
             href="https://github.com/qetqet910/Notia"

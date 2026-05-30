@@ -1,16 +1,14 @@
 import React from 'react';
-import { useNotes } from '@/hooks/useNotes';
+import { useGoalStats } from '@/hooks/useGoalStats';
 import { CustomProgress } from '@/components/features/dashboard/myPage/CustomProgress';
 import Target from 'lucide-react/dist/esm/icons/target';
 import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
 
 export const GoalProgress = () => {
-  const { goalStats } = useNotes();
-  const { weeklyNote, weeklyReminder } = goalStats;
+  const { weeklyNote, weeklyReminder } = useGoalStats();
 
   return (
     <div className="mt-6 p-3 bg-background rounded-lg border space-y-3">
-      {/* 주간 노트 목표 */}
       <div>
         <div className="text-xs text-right text-muted-foreground flex justify-between">
           <span className="flex mb-1">

@@ -1,54 +1,3 @@
-import React from 'react';
-import Hash from 'lucide-react/dist/esm/icons/hash';
-import AtSign from 'lucide-react/dist/esm/icons/at-sign';
-import PenSquare from 'lucide-react/dist/esm/icons/pen-square';
-import Users from 'lucide-react/dist/esm/icons/users';
-import BrainCircuit from 'lucide-react/dist/esm/icons/brain-circuit';
-import Feather from 'lucide-react/dist/esm/icons/feather';
-import { cubicBezier } from 'framer-motion';
-
-export const features = [
-  {
-    icon: <Hash className="w-8 h-8 text-white" />,
-    title: '#태그로 완성하는 생각의 지도',
-    description:
-      '#기호로 태그를 붙여 주제별로 손쉽게 분류하고 연결하세요. 흩어져 있던 아이디어가 한눈에 들어오는 지도가 펼쳐집니다.',
-  },
-  {
-    icon: <AtSign className="w-8 h-8 text-white" />,
-    title: '@명일 2시 15분 회의실 사전 준비.',
-    description:
-      '처럼 노트 작성 중 간단하게 리마인더를 설정하세요. 중요한 약속과 할 일을 정확한 시간에 알려드립니다.',
-  },
-  {
-    icon: <PenSquare className="w-8 h-8 text-white" />,
-    title: '마크다운으로 쓰는 모든 것',
-    description:
-      '표준 마크다운을 지원하여, 작성한 콘텐츠를 블로그나 다른 문서 도구로 손쉽게 옮길 수 있습니다. 당신의 기록은 온전히 당신의 것입니다.',
-  },
-];
-
-export const userProfiles = [
-  {
-    icon: <BrainCircuit className="w-10 h-10 text-[#61C9A8]" />,
-    title: '콘텐츠 크리에이터',
-    description:
-      '마크다운으로 초안을 작성하고 주제별로 아이디어를 관리하세요. 작성한 내용은 바로 블로그나 다른 플랫폼으로 옮길 수 있습니다.',
-  },
-  {
-    icon: <Users className="w-10 h-10 text-[#61C9A8]" />,
-    title: '프로젝트 개발자/관리자',
-    description:
-      '회의록을 작성하며 포인트별로 정리하고, ‘@내일 12시 후킹 1차 시안 혜진프로 제출.’와 같이 바로 할 일을 리마인더로 지정하여 효율적으로 팀을 관리하세요.',
-  },
-  {
-    icon: <Feather className="w-10 h-10 text-[#61C9A8]" />,
-    title: '열정적인 학습자',
-    description:
-      '강의 내용을 과목별로 정리하고, ‘@2025-11-12 17시 [가천대] 수시 1차 추합 결과 확인.’ 처럼 중요한 일정을 놓치지 마세요.',
-  },
-];
-
 export const faqItems = [
   {
     question: '무료로 이용할 수 있나요?',
@@ -82,21 +31,3 @@ export const initialContent = `# 회의 정리본
 
 @글피 2시 10분 A회의실 회의.
 `;
-
-// ---- Animation Variants ----
-export const fadeIn = (delay = 0.2) => ({
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, delay, ease: cubicBezier(0.42, 0, 0.58, 1) },
-  },
-});
-
-export const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2, delayChildren: 0.1 },
-  },
-};

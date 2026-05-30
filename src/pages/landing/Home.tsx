@@ -11,7 +11,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/landing/Header';
 import { Footer } from '@/components/layout/landing/Footer';
-import { AppPreview } from '@/components/features/landing/AppPreview';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // LandingEditor는 뷰포트 진입 시 lazy-load됨
 const LazyLandingEditor = React.lazy(() =>
@@ -79,7 +79,7 @@ export default function Home() {
 
       <main>
         {/* Hero Section - Toss Style */}
-        <section className="relative min-h-screen flex items-center px-6 lg:px-12 overflow-hidden bg-white">
+        <section className="relative min-h-screen flex items-center px-6 lg:px-12 overflow-hidden bg-white pt-[60px]">
           {/* Subtle Background Pattern */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#F9FAFB_1px,transparent_1px),linear-gradient(to_bottom,#F9FAFB_1px,transparent_1px)] bg-[size:4rem_4rem]" />
@@ -160,14 +160,19 @@ export default function Home() {
               </motion.div>
             </motion.div>
 
-            {/* Hero Visual — App Preview */}
+            {/* Hero Visual — Lottie Animation */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2, ease: TOSS_EASE }}
-              className="hidden md:flex items-center justify-center"
+              className="hidden md:flex items-center justify-center w-full"
             >
-              <AppPreview />
+              <DotLottieReact
+                src="/lottie/landingAnimation.lottie"
+                loop
+                autoplay
+                className="w-full md:w-[90%] lg:w-full xl:w-[110%]"
+              />
             </motion.div>
           </div>
         </section>

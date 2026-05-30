@@ -27,8 +27,8 @@ export const AppPreview: React.FC = () => (
       boxShadow: '0 20px 60px rgba(0,0,0,.13)',
       border: '1px solid #E5E8EB',
       width: '100%',
-      maxWidth: 440,
-      fontSize: 11,
+      maxWidth: 480,
+      fontSize: 12,
       userSelect: 'none',
     }}
   >
@@ -77,14 +77,14 @@ export const AppPreview: React.FC = () => (
     </div>
 
     {/* Body */}
-    <div style={{ display: 'flex', height: 200 }}>
+    <div style={{ display: 'flex', height: 280 }}>
       {/* Sidebar */}
       <div
         style={{
-          width: 120,
+          width: 130,
           background: '#F9FAFB',
           borderRight: '1px solid #E5E8EB',
-          padding: 6,
+          padding: 8,
         }}
       >
         {NAV_ITEMS.map(([label, active]) => (
@@ -151,7 +151,7 @@ export const AppPreview: React.FC = () => (
       </div>
 
       {/* Note List */}
-      <div style={{ width: 130, borderRight: '1px solid #E5E8EB' }}>
+      <div style={{ width: 145, borderRight: '1px solid #E5E8EB' }}>
         <div
           style={{
             padding: '6px 8px',
@@ -230,13 +230,13 @@ export const AppPreview: React.FC = () => (
       </div>
 
       {/* Editor Preview */}
-      <div style={{ flex: 1, padding: 10, overflow: 'hidden' }}>
+      <div style={{ flex: 1, padding: 12, overflow: 'hidden' }}>
         <div
           style={{
             fontWeight: 700,
-            fontSize: 12,
+            fontSize: 13,
             color: '#191F28',
-            marginBottom: 5,
+            marginBottom: 6,
             letterSpacing: '-0.02em',
           }}
         >
@@ -244,9 +244,9 @@ export const AppPreview: React.FC = () => (
         </div>
         <div
           style={{
-            fontSize: 10,
+            fontSize: 11,
             color: '#4E5968',
-            lineHeight: 1.7,
+            lineHeight: 1.8,
           }}
         >
           오늘 회의에서 논의한 내용을 정리합니다.
@@ -256,21 +256,28 @@ export const AppPreview: React.FC = () => (
           </span>
           <br />
           <br />
-          <strong style={{ color: '#191F28' }}>## 주요 안건</strong>
+          <strong style={{ color: '#191F28', fontSize: 11 }}>## 주요 안건</strong>
           <br />
           - UI 개선: 대시보드 최적화
+          <br />
+          - 백엔드 API 성능 리뷰
           <br />
           -{' '}
           <span
             style={{
               color: '#C2410C',
               background: '#FFF7ED',
-              padding: '0 3px',
+              padding: '1px 4px',
               borderRadius: 3,
             }}
           >
             @내일 오후 3시 클라이언트 미팅.
           </span>
+          <br />
+          <br />
+          <strong style={{ color: '#191F28', fontSize: 11 }}>## 다음 스프린트</strong>
+          <br />
+          - 모바일 반응형 작업 시작
         </div>
       </div>
     </div>

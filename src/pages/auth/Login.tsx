@@ -135,7 +135,7 @@ export const Login: React.FC = () => {
                 "data-[state=active]:hover:bg-white/80"
               )}
             >
-              만들기
+              회원가입
             </TabsTrigger>
           </TabsList>
 
