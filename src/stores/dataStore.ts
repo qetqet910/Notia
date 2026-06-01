@@ -944,6 +944,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
 
     set({ isSyncing: true });
+    let syncSuccess = false;
 
     try {
       await get().unsubscribeAll();
@@ -1198,7 +1199,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       set({ channels: [notesChannel, remindersChannel, foldersChannel] });
 
       // 3. Fetch from Supabase and Merge
-      let syncSuccess = false;
       try {
         const merged = await fetchAndMergeFromSupabase(userId, finalNotes, finalFolders);
         syncSuccess = merged.success;

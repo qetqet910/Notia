@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2 } from 'lucide-react';
 import { CloseHandler } from '@/components/common/CloseHandler';
+import { TitleBar } from '@/components/common/TitleBar';
 import { DataResync } from '@/components/providers/DataResync';
 
 const MyPage = lazy(() => import('@/pages/dashboard/MyPage'));
@@ -70,7 +71,10 @@ const AppLayout = () => {
   return (
     <ThemeProvider>
       <ScrollToTop />
-      <Outlet />
+      <TitleBar />
+      <div className={isTauri() ? 'flex-1 overflow-hidden' : ''}>
+        <Outlet />
+      </div>
     </ThemeProvider>
   );
 };
@@ -249,7 +253,7 @@ export default function App() {
   };
 
   return (
-    <div className="max-w-[1920px] mx-auto min-h-screen bg-background">
+    <div className={`max-w-[1920px] mx-auto bg-background ${isTauri() ? 'h-screen flex flex-col' : 'min-h-screen'}`}>
       <RouterProvider router={router} />
       <DataResync />
       <Toaster />

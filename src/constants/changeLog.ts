@@ -2,6 +2,23 @@ import { ChangelogEntry } from '@/types';
 
 export const changelogData: ChangelogEntry[] = [
   {
+    version: 'v1.3.0',
+    date: '2026년 6월 1일',
+    userChanges: [
+      { category: '✨ 기능', description: '커스텀 타이틀바: 데스크탑 앱에서 OS 기본 창 컨트롤 대신 앱 테마와 완벽히 어울리는 커스텀 타이틀바를 사용합니다.' },
+      { category: '🐛 버그 수정', description: '동기화 알림 오동작 수정: 서버와 실제로 동기화에 성공했을 때만 "동기화 완료" 토스트가 표시됩니다.' },
+      { category: '🐛 버그 수정', description: '탭 전환 후 재동기화 수정: 다른 탭에서 돌아오거나 네트워크가 복구될 때 실제로 서버에서 최신 데이터를 다시 가져옵니다.' },
+      { category: '💅 디자인', description: '랜딩 페이지 개선: 히어로 섹션 비주얼을 Lottie 애니메이션으로 교체하고, 모바일에서 내비게이션 메뉴가 정상적으로 동작합니다.' },
+      { category: '💅 디자인', description: '로그인 페이지: 회원가입 탭 이름을 "만들기"에서 "회원가입"으로 변경했습니다.' },
+    ],
+    devChanges: [
+      { category: '✨ 기능', description: 'Tauri: `decorations: false`로 OS 타이틀바를 제거하고 커스텀 TitleBar 컴포넌트를 구현했습니다. 창 제어 권한(minimize/maximize/close)을 capabilities에 추가했습니다.' },
+      { category: '🔧 리팩토링', description: 'DataStore: Supabase fetch+merge 로직을 `fetchAndMergeFromSupabase` 헬퍼로 추출하고, 초기화 가드를 우회하는 `resync()` 함수를 별도로 추가했습니다.' },
+      { category: '🔧 리팩토링', description: 'GoalProgress: `useNotes` 의존성을 제거하고 `useGoalStats` 전용 훅으로 분리하여 불필요한 `initialize` 중복 호출을 방지했습니다.' },
+      { category: '🐛 버그 수정', description: 'dataStore: `syncSuccess` 변수가 outer try 블록 안에 선언되어 finally에서 접근 불가하던 스코프 버그를 수정했습니다.' },
+    ],
+  },
+  {
     version: 'v1.2.1',
     date: '2026년 4월 7일',
     userChanges: [

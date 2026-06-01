@@ -724,7 +724,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div
-      className={`flex flex-col h-screen theme-${
+      className={`flex flex-col h-full theme-${
         isDarkMode ? (isDeepDarkMode ? 'deepdark' : 'dark') : 'light'
       }`}
     >

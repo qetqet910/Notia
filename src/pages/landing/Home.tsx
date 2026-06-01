@@ -171,7 +171,7 @@ export default function Home() {
                 src="/lottie/landingAnimation.lottie"
                 loop
                 autoplay
-                className="w-full md:w-[90%] lg:w-full xl:w-[110%]"
+                className="w-full md:w-[110%] lg:w-[125%] xl:w-[140%]"
               />
             </motion.div>
           </div>
