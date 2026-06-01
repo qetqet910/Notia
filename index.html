@@ -84,7 +84,8 @@
     <link rel="preload" href="/fonts/Pretendard-Regular.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/Pretendard-Medium.woff2" as="font" type="font/woff2" crossorigin />
 
-    <!-- PWA -->
+    <!-- PWA / Color -->
+    <meta name="color-scheme" content="light dark" />
     <meta
       name="theme-color"
       media="(prefers-color-scheme: light)"
@@ -99,32 +100,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Notia" />
-    <script>
-      (function() {
-        try {
-          var localTheme = localStorage.getItem('theme-storage');
-          var theme = 'system';
-          if (localTheme) {
-            var parsed = JSON.parse(localTheme);
-            if (parsed && parsed.state && parsed.state.theme) {
-              theme = parsed.state.theme;
-            }
-          }
-          
-          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          
-          if (theme === 'dark' || (theme === 'system' && systemDark)) {
-            document.documentElement.classList.add('dark');
-            document.documentElement.style.backgroundColor = '#0f172a';
-          } else {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.style.backgroundColor = '#ffffff';
-          }
-        } catch (e) {
-          console.error('Theme init failed', e);
-        }
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

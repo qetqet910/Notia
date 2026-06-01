@@ -163,7 +163,7 @@ export default function Home() {
             {/* Hero Visual — Lottie Animation */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              animate={{ opacity: 1, scale: 1.5}}
               transition={{ duration: 0.8, delay: 0.2, ease: TOSS_EASE }}
               className="hidden md:flex items-center justify-center w-full"
             >

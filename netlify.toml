@@ -52,6 +52,28 @@ to = "/assets/:splat"
 status = 200
 force = true
 
+# /.well-known URIs (RFC 8615)
+[[redirects]]
+from = "/.well-known/change-password"
+to = "/dashboard/myPage?tab=settings"
+status = 302
+
+[[redirects]]
+from = "/.well-known/security.txt"
+to = "/.well-known/security.txt"
+status = 200
+
+# Security Headers (모든 페이지)
+[[headers]]
+for = "/*"
+[headers.values]
+  Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+  X-Content-Type-Options = "nosniff"
+  X-Frame-Options = "DENY"
+  Referrer-Policy = "strict-origin-when-cross-origin"
+  Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+  Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self';"
+
 # HTML은 캐시하지 않음
 [[headers]]
 for = "/*.html"

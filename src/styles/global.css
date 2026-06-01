@@ -108,6 +108,7 @@
 
   html {
     font-size: 14px;
+    scrollbar-gutter: stable;
   }
   @media (min-width: 640px) {
     html { font-size: 15px; }
@@ -326,6 +327,18 @@ html {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 전정기관 민감 사용자 — 모든 애니메이션 비활성화 (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @media print {

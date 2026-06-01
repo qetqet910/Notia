@@ -1,8 +1,15 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /terms-agreement
+Disallow: /auth/callback
+Disallow: /.netlify/
 
 # Prerender.io
 User-agent: Prerender
 Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
 
 Sitemap: https://notia.site/sitemap.xml

@@ -243,12 +243,6 @@ export const DownloadPage: React.FC = () => {
                           <Badge variant="secondary" className="px-3 py-1 bg-toss-lightGray text-toss-dark border-none">
                             최근 업데이트: {release ? new Date(release.published_at).toLocaleDateString() : (loading ? 'Loading...' : changelogData[0].date)}
                           </Badge>
-                          <a
-                            href="/changelog"
-                            className="text-xs text-notia-primary font-semibold hover:underline self-center"
-                          >
-                            변경 사항 보기
-                          </a>
                         </div>
 
                         {platform.id === 'Mobile / Desktop' ? (
