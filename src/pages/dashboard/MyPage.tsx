@@ -111,7 +111,7 @@ export default function MyPage() {
             </nav>
           </div>
           <div className="md:col-span-4 space-y-6">
-            <div className="bg-card rounded-xl border border-border/50 shadow-sm p-1 min-h-[500px]">
+            <div className="bg-card rounded-xl shadow-sm p-1 min-h-[500px]">
               {renderContent()}
             </div>
           </div>

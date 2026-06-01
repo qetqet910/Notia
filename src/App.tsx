@@ -78,7 +78,7 @@ const AppLayout = () => {
         본문으로 바로가기
       </a>
       <TitleBar />
-      <div id="main-content" className="flex-1 overflow-auto" tabIndex={-1}>
+      <div id="main-content" className="flex-1 overflow-auto outline-none" tabIndex={-1}>
         <Outlet />
       </div>
     </ThemeProvider>
