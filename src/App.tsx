@@ -72,7 +72,7 @@ const AppLayout = () => {
     <ThemeProvider>
       <ScrollToTop />
       <TitleBar />
-      <div className={isTauri() ? 'flex-1 overflow-hidden' : ''}>
+      <div className="flex-1 overflow-hidden">
         <Outlet />
       </div>
     </ThemeProvider>
@@ -253,7 +253,7 @@ export default function App() {
   };
 
   return (
-    <div className={`max-w-[1920px] mx-auto bg-background ${isTauri() ? 'h-screen flex flex-col' : 'min-h-screen'}`}>
+    <div className="max-w-[1920px] mx-auto bg-background h-screen flex flex-col">
       <RouterProvider router={router} />
       <DataResync />
       <Toaster />
