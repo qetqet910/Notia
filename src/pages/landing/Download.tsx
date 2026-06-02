@@ -90,10 +90,12 @@ export const DownloadPage: React.FC = () => {
   };
 
   const getDownloadLink = (os: string) => {
+    const v = changelogData[0].version.replace('v', '');
+    const base = 'https://github.com/qetqet910/Notia/releases/latest/download';
     const defaultLinks = {
-      Windows: 'https://github.com/qetqet910/Notia/releases/latest/download/Notia_x64-setup.exe',
-      macOS: 'https://github.com/qetqet910/Notia/releases/latest/download/Notia_universal.app.tar.gz',
-      Linux: 'https://github.com/qetqet910/Notia/releases/latest/download/Notia_amd64.AppImage',
+      Windows: `${base}/notia_${v}_x64-setup.exe`,
+      macOS: `${base}/notia_${v}_universal.app.tar.gz`,
+      Linux: `${base}/notia_${v}_amd64.AppImage`,
     };
 
     if (!release) return defaultLinks[os as keyof typeof defaultLinks] || '#';
