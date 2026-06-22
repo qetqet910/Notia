@@ -1,6 +1,5 @@
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { invoke } from '@tauri-apps/api/core';
-import { v4 as uuidv4 } from 'uuid';
 import { create } from 'zustand';
 
 import { localDB } from '@/services/localDB';
@@ -300,7 +299,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       createdFolders.push({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         owner_id: ownerId,
         path: folderPath,
         name: getFolderName(folderPath),
@@ -753,7 +752,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     },
   ): Promise<Note | null> => {
     const { addNoteState } = get();
-    const newNoteId = uuidv4();
+    const newNoteId = crypto.randomUUID();
     const now = new Date().toISOString();
     const nowDate = new Date(now);
 
@@ -779,7 +778,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       newNote.reminders = noteData.reminders
         .filter(reminder => reminder.date instanceof Date && !Number.isNaN(reminder.date.getTime()))
         .map(reminder => ({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           note_id: newNoteId,
           owner_id: noteData.owner_id,
           reminder_text: reminder.text,

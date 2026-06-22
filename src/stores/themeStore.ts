@@ -10,14 +10,12 @@ type ThemeState = {
   notificationOffsets: number[]; // 알림 오프셋 상태 추가
   isDarkMode: boolean;
   isDeepDarkMode: boolean;
-  isDashboardActive: boolean;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   setFontFamily: (font: string) => Promise<void>;
   setNotificationOffsets: (offsets: number[]) => Promise<void>; // 오프셋 설정 함수
   loadFontSettings: (userId: string) => Promise<void>;
   updateThemeFromSystem: () => void;
-  setDashboardActive: (active: boolean) => void;
 };
 
 export const useThemeStore = create<ThemeState>()(
@@ -28,7 +26,6 @@ export const useThemeStore = create<ThemeState>()(
       notificationOffsets: [1, 5, 10, 15, 30], // 기본값
       isDarkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
       isDeepDarkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-      isDashboardActive: false,
 
       toggleTheme: () => {
         const currentState = get();
@@ -114,10 +111,6 @@ export const useThemeStore = create<ThemeState>()(
           ).matches;
           set({ isDarkMode: isDark, isDeepDarkMode: false });
         }
-      },
-
-      setDashboardActive: (active: boolean) => {
-        set({ isDashboardActive: active });
       },
     }),
     {

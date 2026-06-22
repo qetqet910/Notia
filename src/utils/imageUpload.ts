@@ -1,5 +1,4 @@
 import { supabase } from '@/services/supabaseClient';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * 이미지를 Supabase Storage 버킷에 업로드하고 공용 URL을 반환합니다.
@@ -15,7 +14,7 @@ export const uploadImageToSupabase = async (file: File, userId: string): Promise
     }
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage

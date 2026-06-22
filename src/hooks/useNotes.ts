@@ -3,7 +3,6 @@ import { Note, EditorReminder, Reminder } from '@/types';
 import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
-import { v4 as uuidv4 } from 'uuid';
 import { parseObsidianLinks } from '@/utils/obsidianLinks';
 
 const getStartOfWeek = () => {
@@ -246,7 +245,7 @@ export const useNotes = () => {
                       
                       // If it's a new reminder (temp ID), generate a valid UUID.
                       const isTempId = r.id && r.id.startsWith('temp-');
-                      const idToUse = isTempId ? uuidv4() : r.id;
+                      const idToUse = isTempId ? crypto.randomUUID() : r.id;
                       
                       return {
                         id: idToUse, // Use the valid UUID
@@ -322,7 +321,7 @@ export const useNotes = () => {
         // Optimistically update reminders structure, but the real data will come from saveReminders
         reminders: (updates.reminders || []).map(
           (er: EditorReminder): Reminder => ({
-            id: er.id || uuidv4(),
+            id: er.id || crypto.randomUUID(),
             note_id: originalNote.id,
             owner_id: originalNote.owner_id,
             reminder_text: er.text,

@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef, useTransition } from 'react';
 import { EditorView, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { StateField, StateEffect } from '@codemirror/state';
 import { ReactCodeMirrorRef } from '@uiw/react-codemirror';
-import { v4 as uuidv4 } from 'uuid';
 import { uploadImageToSupabase } from '@/utils/imageUpload';
 import { useAuthStore } from '@/stores/authStore';
 import { invoke } from '@tauri-apps/api/core';
@@ -155,7 +154,7 @@ export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | 
           return;
       }
 
-      const uploadId = uuidv4();
+      const uploadId = crypto.randomUUID();
 
       // 1. Show Visual Widget
       view.dispatch({
