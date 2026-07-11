@@ -1,15 +1,14 @@
 console.log(`
     _   __      __  _      
    / | / /___  / /_(_)___ _
-  /  |/ / __ \/ __/ / __ \`/
+  /  |/ / __ \\/ __/ / __ \`/
  / /|  / /_/ / /_/ / /_/ / 
-/_/ |_/\____/\__/_/\__,_/  
+/_/ |_/\\____/\\__/_/\\__,_/  
       
    Notia - Organized Creativity
 `);
 
 import './styles/global.css';
-import { isTauri } from '@/utils/isTauri';
 
 // --- Global Error Handlers (Must be first) ---
 // 초기화 단계에서 발생하는 에러를 화면에 표시하기 위한 핸들러입니다.
@@ -146,8 +145,7 @@ async function initializeApp(): Promise<void> { // async 유지 (service worker 
     const platformInitialized = initializePlatform(platform); // await 제거
 
     // 3. 전체 초기화 결과 로깅
-    if (platformInitialized) {
-    } else {
+    if (!platformInitialized) {
       console.warn(
         'Application initialized with warnings (platform initialization failed)',
       );

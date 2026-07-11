@@ -83,32 +83,6 @@ export interface ActivityData {
   level: number;
 }
 
-export interface Team {
-  id: string;
-  name: string;
-  key: string;
-  owner_id: string;
-  created_at: string;
-  settings?: Record<string, unknown>;
-  description?: string;
-  icon?: string;
-}
-
-export interface TeamMember {
-  id: string;
-  group_id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
-  joined_at: string;
-  group_name?: string;
-  userProfile?: {
-    displayName?: string;
-    avatarUrl?: string;
-    email?: string;
-  };
-}
-
 export type ChangeCategory =
   | '✨ 기능'
   | '🐛 버그 수정'
@@ -126,8 +100,7 @@ export type ChangeCategory =
   | '🔄 업데이트'
   | '⚡ 성능'
   | '🎨 디자인'
-  | '⚙️ 백엔드'
-  | '💾 데이터베이스'; // Duplicate check - removing duplicate in next step if necessary
+  | '⚙️ 백엔드';
 
 export interface ChangelogEntry {
   version: string;

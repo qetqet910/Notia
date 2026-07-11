@@ -3,7 +3,8 @@
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
-    "types": ["react", "react-dom", "vite/client"],
+    "skipLibCheck": true,
+    "types": ["react", "react-dom", "vite/client", "vitest/globals"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

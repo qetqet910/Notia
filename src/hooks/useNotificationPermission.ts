@@ -3,8 +3,10 @@ import { supabase } from '@/services/supabaseClient';
 import { useAuthStore } from '@/stores/authStore';
 import { requestPermission as requestUnifiedPermission, checkPermission } from '@/utils/notification';
 
-// VAPID 공개 키 (환경 변수에서 가져옴)
-const VAPID_PUBLIC_KEY = window.__ENV__?.VITE_VAPID_PUBLIC_KEY || import.meta.env.VITE_VAPID_PUBLIC_KEY;
+// VAPID 공개 키를 반환합니다. 런타임에 주입되는 window.__ENV__를 반영하기 위해
+// 모듈 로드 시점이 아니라 호출 시점에 읽습니다.
+const getVapidPublicKey = (): string | undefined =>
+  window.__ENV__?.VITE_VAPID_PUBLIC_KEY || import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 /**
  * URL-safe base64 문자열을 Uint8Array로 변환합니다.
@@ -57,13 +59,14 @@ export const useNotificationPermission = () => {
         return;
       }
 
-      if (!VAPID_PUBLIC_KEY) {
+      const vapidPublicKey = getVapidPublicKey();
+      if (!vapidPublicKey) {
         console.warn('VAPID public key is not defined. Push subscription skipped.');
         return;
       }
       const newSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
 
       await saveSubscription(newSubscription);
@@ -93,7 +96,6 @@ export const useNotificationPermission = () => {
 
     if (error) {
       console.error('Failed to save subscription:', error);
-    } else {
     }
   };
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/services/supabaseClient';
 
-type Theme = 'dark' | 'light' | 'deepdark' | 'system';
+export type Theme = 'dark' | 'light' | 'deepdark' | 'system';
 
 type ThemeState = {
   theme: Theme;

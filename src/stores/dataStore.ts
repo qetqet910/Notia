@@ -5,6 +5,14 @@ import { create } from 'zustand';
 import { localDB } from '@/services/localDB';
 import { supabase } from '@/services/supabaseClient';
 import type { ActivityData, EditorReminder, Folder, Note, Reminder } from '@/types';
+import {
+  doesPathMatch,
+  getAncestorPaths,
+  getFolderName,
+  getParentPath,
+  normalizeFolderPath,
+  remapFolderPath,
+} from '@/utils/folderPath';
 import { isTauri } from '@/utils/isTauri';
 
 interface CalculationResult {
@@ -70,87 +78,7 @@ interface DataState {
 let worker: Worker | null = null;
 let currentJobId = 0;
 
-// --- Folder path utilities ---
-
-function normalizeFolderPath(path: string | null | undefined): string {
-  if (!path || typeof path !== 'string') return '/';
-
-  const trimmed = path.trim();
-  if (!trimmed || trimmed === '/' || trimmed === '.') {
-    return '/';
-  }
-
-  // 앞뒤 슬래시 정리 및 중복 슬래시 제거
-  let normalized = trimmed.replace(/\/+/g, '/');
-  if (!normalized.startsWith('/')) normalized = '/' + normalized;
-  if (normalized.endsWith('/') && normalized.length > 1) normalized = normalized.slice(0, -1);
-
-  return normalized || '/';
-}
-
-
-function doesPathMatch(targetPath: string, basePath: string): boolean {
-  if (basePath === '/') {
-    return true;
-  }
-  return targetPath === basePath || targetPath.startsWith(`${basePath}/`);
-}
-
-function getParentPath(path: string): string | null {
-  const normalizedPath = normalizeFolderPath(path);
-  if (normalizedPath === '/') {
-    return null;
-  }
-
-  const lastSlashIndex = normalizedPath.lastIndexOf('/');
-  if (lastSlashIndex <= 0) {
-    return '/';
-  }
-
-  return normalizeFolderPath(normalizedPath.slice(0, lastSlashIndex));
-}
-
-function getFolderName(path: string): string {
-  const normalizedPath = normalizeFolderPath(path);
-  if (normalizedPath === '/') {
-    return '/';
-  }
-
-  const lastSlashIndex = normalizedPath.lastIndexOf('/');
-  return normalizedPath.slice(lastSlashIndex + 1);
-}
-
-function getAncestorPaths(path: string): string[] {
-  const normalizedPath = normalizeFolderPath(path);
-  if (normalizedPath === '/') {
-    return [];
-  }
-
-  const segments = normalizedPath.slice(1).split('/').filter(Boolean);
-  const result: string[] = [];
-  let current = '';
-
-  for (const segment of segments) {
-    current = `${current}/${segment}`;
-    result.push(normalizeFolderPath(current));
-  }
-
-  return result;
-}
-
-function remapFolderPath(path: string, oldBase: string, newBase: string): string {
-  const normalizedPath = normalizeFolderPath(path);
-  const normalizedOldBase = normalizeFolderPath(oldBase);
-  const normalizedNewBase = normalizeFolderPath(newBase);
-
-  if (!doesPathMatch(normalizedPath, normalizedOldBase)) {
-    return normalizedPath;
-  }
-
-  const suffix =
-    normalizedOldBase === '/' ? normalizedPath : normalizedPath.slice(normalizedOldBase.length);
-  return normalizeFolderPath(`${normalizedNewBase}${suffix}`);
-}
+// 폴더 경로 유틸리티는 @/utils/folderPath 로 분리되었습니다.
 
 // --- Local DB Write Batching/Debouncing ---
 const pendingNoteWrites: Map<string, Note> = new Map();

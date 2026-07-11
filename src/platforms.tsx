@@ -128,7 +128,7 @@ function setupExtensionMessageListeners(api: typeof chrome) {
 }
 
 function checkExtensionPermissions(api: typeof chrome) {
-  api.permissions.getAll((permissions) => {
+  api.permissions.getAll(() => {
   });
 }
 

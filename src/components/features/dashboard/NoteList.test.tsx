@@ -76,7 +76,7 @@ function toFolderMap(paths: string[]): Record<string, Folder> {
 function installFolderActionMocks(initialPaths: string[]) {
 	useDataStore.setState({ folders: toFolderMap(initialPaths) });
 
-	const createFolderMock = vi.fn((path: string) => {
+	const createFolderMock = vi.fn(async (path: string) => {
 		const normalizedPath = normalizeFolderPath(path);
 		const segments = normalizedPath.slice(1).split("/").filter(Boolean);
 		const toEnsure: string[] = [];
@@ -252,7 +252,7 @@ describe("NoteList tree mode folder sync", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "새 폴더 만들기" }));
 
-		const input = screen.getByPlaceholderText("예: project/meeting");
+		const input = await screen.findByPlaceholderText("예: project/meeting");
 		fireEvent.change(input, { target: { value: "project/meeting" } });
 		fireEvent.click(screen.getByRole("button", { name: "생성" }));
 
@@ -282,7 +282,7 @@ describe("NoteList tree mode folder sync", () => {
 		fireEvent.pointerDown(screen.getByRole("button", { name: "work 폴더 메뉴" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "이름 변경" }));
 
-		const input = screen.getByDisplayValue("work");
+		const input = await screen.findByDisplayValue("work");
 		fireEvent.change(input, { target: { value: "archive" } });
 		fireEvent.click(screen.getByRole("button", { name: "변경" }));
 
@@ -390,7 +390,7 @@ describe("NoteList tree mode folder sync", () => {
 		fireEvent.pointerDown(screen.getByRole("button", { name: "work 폴더 메뉴" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "이름 변경" }));
 
-		const input = screen.getByDisplayValue("work");
+		const input = await screen.findByDisplayValue("work");
 		fireEvent.change(input, { target: { value: "archive" } });
 		fireEvent.click(screen.getByRole("button", { name: "변경" }));
 

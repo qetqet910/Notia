@@ -26,7 +26,7 @@ const LazyHomeExtra = React.lazy(() =>
 );
 
 // --- Toss Style Animation Constants ---
-const TOSS_EASE = [0.16, 1, 0.3, 1] as any;
+const TOSS_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 // --- Toss Style Animation Variants ---
 const tossFadeIn = {

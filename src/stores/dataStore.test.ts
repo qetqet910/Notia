@@ -61,6 +61,7 @@ vi.mock('@/services/supabaseClient', () => ({
 
 vi.mock('@/services/localDB', () => ({
   localDB: {
+    init: vi.fn().mockResolvedValue(undefined),
     upsertNote: vi.fn(),
     upsertNotes: vi.fn(),
     upsertFolders: vi.fn(),
@@ -219,7 +220,7 @@ describe('dataStore - New Features', () => {
     vi.useRealTimers();
   });
 
-  it('createFolder/getNotesByFolder should normalize folder paths', () => {
+  it('createFolder/getNotesByFolder should normalize folder paths', async () => {
     useDataStore.setState({
       notes: {
         'note-1': createNote('note-1', { folder_path: '/work/project' }),
@@ -227,7 +228,7 @@ describe('dataStore - New Features', () => {
       folders: {},
     });
 
-    const created = useDataStore.getState().createFolder('  //work//project//  ');
+    const created = await useDataStore.getState().createFolder('  //work//project//  ');
     const notesInFolder = useDataStore.getState().getNotesByFolder('work///project/');
 
     expect(created).toBe('/work/project');
@@ -551,10 +552,10 @@ describe('dataStore - New Features', () => {
     expect(pathNode?.noteIds).toEqual(['note-1']);
   });
 
-  it("createFolder('/work') should result in empty folder node in tree", () => {
+  it("createFolder('/work') should result in empty folder node in tree", async () => {
     useDataStore.setState({ notes: {}, folders: {}, currentUserId: 'user-1' });
 
-    const normalized = useDataStore.getState().createFolder('/work');
+    const normalized = await useDataStore.getState().createFolder('/work');
     const tree = useDataStore.getState().getFolderTree();
     const workNode = tree.children.find((child) => child.path === '/work');
 

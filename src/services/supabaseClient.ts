@@ -71,6 +71,14 @@ const createMockSupabase = () => {
       if (prop === 'auth') {
         return {
           getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+          getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+          updateUser: () => Promise.resolve({ data: { user: null }, error: null }),
+          signInWithPassword: () =>
+            Promise.resolve({ data: { user: null, session: null }, error: null }),
+          signInWithOAuth: () =>
+            Promise.resolve({ data: { provider: null, url: null }, error: null }),
+          exchangeCodeForSession: () =>
+            Promise.resolve({ data: { session: null, user: null }, error: null }),
           onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
           signOut: () => Promise.resolve({ error: null }),
         };

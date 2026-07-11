@@ -5,11 +5,21 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 import type { Note } from '@/types';
 import type { DragEndEvent } from '@dnd-kit/core';
 
-// Mock the data store's moveNote to verify drag behavior
+// Mock the data store's moveNote to verify drag behavior.
+// useDataStore is a Zustand hook: callable with a selector AND exposes getState().
 const moveNoteMock = vi.fn();
-vi.mock('@/stores/dataStore', () => ({
-  useDataStore: { getState: () => ({ moveNote: moveNoteMock }) },
-}));
+vi.mock('@/stores/dataStore', () => {
+  // Lazily read moveNoteMock so the hoisted factory doesn't touch it before init.
+  const getState = () => ({
+    moveNote: moveNoteMock,
+    lastChangedNoteId: null,
+    setLastChangedNoteId: vi.fn(),
+  });
+  const useDataStore = (selector?: (s: ReturnType<typeof getState>) => unknown) =>
+    selector ? selector(getState()) : getState();
+  useDataStore.getState = getState;
+  return { useDataStore };
+});
 
 let capturedOnDragEnd: ((event: DragEndEvent) => void) | undefined;
 interface DndContextProps {
@@ -58,7 +68,7 @@ describe('NoteTree Note Drag/Click behavior', () => {
         onSelectNote={onSelectNote}
         onSelectFolder={() => {}}
         onTogglePin={() => {}}
-        folderPaths={['/']}
+        folders={{}}
         onRequestCreateFolder={() => {}}
         onRequestRenameFolder={() => {}}
         onDeleteFolder={() => {}}
@@ -80,7 +90,7 @@ describe('NoteTree Note Drag/Click behavior', () => {
         onSelectNote={() => {}}
         onSelectFolder={() => {}}
         onTogglePin={() => {}}
-        folderPaths={['/', '/target']}
+        folders={{}}
         onRequestCreateFolder={() => {}}
         onRequestRenameFolder={() => {}}
         onDeleteFolder={() => {}}
@@ -106,7 +116,7 @@ describe('NoteTree Note Drag/Click behavior', () => {
         onSelectNote={() => {}}
         onSelectFolder={() => {}}
         onTogglePin={() => {}}
-        folderPaths={['/', '/newPath']}
+        folders={{}}
         onRequestCreateFolder={() => {}}
         onRequestRenameFolder={() => {}}
         onDeleteFolder={() => {}}

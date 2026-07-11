@@ -8,7 +8,11 @@ import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
 export default function GlobalError() {
   const navigate = useNavigate();
-  const error = useRouteError() as any;
+  const error = useRouteError() as {
+    message?: string;
+    statusText?: string;
+    stack?: string;
+  };
   const { user } = useAuthStore();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);

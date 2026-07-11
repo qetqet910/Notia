@@ -102,12 +102,15 @@ describe('Editor Component', () => {
     id: 'note-1',
     title: 'Test Title',
     content: 'Initial content',
+    content_preview: 'Initial content',
     tags: [],
     reminders: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    user_id: 'test-user',
-    is_archived: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    owner_id: 'test-user',
+    is_public: false,
     is_pinned: false,
   };
 

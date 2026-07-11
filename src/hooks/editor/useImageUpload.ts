@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useTransition } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { EditorView, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { StateField, StateEffect } from '@codemirror/state';
 import { ReactCodeMirrorRef } from '@uiw/react-codemirror';
@@ -65,7 +65,7 @@ export const uploadState = StateField.define<DecorationSet>({
 // --- Hook Logic ---
 
 export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | null>) => {
-  const [isPending, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuthStore();
   const { toast } = useToast();
@@ -91,6 +91,7 @@ export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | 
         return null;
       }
 
+      setIsUploading(true);
       try {
         let fileToUpload = file;
 
@@ -144,6 +145,8 @@ export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | 
           description: (error as Error).message || '이미지 업로드 중 오류가 발생했습니다.',
         });
         return null;
+      } finally {
+        setIsUploading(false);
       }
   }, [user, toast]);
 
@@ -161,12 +164,12 @@ export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | 
           effects: uploadEffect.of({ id: uploadId, pos })
       });
 
-      startTransition(async () => {
+      void (async () => {
           const url = await handleImageUpload(file);
-          
+
           if (url) {
             const markdownImage = `\n![${file.name}](${url})\n`;
-            
+
             // 2. Insert Image & Remove Widget
             view.dispatch({
               changes: { from: pos, insert: markdownImage },
@@ -176,7 +179,7 @@ export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | 
              // Just remove widget
              view.dispatch({ effects: uploadEffect.of({ id: uploadId, pos: null }) });
           }
-      });
+      })();
   }, [handleImageUpload, user]);
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,5 +216,5 @@ export const useImageUpload = (editorRef?: React.RefObject<ReactCodeMirrorRef | 
     })
   ], [processUpload]);
 
-  return { isUploading: isPending, handleFileChange, imageUploadExtension, fileInputRef, openFileSelector, handleImageUpload };
+  return { isUploading, handleFileChange, imageUploadExtension, fileInputRef, openFileSelector, handleImageUpload };
 };

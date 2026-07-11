@@ -17,13 +17,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { useAuthStore } from '@/stores/authStore';
-import { Reminder } from '@/types';
-
-type EnrichedReminder = Reminder & {
-  noteId: string;
-  noteTitle: string;
-  noteContent: string;
-};
+import type { EnrichedReminder } from '@/utils/deriveAllReminders';
 
 interface ReminderViewProps {
   reminders: EnrichedReminder[];
@@ -150,33 +144,16 @@ export const ReminderView: React.FC<ReminderViewProps> = React.memo(
     }, [reminders, handleDelete]);
 
     const handleGlobalNotificationsToggle = useCallback(
-      async (enabled: boolean) => {
+      (enabled: boolean) => {
         if (!user?.id) return;
         setGlobalNotifications(enabled);
 
-        const updatePromises = reminders
+        // 완료되지 않은 모든 리마인더의 enabled 플래그를 일괄 갱신한다.
+        // 실제 알림 스케줄링은 이 플래그를 기준으로 처리되므로 여기서
+        // 별도의 알림 생성/취소를 호출할 필요는 없다.
+        reminders
           .filter((r) => !r.completed)
-          .map((reminder) => {
-            onToggleEnable(reminder.id, enabled);
-            if (enabled) {
-              return createReminderNotifications(
-                user.id,
-                reminder.noteId,
-                reminder.id,
-                reminder.reminder_text,
-                reminder.noteTitle,
-                new Date(reminder.reminder_time),
-              );
-            } else {
-              return cancelReminderNotifications(reminder.id);
-            }
-          });
-
-        try {
-          await Promise.all(updatePromises);
-        } catch (error) {
-          console.error('전체 리마인더 알람 상태 동기화 중 오류 발생:', error);
-        }
+          .forEach((reminder) => onToggleEnable(reminder.id, enabled));
       },
       [user, reminders, onToggleEnable],
     );

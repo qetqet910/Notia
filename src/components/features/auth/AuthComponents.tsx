@@ -16,7 +16,7 @@ export const SocialLoginButton = React.memo<{
   onClick: (provider: 'github' | 'google') => void;
   disabled: boolean;
   keyPrefix: string;
-}>(({ provider, icon, color, label, onClick, disabled, keyPrefix }) => (
+}>(({ provider, icon, label, onClick, disabled, keyPrefix }) => (
   <motion.div
     key={`${keyPrefix}-${provider}`}
     initial={{ opacity: 0, y: 10 }}

@@ -1,6 +1,8 @@
 import { Variants } from 'framer-motion';
 
-const easeOutCubic = [0.25, 0.46, 0.45, 0.94];
+const easeOutCubic: [number, number, number, number] = [
+  0.25, 0.46, 0.45, 0.94,
+];
 
 export const fadeIn = {
   initial: { opacity: 0, y: 20 },

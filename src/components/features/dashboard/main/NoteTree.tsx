@@ -14,7 +14,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
 import Folder from "lucide-react/dist/esm/icons/folder";
 import MoreHorizontal from "lucide-react/dist/esm/icons/more-horizontal";
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDataStore } from "@/stores/dataStore";
 import type { Note } from "@/types";
+import { normalizeFolderPath } from "@/utils/folderPath";
 import { cn } from "@/utils/shadcnUtils";
 
 interface NoteTreeProps {
@@ -59,14 +60,8 @@ interface FolderNode {
 	notes: NoteWithChildren[];
 }
 
-export function normalizeFolderPath(path: string | null | undefined): string {
-	if (!path || typeof path !== "string") return "/";
-	const trimmed = path.trim();
-	if (!trimmed || trimmed === "/") return "/";
-	const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-	const collapsed = withLeadingSlash.replace(/\/+/g, "/");
-	return collapsed.replace(/\/+$/g, "") || "/";
-}
+// 하위 호환: 기존에 이 모듈에서 normalizeFolderPath를 import하던 곳들을 위해 재노출한다.
+export { normalizeFolderPath };
 
 function buildFolderTree(notes: Note[] = [], folders: Record<string, Folder> = {}): FolderNode {
 	const root: FolderNode = { id: "root", path: "/", name: "/", children: [], notes: [] };
@@ -146,7 +141,7 @@ const DraggableNoteRow: FC<{
 	onSelectNote: (note: Note) => void;
 	onTogglePin: (noteId: string) => void;
 }> = ({ note, depth, selectedNote, onSelectNote, onTogglePin }) => {
-	const [isExpanded, setIsExpanded] = useState(false);
+	const [isExpanded] = useState(false);
 	const hasChildren = note.children.length > 0;
 
 	const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
@@ -383,7 +378,6 @@ export const NoteTree: FC<NoteTreeProps> = ({
 
 	useEffect(() => {
 		if (selectedFolderPath !== prevSelectedPathRef.current) {
-			const oldNormalized = normalizeFolderPath(prevSelectedPathRef.current);
 			const newNormalized = normalizeFolderPath(selectedFolderPath);
 			prevSelectedPathRef.current = selectedFolderPath;
 

@@ -246,7 +246,7 @@ describe('LocalDB Service', () => {
 
       expect(folders).toHaveLength(1);
       expect(folders[0].path).toBe('/work');
-      expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM folders WHERE deleted_at IS NULL'));
+      expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM folders WHERE (deleted_at IS NULL OR deleted_at = "")'));
     });
 
     it('getFolders(ownerId) should scope by owner_id', async () => {
@@ -272,7 +272,7 @@ describe('LocalDB Service', () => {
       expect(folders[0].owner_id).toBe('userA');
       expect(folders.some((folder) => folder.owner_id === 'userB')).toBe(false);
       expect(mockSelect).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM folders WHERE owner_id = ? AND deleted_at IS NULL'),
+        expect.stringContaining('SELECT * FROM folders WHERE owner_id = ? AND (deleted_at IS NULL OR deleted_at = "")'),
         ['userA'],
       );
     });
@@ -318,7 +318,7 @@ describe('LocalDB Service', () => {
       expect(notes.some((note) => note.owner_id === 'userB')).toBe(false);
       expect(mockSelect).toHaveBeenNthCalledWith(
         1,
-        expect.stringContaining('SELECT * FROM notes WHERE owner_id = ? AND is_deleted = 0'),
+        expect.stringContaining('SELECT * FROM notes WHERE owner_id = ? AND (deleted_at IS NULL OR deleted_at = "")'),
         ['userA'],
       );
       expect(mockSelect).toHaveBeenNthCalledWith(

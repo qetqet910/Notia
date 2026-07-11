@@ -7,45 +7,26 @@ import React, {
   Suspense,
   lazy,
 } from 'react';
-import { useNavigate, useBlocker } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import { Toaster } from '@/components/ui/toaster';
 
 import { useToast } from '@/hooks/useToast';
 import { useReminderScheduler } from '@/hooks/useReminderScheduler';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useWikiLinkNavigation } from '@/hooks/useWikiLinkNavigation';
+import { deriveAllReminders } from '@/utils/deriveAllReminders';
+import { derivePopularTags } from '@/utils/derivePopularTags';
+import { useEditGuard } from '@/hooks/useEditGuard';
 
-import { GoalProgress } from '@/components/features/dashboard/GoalProgress';
-import { UserProfile } from '@/components/features/dashboard/UserProfile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotes } from '@/hooks/useNotes';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
-import PlusCircle from 'lucide-react/dist/esm/icons/plus-circle';
-import CalendarIcon from 'lucide-react/dist/esm/icons/calendar';
-import Clock from 'lucide-react/dist/esm/icons/clock';
-import List from 'lucide-react/dist/esm/icons/list';
-import Menu from 'lucide-react/dist/esm/icons/menu';
-import User from 'lucide-react/dist/esm/icons/user';
-import Activity from 'lucide-react/dist/esm/icons/activity';
-import Settings from 'lucide-react/dist/esm/icons/settings';
-import Monitor from 'lucide-react/dist/esm/icons/monitor';
-import LogOut from 'lucide-react/dist/esm/icons/log-out';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import Trash from 'lucide-react/dist/esm/icons/trash-2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeStore } from '@/stores/themeStore';
 import logoImage from '@/assets/images/Logo.png';
 import logoDarkImage from '@/assets/images/LogoDark.png';
-import { Note, Reminder, EditorReminder } from '@/types';
+import { Note, EditorReminder } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,8 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ToastAction } from '@/components/ui/toast';
-import { resolveWikiLinkTitle } from '@/utils/wikiLinkSelection';
 import { useDataStore } from '@/stores/dataStore';
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 
@@ -76,6 +55,10 @@ import { TimelineLoader } from '@/components/loader/dashboard/TimelineLoader';
 import { NoteListLoader } from '@/components/loader/dashboard/NoteListLoader';
 import { DashboardTour } from '@/components/features/dashboard/DashboardTour';
 import { FeedbackDialog } from '@/components/features/dashboard/FeedbackDialog';
+import { EmptyNoteState } from '@/components/features/dashboard/main/EmptyNoteState';
+import { DashboardSidebar } from '@/components/features/dashboard/main/DashboardSidebar';
+import { MobileNavigation } from '@/components/features/dashboard/main/MobileNavigation';
+import { DesktopActions } from '@/components/features/dashboard/main/DesktopActions';
 
 const NoteList = lazy(() =>
   import('@/components/features/dashboard/NoteList').then((module) => ({
@@ -116,26 +99,6 @@ import {
   ResizableHandle,
 } from '@/components/ui/resizable';
 
-const NAV_ITEMS = [
-  { id: 'notes', label: '노트', icon: List },
-  { id: 'reminder', label: '리마인더', icon: Clock },
-  { id: 'calendar', label: '캘린더', icon: CalendarIcon },
-  { id: 'timeline', label: '타임라인', icon: Activity },
-  { id: 'trash', label: '휴지통', icon: Trash },
-];
-
-const EmptyNoteState = ({
-  handleCreateNote,
-}: {
-  handleCreateNote: () => void;
-}) => (
-  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-    <p>노트를 선택하거나 새로운 노트를 작성하세요</p>
-    <Button variant="outline" className="mt-4" onClick={handleCreateNote}>
-      <PlusCircle className="mr-2 h-4 w-4" />새 노트
-    </Button>
-  </div>
-);
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -170,28 +133,22 @@ export const Dashboard: React.FC = () => {
     [notes, selectedNoteId],
   );
   const [isNoteContentLoading, setIsNoteContentLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [isWikiLinkDialogOpen, setIsWikiLinkDialogOpen] = useState(false);
-  const [wikiLinkTargetTitle, setWikiLinkTargetTitle] = useState('');
-  const [wikiLinkCandidates, setWikiLinkCandidates] = useState<Note[]>([]);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const editorRef = useRef<{ save: () => void } | null>(null);
   const newlyCreatedNoteId = useRef<string | null>(null);
 
-  const blocker = useBlocker(isEditing);
-
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      if (hasUnsavedChanges) {
-        setIsCancelDialogOpen(true);
-      } else {
-        blocker.proceed();
-      }
-    }
-  }, [blocker, hasUnsavedChanges]);
+  const {
+    isEditing,
+    setIsEditing,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    isCancelDialogOpen,
+    handleEnterEditMode,
+    handleCancelEdit,
+    confirmLeaveEdit,
+    cancelLeaveEdit,
+  } = useEditGuard();
 
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const activeTabs = useMemo(
@@ -199,26 +156,7 @@ export const Dashboard: React.FC = () => {
     [],
   );
 
-  const allReminders = useMemo(() => {
-    if (!notes || !Array.isArray(notes)) return [];
-    const remindersMap = new Map<
-      string,
-      Reminder & { noteId: string; noteTitle: string; noteContent: string }
-    >();
-    notes.forEach((note) => {
-      (note.reminders || []).forEach((reminder) => {
-        if (!remindersMap.has(reminder.id)) {
-          remindersMap.set(reminder.id, {
-            ...reminder,
-            noteId: note.id,
-            noteTitle: note.title || '제목 없음',
-            noteContent: note.content_preview?.substring(0, 100) || '',
-          });
-        }
-      });
-    });
-    return Array.from(remindersMap.values());
-  }, [notes]);
+  const allReminders = useMemo(() => deriveAllReminders(notes), [notes]);
 
   useEffect(() => {
     if (permission === 'default') {
@@ -232,7 +170,7 @@ export const Dashboard: React.FC = () => {
       setSelectedNoteId(null);
       setIsEditing(false);
     }
-  }, [notes, selectedNoteId]);
+  }, [notes, selectedNoteId, setIsEditing]);
 
   useEffect(() => {
     if (selectedNoteId && selectedNoteId === newlyCreatedNoteId.current) {
@@ -241,7 +179,7 @@ export const Dashboard: React.FC = () => {
         newlyCreatedNoteId.current = null;
       }, 50);
     }
-  }, [selectedNoteId]);
+  }, [selectedNoteId, setIsEditing]);
 
   const handleSelectNote = useCallback(
     async (note: Note) => {
@@ -255,78 +193,29 @@ export const Dashboard: React.FC = () => {
         setIsNoteContentLoading(false);
       }
     },
-    [fetchNoteContent],
+    [fetchNoteContent, setIsEditing, setHasUnsavedChanges],
   );
 
-  const createAndOpenNoteFromWikiLink = useCallback(
-    async (title: string) => {
-      if (!session?.user?.id) return;
-
-      const newNote = await addNote({
-        title: title.trim() || '새로운 노트',
-        content: '',
-        tags: [],
-      });
-
-      if (!newNote) {
-        toast({
-          title: '노트 생성에 실패했어요',
-          description: '잠시 후 다시 시도해주세요.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setSelectedNoteId(newNote.id);
-      setActiveTab('notes');
-    },
-    [addNote, session?.user?.id, toast],
-  );
-
-  const openNoteByTitle = useCallback(
-    (title: string) => {
-      const resolution = resolveWikiLinkTitle(notes || [], title);
-
-      if (resolution.type === 'single') {
-        setActiveTab('notes');
-        void handleSelectNote(resolution.note);
-        return;
-      }
-
-      if (resolution.type === 'none') {
-        toast({
-          title: '노트를 찾을 수 없어요',
-          description: `"${title}" 제목의 노트를 찾지 못했어요.`,
-          variant: 'destructive',
-          action: (
-            <ToastAction
-              altText={`"${title}" 노트 생성`}
-              onClick={() => {
-                void createAndOpenNoteFromWikiLink(title);
-              }}
-            >
-              생성 후 열기
-            </ToastAction>
-          ),
-        });
-        return;
-      }
-
-      setWikiLinkTargetTitle(title);
-      setWikiLinkCandidates(resolution.candidates);
-      setIsWikiLinkDialogOpen(true);
-    },
-    [createAndOpenNoteFromWikiLink, handleSelectNote, notes, toast],
-  );
-
-  const handleEnterEditMode = useCallback(() => {
-    setTimeout(() => setIsEditing(true), 0);
+  const selectNewlyCreatedNote = useCallback((note: Note) => {
+    setSelectedNoteId(note.id);
   }, []);
 
-  const handleCancelEdit = useCallback(() => {
-    setIsEditing(false);
-    setHasUnsavedChanges(false);
-  }, []);
+  const {
+    isWikiLinkDialogOpen,
+    wikiLinkTargetTitle,
+    wikiLinkCandidates,
+    openNoteByTitle,
+    closeWikiLinkDialog,
+    selectWikiLinkCandidate,
+  } = useWikiLinkNavigation({
+    notes,
+    sessionUserId: session?.user?.id,
+    addNote,
+    toast,
+    setActiveTab,
+    handleSelectNote,
+    selectNewlyCreatedNote,
+  });
 
   const handleCreateNote = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -356,116 +245,31 @@ export const Dashboard: React.FC = () => {
     setHasUnsavedChanges(false);
   };
 
-  const handleKeyboardShortcuts = useCallback(
-    (e: KeyboardEvent) => {
-      const isCtrlCmd = e.ctrlKey || e.metaKey;
-      const key = e.key.toLowerCase();
-      const target = e.target as HTMLElement;
-
-      if (isDeleteDialogOpen) {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setIsDeleteDialogOpen(false);
-        }
-        return;
-      }
-
-      // When in editing mode
-      if (isEditing) {
-        if (isCtrlCmd && key === 's') {
-          e.preventDefault();
-          if (hasUnsavedChanges && editorRef.current) {
-            editorRef.current.save();
-          }
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          handleCancelEdit();
-        }
-        // Allow other keys to function normally for typing
-        return;
-      }
-
-      // When not in editing mode
-      const isInputElement =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable;
-
-      if (isInputElement && e.key !== 'Tab') {
-        return;
-      }
-
-      const shortcuts: { [key: string]: () => void } = {
-        n: handleCreateNote,
-        '/': () => navigate('/dashboard/help?tab=overview'),
-        '?': () => navigate('/dashboard/help?tab=overview'),
-        t: () => setTheme(isDarkMode || isDeepDarkMode ? 'light' : 'dark'),
-        Tab: () => {
-          const currentTabIndex = activeTabs.indexOf(activeTab);
-          const nextIndex = (currentTabIndex + 1) % activeTabs.length;
-          setActiveTab(activeTabs[nextIndex]);
-        },
-        b: () => setIsSidebarVisible((prev) => !prev),
-        d: () => selectedNoteId && setIsDeleteDialogOpen(true),
-        delete: () => selectedNoteId && setIsDeleteDialogOpen(true),
-        m: () => navigate('/dashboard/myPage?tab=profile'),
-        ',': () => navigate('/dashboard/myPage?tab=activity'),
-        '.': () => navigate('/dashboard/myPage?tab=settings'),
-      };
-
-      const handler = shortcuts[e.key === 'Tab' ? 'Tab' : key];
-      if (handler) {
-        e.preventDefault();
-        handler();
-      }
-    },
-    [
-      isEditing,
-      hasUnsavedChanges,
-      handleCancelEdit,
-      handleCreateNote,
-      navigate,
-      setTheme,
-      isDarkMode,
-      isDeepDarkMode,
-      activeTabs,
-      activeTab,
-      selectedNoteId,
-      isDeleteDialogOpen,
-    ],
-  );
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyboardShortcuts);
-    return () =>
-      document.removeEventListener('keydown', handleKeyboardShortcuts);
-  }, [handleKeyboardShortcuts]);
+  useKeyboardShortcuts({
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    isEditing,
+    hasUnsavedChanges,
+    editorRef,
+    handleCancelEdit,
+    handleCreateNote,
+    navigate,
+    setTheme,
+    isDarkMode,
+    isDeepDarkMode,
+    activeTabs,
+    activeTab,
+    setActiveTab,
+    setIsSidebarVisible,
+    selectedNoteId,
+  });
 
   const logoSrc = useMemo(
     () => (isDarkMode || isDeepDarkMode ? logoDarkImage : logoImage),
     [isDarkMode, isDeepDarkMode],
   );
 
-  const popularTags = useMemo(() => {
-    if (!notes || !Array.isArray(notes)) return [];
-    const tagCount: Record<string, number> = {};
-    notes
-      .filter((note) => note && typeof note === 'object')
-      .forEach((note) => {
-        const tags = note.tags;
-        if (tags && Array.isArray(tags)) {
-          tags
-            .filter((tag) => typeof tag === 'string')
-            .forEach((tag) => {
-              tagCount[tag] = (tagCount[tag] || 0) + 1;
-            });
-        }
-      });
-    return Object.entries(tagCount)
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  }, [notes]);
+  const popularTags = useMemo(() => derivePopularTags(notes), [notes]);
 
   if (isNotesLoading) return <DashboardPageLoader />;
 
@@ -561,7 +365,9 @@ export const Dashboard: React.FC = () => {
         const cancelDialog = (
           <AlertDialog
             open={isCancelDialogOpen}
-            onOpenChange={setIsCancelDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) cancelLeaveEdit();
+            }}
           >
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -573,19 +379,10 @@ export const Dashboard: React.FC = () => {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel
-                  onClick={() => {
-                    blocker.reset?.();
-                  }}
-                >
+                <AlertDialogCancel onClick={cancelLeaveEdit}>
                   취소
                 </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    handleCancelEdit();
-                    blocker.proceed?.();
-                  }}
-                >
+                <AlertDialogAction onClick={confirmLeaveEdit}>
                   나가기
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -733,11 +530,7 @@ export const Dashboard: React.FC = () => {
       <Dialog
         open={isWikiLinkDialogOpen}
         onOpenChange={(open) => {
-          setIsWikiLinkDialogOpen(open);
-          if (!open) {
-            setWikiLinkCandidates([]);
-            setWikiLinkTargetTitle('');
-          }
+          if (!open) closeWikiLinkDialog();
         }}
       >
         <DialogContent className="max-w-xl">
@@ -753,13 +546,7 @@ export const Dashboard: React.FC = () => {
                 key={candidate.id}
                 variant="outline"
                 className="h-auto w-full justify-start py-3 text-left"
-                onClick={() => {
-                  setActiveTab('notes');
-                  setIsWikiLinkDialogOpen(false);
-                  setWikiLinkCandidates([]);
-                  setWikiLinkTargetTitle('');
-                  void handleSelectNote(candidate);
-                }}
+                onClick={() => selectWikiLinkCandidate(candidate)}
               >
                 <div className="flex w-full flex-col gap-1">
                   <span className="font-medium">{candidate.title}</span>
@@ -824,7 +611,7 @@ export const Dashboard: React.FC = () => {
               !isEditing && isSidebarVisible ? 'w-48' : 'w-0 opacity-0'
             }`}
           >
-            <Sidebar
+            <DashboardSidebar
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               onTagSelect={setSelectedTag}
@@ -840,318 +627,7 @@ export const Dashboard: React.FC = () => {
     </div>
   );
 };
-const Sidebar = ({
-  activeTab,
-  setActiveTab,
-  onTagSelect,
-  isEditing,
-  popularTags,
-}: {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  onTagSelect: (tag: string) => void;
-  isEditing: boolean;
-  popularTags: { tag: string; count: number }[];
-}) => {
-  return (
-    <aside
-      className={`border-r border-border bg-muted p-4 hidden md:flex overflow-y-auto justify-between flex-col h-full ${
-        isEditing ? 'w-0 opacity-0' : 'w-48'
-      }`}
-    >
-      <nav id="tour-sidebar-nav" className="flex flex-col gap-2">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Button
-              key={item.id}
-              variant={activeTab === item.id ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => setActiveTab(item.id)}
-            >
-              <Icon className="mr-2 h-4 w-4" />
-              {item.label}
-            </Button>
-          );
-        })}
-      </nav>
-      <div>
-        {popularTags.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              인기 태그
-            </h3>
-            <div className="flex flex-col gap-1">
-              {popularTags.map(({ tag, count }) => (
-                <Button
-                  key={tag}
-                  variant="ghost"
-                  size="sm"
-                  className="justify-between text-xs"
-                  onClick={() => {
-                    setActiveTab('notes');
-                    onTagSelect(tag);
-                  }}
-                >
-                  <span>#{tag}</span>
-                  <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
-                    {count}
-                  </span>
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-        <div id="tour-goal-progress">
-          <GoalProgress />
-        </div>
-      </div>
-    </aside>
-  );
-};
 
-const MobileNavigation = ({
-  activeTab,
-  setActiveTab,
-  handleCreateNote,
-  popularTags,
-  onTagSelect,
-}: {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  handleCreateNote: () => void;
-  popularTags: { tag: string; count: number }[];
-  onTagSelect: (tag: string) => void;
-}) => {
-  const navigate = useNavigate();
-  const { userProfile, user, signOut, isLogoutLoading } = useAuthStore();
-  const { toast } = useToast();
-  const { setTheme } = useThemeStore();
-  const [isOpen, setIsOpen] = useState(false);
 
-  const displayName =
-    userProfile?.display_name || user?.user_metadata?.name || '사용자';
-  const displayEmail =
-    userProfile?.email && !userProfile.email.startsWith('anon_')
-      ? userProfile.email
-      : user?.email && !user.email.startsWith('anon_')
-      ? user.email
-      : '';
-  const avatarUrl =
-    userProfile?.avatar_url || user?.user_metadata?.avatar_url || '';
-  const initials = displayName?.substring(0, 1).toUpperCase() || '사';
-
-  const handleSignOut = async () => {
-    try {
-      const result = await signOut();
-      if (result.success) {
-        toast({
-          title: '로그아웃 성공',
-          description: '성공적으로 로그아웃되었습니다.',
-        });
-        setTheme('light');
-        navigate('/');
-      } else {
-        throw result.error || new Error('로그아웃 실패');
-      }
-    } catch (error) {
-      toast({
-        title: '로그아웃 실패',
-        description:
-          error instanceof Error
-            ? error.message
-            : '로그아웃 중 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setIsOpen(false);
-  };
-
-  return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <Button
-        variant="ghost"
-        onClick={() => {
-          handleCreateNote();
-          setIsOpen(false);
-        }}
-      >
-        <PlusCircle />
-      </Button>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="w-72 bg-background p-0">
-        <SheetHeader className="sr-only">
-          <SheetTitle>모바일 메뉴</SheetTitle>
-          <SheetDescription>
-            노트, 리마인더, 캘린더, 타임라인 등 주요 기능으로 이동할 수 있는
-            메뉴입니다.
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col h-full">
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 border-b">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName} />}
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="font-semibold">{displayName}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {displayEmail}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="p-4">
-              <Button
-                variant="outline"
-                className="w-full justify-start mb-4"
-                onClick={() => {
-                  handleCreateNote();
-                  setIsOpen(false);
-                }}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />새 노트
-              </Button>
-              <nav className="flex flex-col gap-1">
-                {NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Button
-                      key={item.id}
-                      variant={activeTab === item.id ? 'secondary' : 'ghost'}
-                      className="w-full justify-start"
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        setIsOpen(false);
-                      }}
-                    >
-                      <Icon className="mr-2 h-4 w-4" />
-                      {item.label}
-                    </Button>
-                  );
-                })}
-              </nav>
-              <Separator className="my-4" />
-              <nav className="flex flex-col gap-1">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() =>
-                    handleNavigation('/dashboard/myPage?tab=profile')
-                  }
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  마이페이지
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() =>
-                    handleNavigation('/dashboard/myPage?tab=activity')
-                  }
-                >
-                  <Activity className="mr-2 h-4 w-4" />
-                  활동
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() =>
-                    handleNavigation('/dashboard/myPage?tab=settings')
-                  }
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  설정
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() => handleNavigation('/dashboard/help')}
-                >
-                  <Monitor className="mr-2 h-4 w-4" />
-                  도움말
-                </Button>
-              </nav>
-            </div>
-          </div>
-          <div className="p-4 border-t">
-            {popularTags.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  인기 태그
-                </h3>
-                <div className="flex flex-col gap-1">
-                  {popularTags.map(({ tag, count }) => (
-                    <Button
-                      key={tag}
-                      variant="ghost"
-                      size="sm"
-                      className="justify-between text-xs"
-                      onClick={() => {
-                        onTagSelect(tag);
-                        setIsOpen(false);
-                      }}
-                    >
-                      <span>#{tag}</span>
-                      <span className="bg-muted-foreground/20 rounded-full px-2 py-0.5 text-xs">
-                        {count}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="mb-4">
-              <GoalProgress />
-            </div>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={handleSignOut}
-              disabled={isLogoutLoading}
-            >
-              {isLogoutLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <LogOut className="mr-2 h-4 w-4" />
-              )}
-              로그아웃
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-};
-
-const DesktopActions = ({
-  handleCreateNote,
-}: {
-  handleCreateNote: () => void;
-}) => (
-  <div className="flex items-center gap-2">
-    <Button
-      id="tour-create-note"
-      variant="outline"
-      size="sm"
-      onClick={handleCreateNote}
-    >
-      <PlusCircle className="mr-2 h-4 w-4" />새 노트
-    </Button>
-    <div id="tour-user-profile">
-      <UserProfile />
-    </div>
-  </div>
-);
 
 export default Dashboard;

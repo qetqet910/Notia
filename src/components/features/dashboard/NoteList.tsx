@@ -3,7 +3,7 @@ import FolderPlus from "lucide-react/dist/esm/icons/folder-plus";
 import Search from "lucide-react/dist/esm/icons/search";
 import List from "lucide-react/dist/esm/icons/list";
 import Share2 from "lucide-react/dist/esm/icons/share-2";
-import { type FC, useEffect, useMemo, useState } from "react";
+import { type FC, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -168,8 +168,6 @@ export const NoteList: FC<NoteListProps> = ({
 		}
 	}, [isFolderDialogOpen]);
 
-	const folderPaths = useMemo(() => Object.keys(folders), [folders]);
-
 	const openCreateFolderDialog = (parentPath: string) => {
 		const action = () => {
 			setFolderDialogMode("create");
@@ -277,19 +275,20 @@ export const NoteList: FC<NoteListProps> = ({
 				await useDataStore.getState().renameFolder(folderDialogPath, targetPath);
 				setSelectedFolderPath((prev) => remapSelectedPath(prev, folderDialogPath, targetPath));
 			}
+			// 성공했을 때만 다이얼로그를 닫고 입력을 비운다.
+			setIsFolderDialogOpen(false);
+			setFolderInput("");
 		} catch (error) {
 			console.error("Folder operation failed:", error);
+			// 실패 시 다이얼로그를 유지해 사용자가 입력을 보존한 채 재시도할 수 있게 한다.
 			toast({
-				title: "폴더 작업 실패",
+				title: folderDialogMode === "create" ? "폴더 만들기 실패" : "폴더 이름 변경 실패",
 				description:
 					error instanceof Error
 						? error.message
 						: "작업 중 오류가 발생했습니다.",
 				variant: "destructive",
 			});
-		} finally {
-			setIsFolderDialogOpen(false);
-			setFolderInput("");
 		}
 	};
 
