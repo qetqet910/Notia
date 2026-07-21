@@ -1,7 +1,7 @@
 <br/>
 <p align="center">
   <img src="./src/assets/images/Logo.png" alt="Notia Logo" width="240">
-  <p align="center">24.02 ~ END 🪖 (도메인 만료)</p>
+  <p align="center">25.02 ~ END 🪖 (도메인 만료)</p>
 </p>
 
 
