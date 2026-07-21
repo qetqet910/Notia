@@ -3,6 +3,8 @@
   <img src="./src/assets/images/Logo.png" alt="Notia Logo" width="240">
 </p>
 
+## 24.02 ~ END
+
 <p align="center">
   <strong>기억의 조각을 태그와 리마인더로 연결하세요.</strong>
   <br>
