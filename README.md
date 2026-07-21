@@ -1,9 +1,9 @@
 <br/>
 <p align="center">
   <img src="./src/assets/images/Logo.png" alt="Notia Logo" width="240">
+  <p align="center">24.02 ~ END 🪖 (도메인 만료)</p>
 </p>
 
-## 24.02 ~ END
 
 <p align="center">
   <strong>기억의 조각을 태그와 리마인더로 연결하세요.</strong>
